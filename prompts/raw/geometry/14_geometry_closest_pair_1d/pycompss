@@ -1,0 +1,7 @@
+""" Return the distance between the closest two elements in the vector x.
+    Use PyCOMPSs to compute in parallel.
+    Example: 
+
+    input: [7, 3, 9, 12, 31, 1]
+    output: 2
+"""

@@ -22,8 +22,8 @@ class Prompt:
     def check_valid(self, prompt: str):
         if prompt == "":
             raise ValueError("Prompt is empty")
-        if not prompt.endswith("{"):
-            raise ValueError(f"Prompt {prompt} does not end with {'{'}")
+        if not prompt.endswith("{") and not prompt.endswith(":"):
+            raise ValueError(f"Prompt {prompt} does not end with {'{'} or {':'}")
         for substr in ["Example", "input:", "output:"]:
             self.must_contain(prompt, substr)
     
@@ -182,6 +182,22 @@ class HIPPrompt(Prompt):
     def add_imports(self, prompt: str) -> str:
         return prompt
 
+class PyCOMPSsPrompt(Prompt):
+    
+    def __init__(self):
+        super().__init__("pycompss")
+    
+    def check_valid(self, prompt: str):
+        super().check_valid(prompt)
+        self.must_contain_all(prompt, ["PyCOMPSs", "def"])
+    
+    def get_model_name_for_function_suffix(self):
+        return "PyCOMPSs"
+    
+    def add_imports(self, prompt: str) -> str:
+        imports = "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.api import compss_barrier\n\n"
+        return imports + prompt
+
 
 def get_args():
     parser = ArgumentParser(description=__doc__)
@@ -204,12 +220,12 @@ def parse_raw_prompt(
         <model>.
     """
     prompt_paths = os.listdir(fpath)
-    if set(prompt_paths) != {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"}:
+    if set(prompt_paths) != {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"} and set(prompt_paths) != {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"}:
         raise ValueError(f"{fpath} does not contain prompts for all models")
     
     parsers = {"serial": SerialPrompt(), "omp": OpenMPPrompt(), 
         "mpi": MPIPrompt(), "mpi+omp": MPIOpenMPPrompt(), 
-        "kokkos": KokkosPrompt(), "cuda": CUDAPrompt(), "hip": HIPPrompt()}
+        "kokkos": KokkosPrompt(), "cuda": CUDAPrompt(), "hip": HIPPrompt(), "pycompss": PyCOMPSsPrompt()}
 
     prompts = []
     for model in prompt_paths:
