@@ -1,10 +1,10 @@
-""" Compute the average of the vector x. Store the result in average.
-    Use PyCOMPSs to compute in parallel.
-    Examples:
-   
-    input: [1, 8, 4, 5, 1]
-    output: 3.8
+"""Return the average of the vector x.
+   Use PyCOMPSs to compute in parallel.
+   Examples:
+		
+	 input: [1, 8, 4, 5, 1]
+   output: 3.8
 
-    input: [2, 2, 2, 3]
-    output: 2.25
+   input: [2, 2, 2, 3]
+   output: 2.25
 """

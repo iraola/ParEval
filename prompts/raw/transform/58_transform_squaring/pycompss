@@ -1,0 +1,7 @@
+"""Replace every element of x with the square of its value.
+   Use PyCOMPSs to compute in parallel.
+   Example:
+
+   input: [5, 1, 2, -4, 8]
+   output: [25, 1, 4, 16, 64]
+"""

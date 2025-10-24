@@ -1,0 +1,7 @@
+"""Return the logical XOR reduction of the vector of bools x.
+   Use PyCOMPSs to reduce in parallel.
+   Example:
+
+   input: [false, false, false, true]
+   output: true
+"""

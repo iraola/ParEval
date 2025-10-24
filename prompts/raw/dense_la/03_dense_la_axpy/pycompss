@@ -1,4 +1,4 @@
-""" Compute z = alpha*x+y where x and y are vectors. Store the result in z.
+"""Compute z = alpha*x+y where x and y are vectors. Store the result in z.
    Use PyCOMPSs to compute in parallel.
    Example:
    

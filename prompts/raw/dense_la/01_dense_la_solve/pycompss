@@ -1,4 +1,4 @@
-""" Solve the linear system Ax=b for x.
+"""Solve the linear system Ax=b for x.
    A is an NxN matrix in row-major. x and b have N elements.
    Use PyCOMPSs to compute in parallel.
    Example:
