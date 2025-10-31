@@ -4,6 +4,7 @@
     
     author: Daniel Nichols
     date: October 2023
+    modified: October 2025
 """
 # std imports
 from abc import ABC, abstractmethod
@@ -14,7 +15,7 @@ import re
 from typing import List
 
 
-class Prompt:
+class Prompt(ABC):
     def __init__(self, model: str):
         self.model = model
     
@@ -22,8 +23,8 @@ class Prompt:
     def check_valid(self, prompt: str):
         if prompt == "":
             raise ValueError("Prompt is empty")
-        if not prompt.endswith("{") and not prompt.endswith(":"):
-            raise ValueError(f"Prompt {prompt} does not end with {'{'} or {':'}")
+        if not prompt.endswith("{"):
+            raise ValueError(f"Prompt {prompt} does not end with {'{'}")
         for substr in ["Example", "input:", "output:"]:
             self.must_contain(prompt, substr)
     
@@ -86,6 +87,7 @@ class SerialPrompt(Prompt):
     def add_imports(self, prompt: str) -> str:
         return prompt
 
+
 class OpenMPPrompt(Prompt):
     def __init__(self):
         super().__init__("omp")
@@ -100,8 +102,8 @@ class OpenMPPrompt(Prompt):
     def add_imports(self, prompt: str) -> str:
         return "#include <omp.h>\n\n" + prompt
 
-class MPIPrompt(Prompt):
 
+class MPIPrompt(Prompt):
     def __init__(self):
         super().__init__("mpi")
     
@@ -115,8 +117,8 @@ class MPIPrompt(Prompt):
     def add_imports(self, prompt: str) -> str:
         return "#include <mpi.h>\n\n" + prompt
 
-class MPIOpenMPPrompt(Prompt):
 
+class MPIOpenMPPrompt(Prompt):
     def __init__(self):
         super().__init__("mpi+omp")
     
@@ -133,7 +135,6 @@ class MPIOpenMPPrompt(Prompt):
 
 
 class KokkosPrompt(Prompt):
-
     def __init__(self):
         super().__init__("kokkos")
     
@@ -150,7 +151,6 @@ class KokkosPrompt(Prompt):
 
 
 class CUDAPrompt(Prompt):
-    
     def __init__(self):
         super().__init__("cuda")
     
@@ -167,7 +167,6 @@ class CUDAPrompt(Prompt):
 
 
 class HIPPrompt(Prompt):
-        
     def __init__(self):
         super().__init__("hip")
     
@@ -182,20 +181,29 @@ class HIPPrompt(Prompt):
     def add_imports(self, prompt: str) -> str:
         return prompt
 
+
 class PyCOMPSsPrompt(Prompt):
-    
     def __init__(self):
         super().__init__("pycompss")
     
     def check_valid(self, prompt: str):
-        super().check_valid(prompt)
-        self.must_contain_all(prompt, ["PyCOMPSs", "def"])
+        if prompt == "":
+            raise ValueError("Prompt is empty")
+        # PyCOMPSs prompts end with a double quote
+        if not prompt.endswith('"'):
+            raise ValueError(f"PyCOMPSs prompt does not end with a double quote (\")")
+
+        self.must_contain_all(prompt, ["PyCOMPSs"])
     
     def get_model_name_for_function_suffix(self):
         return "PyCOMPSs"
     
     def add_imports(self, prompt: str) -> str:
-        imports = "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.api import compss_barrier\n\n"
+        imports = (
+            "from pycompss.api.task import task\n"
+            "from pycompss.api.api import compss_wait_on\n"
+            "from pycompss.api.api import compss_barrier\n\n"
+        )
         return imports + prompt
 
 
@@ -205,6 +213,10 @@ def get_args():
     parser.add_argument("-o", "--output", help="path to output json; defaults to stdout if not provided")
     parser.add_argument("--function-suffix", choices=["parallel", "model", "none"], default="none", help="suffix to add to function names")
     parser.add_argument("--add-imports", action="store_true", help="add imports above prompt")
+    parser.add_argument("--models", nargs="+", choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"],
+                        help="only gather prompts for the specified parallelism models")
+    parser.add_argument("--problem-types", nargs="+", choices=["dense_la", "fft", "geometry", "graph", "histogram", "reduce", "scan", "search", "sort", "sparse_la", "stencil", "transform"],
+                        help="only gather prompts for the specified problem types")
     return parser.parse_args()
 
 
@@ -213,19 +225,34 @@ def parse_raw_prompt(
     name: str, 
     fpath: os.PathLike, 
     function_suffix: str = "none", 
-    add_imports: bool = False
+    add_imports: bool = False,
+    models: List[str] = None
 ) -> List[dict]:
     """ Parse the raw prompts from the text files. fpath points to a directory
         with a text prompt for each model. The text prompt should be named
         <model>.
     """
     prompt_paths = os.listdir(fpath)
-    if set(prompt_paths) != {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"} and set(prompt_paths) != {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"}:
-        raise ValueError(f"{fpath} does not contain prompts for all models")
-    
-    parsers = {"serial": SerialPrompt(), "omp": OpenMPPrompt(), 
-        "mpi": MPIPrompt(), "mpi+omp": MPIOpenMPPrompt(), 
-        "kokkos": KokkosPrompt(), "cuda": CUDAPrompt(), "hip": HIPPrompt(), "pycompss": PyCOMPSsPrompt()}
+
+    if models:
+        prompt_paths = [m for m in prompt_paths if m in models]
+
+    expected = {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"}
+    if not set(prompt_paths).issubset(expected):
+        raise ValueError(f"{fpath} contains unknown models: {set(prompt_paths) - expected}")
+    if not prompt_paths:
+        raise ValueError(f"No valid models found in {fpath} for requested subset {models}")
+
+    parsers = {
+        "serial": SerialPrompt(),
+        "omp": OpenMPPrompt(),
+        "mpi": MPIPrompt(),
+        "mpi+omp": MPIOpenMPPrompt(),
+        "kokkos": KokkosPrompt(),
+        "cuda": CUDAPrompt(),
+        "hip": HIPPrompt(),
+        "pycompss": PyCOMPSsPrompt(),
+    }
 
     prompts = []
     for model in prompt_paths:
@@ -233,41 +260,43 @@ def parse_raw_prompt(
         if not os.path.isfile(model_path):
             raise ValueError(f"Expected {model_path} to be a file")
 
-        # get the parser and read in the contents of the prompt
         parser = parsers[model]
         with open(model_path, "r") as fp:
             prompt = fp.read()
         
-        # check the prompt is valid
         parser.check_valid(prompt)
 
-        # add to the function name if necessary
         if function_suffix == "model":
             suffix = parser.get_model_name_for_function_suffix()
             prompt = parser.append_to_function_name(prompt, suffix)
         elif function_suffix == "parallel":
             prompt = parser.append_to_function_name(prompt, "Parallel")
         
-        # add imports if necessary
         if add_imports:
             prompt = parser.add_imports(prompt)
 
+        language = "python" if model == "pycompss" else "cpp"
+
         prompts.append({
             "problem_type": type,
-            "language": "cpp",
+            "language": language,
             "name": name,
             "parallelism_model": model,
             "prompt": prompt
         })
 
+
     return prompts
+
 
 def main():
     args = get_args()
 
-    # prompts root is structured as <prompt_type>/<prompt_name>/<model>
     all_prompts = []
     for type in os.listdir(args.raw_prompts_root):
+        if args.problem_types and type not in args.problem_types:
+            continue  # Skip unwanted problem types
+            
         type_path = os.path.join(args.raw_prompts_root, type)
         if not os.path.isdir(type_path):
             raise ValueError(f"Expected {type_path} to be a directory")
@@ -277,18 +306,19 @@ def main():
             if not os.path.isdir(prompt_path):
                 raise ValueError(f"Expected {prompt_path} to be a directory")
             
-            prompts = parse_raw_prompt(type, prompt_name, prompt_path, 
-                function_suffix=args.function_suffix, add_imports=args.add_imports)
+            prompts = parse_raw_prompt(
+                type, prompt_name, prompt_path,
+                function_suffix=args.function_suffix,
+                add_imports=args.add_imports,
+                models=args.models
+            )
             all_prompts.extend(prompts)
     
-
-    # output
     if args.output:
         with open(args.output, "w") as fp:
             json.dump(all_prompts, fp, indent=4)
     else:
         print(json.dumps(all_prompts, indent=4))
-
 
 
 if __name__ == '__main__':
