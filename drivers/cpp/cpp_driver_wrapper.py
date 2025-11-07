@@ -10,6 +10,7 @@ from os import PathLike
 import subprocess
 import sys
 import tempfile
+import shutil
 
 # local imports
 sys.path.append("..")
@@ -114,7 +115,7 @@ class CppDriverWrapper(DriverWrapper):
             return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
         return RunOutput(run_process.returncode, run_process.stdout, run_process.stderr, config=run_config)
 
-    def test_single_output(self, prompt: str, output: str, test_driver_file: PathLike, problem_size: str) -> GeneratedTextResult:
+    def test_single_output(self, prompt: str, output: str, test_driver_file: PathLike, problem_size: str, prompt_name: str = "prompt", problem_type: str = "problem", output_index: int = 0) -> GeneratedTextResult:
         """ Test a single generated output. """
         logging.debug(f"Testing output:\n{output}")
         with tempfile.TemporaryDirectory(dir=self.scratch_dir) as tmpdir:
@@ -124,6 +125,20 @@ class CppDriverWrapper(DriverWrapper):
             prompt = self.patch_prompt(prompt)
             write_success = self.write_source(prompt+"\n"+output, src_path)
             logging.debug(f"Wrote source to {src_path}.")
+
+            # optionally save a copy of the generated source before cleanup
+            if self.save_generated_dir:
+                try:
+                    safe_type = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in problem_type)
+                    safe_name = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in prompt_name)
+                    dst_dir = os.path.join(self.save_generated_dir, safe_type, safe_name)
+                    os.makedirs(dst_dir, exist_ok=True)
+                    dst_fname = f"{self.parallelism_model}_{output_index}.{src_ext}"
+                    dst_path = os.path.join(dst_dir, dst_fname)
+                    shutil.copyfile(src_path, dst_path)
+                    logging.debug(f"Saved generated source to {dst_path}.")
+                except Exception as e:
+                    logging.warning(f"Failed to save generated source: {e}")
 
             # compile and run the output
             exec_path = os.path.join(tmpdir, "a.out")

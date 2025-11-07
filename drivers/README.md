@@ -19,7 +19,7 @@ of the generated outputs using the below command.
 ```sh
 python run-all.py generated-outputs.json
 
-# usage: run-all.py [-h] [-o OUTPUT] [--scratch-dir SCRATCH_DIR] [--launch-configs LAUNCH_CONFIGS] [--problem-sizes PROBLEM_SIZES] [--yes-to-all]
+# usage: run-all.py [-h] [-o OUTPUT] [--scratch-dir SCRATCH_DIR] [--save-generated DIR] [--launch-configs LAUNCH_CONFIGS] [--problem-sizes PROBLEM_SIZES] [--yes-to-all]
 #                   [--dry] [--overwrite] [--hide-progress]
 #                   [--exclude-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...] | --include-models
 #                   {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...]]
@@ -38,6 +38,7 @@ python run-all.py generated-outputs.json
 #                         Output JSON file containing the results.
 #   --scratch-dir SCRATCH_DIR
 #                         If provided, put scratch files here.
+#   --save-generated DIR   If provided, save each generated source code file to this directory.
 #   --launch-configs LAUNCH_CONFIGS
 #                         config for how to run samples.
 #   --problem-sizes PROBLEM_SIZES
@@ -78,6 +79,10 @@ Additionally, the script uses `/tmp` for building and running the generated code
 On many machines `/tmp` is node-local, which will cause the MPI jobs to fail.
 To solve this you can set `--scratch-dir` to point to a scratch directory
 on a shared file system.
+
+If you want to keep a copy of each generated source file (normally written to a
+temporary directory and deleted), pass `--save-generated <DIR>`. Files will be
+saved under `<DIR>/<problem_type>/<problem_name>/<model>_<index>.<ext>`.
 
 ## Organization of Drivers
 Within `drivers/` there are subdirectories for each programming language. In

@@ -30,6 +30,7 @@ def get_args():
     parser.add_argument("input_json", type=str, help="Input JSON file containing the test cases.")
     parser.add_argument("-o", "--output", type=str, help="Output JSON file containing the results.")
     parser.add_argument("--scratch-dir", type=str, help="If provided, put scratch files here.")
+    parser.add_argument("--save-generated", type=str, metavar="DIR", help="If provided, save each generated source code file to this directory.")
     parser.add_argument("--driver-root", type=str, help="Where to look for the driver files, if not in cwd.")
     parser.add_argument("--launch-configs", type=str, default="launch-configs.json", 
         help="config for how to run samples.")
@@ -173,6 +174,7 @@ def main():
             early_exit_runs=args.early_exit_runs,
             build_timeout=args.build_timeout,
             run_timeout=args.run_timeout,
+            save_generated_dir=args.save_generated,
         )
 
         with contextlib.chdir(DRIVER_ROOT):

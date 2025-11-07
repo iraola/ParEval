@@ -162,6 +162,7 @@ class DriverWrapper(ABC):
     display_runs: bool
     early_exit_runs: bool
     dry: bool
+    save_generated_dir: Optional[PathLike]
 
     def __init__(
         self, 
@@ -175,7 +176,8 @@ class DriverWrapper(ABC):
         display_build_errors: bool = False,
         display_runs: bool = False,
         early_exit_runs: bool = False,
-        dry: bool = False
+        dry: bool = False,
+        save_generated_dir: Optional[PathLike] = None
     ):
         self.parallelism_model = parallelism_model
         self.validator = VALIDATORS[parallelism_model]
@@ -189,6 +191,7 @@ class DriverWrapper(ABC):
         self.display_runs = display_runs
         self.early_exit_runs = early_exit_runs
         self.dry = dry
+        self.save_generated_dir = save_generated_dir
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(parallelism_model={self.parallelism_model}, scratch_dir={self.scratch_dir})"
@@ -216,20 +219,28 @@ class DriverWrapper(ABC):
     def test_all_outputs_in_prompt(self, prompt: dict) -> dict:
         """ Run all the generated outputs in the given prompt. """
         lang = prompt["language"]
-        type = prompt["problem_type"]
+        ptype = prompt["problem_type"]
         name = prompt["name"]
         ext = LANGUAGE_EXTENSIONS[prompt["language"]]
         if lang == "cpp" and self.parallelism_model in ["cuda", "hip"]:
             ext = ".cu"
         driver_dirname = f"{name}"
         driver_base = DRIVER_MAP[self.parallelism_model]
-        test_driver_file = os.path.join(lang, "benchmarks", type, driver_dirname, driver_base + ext)
+        test_driver_file = os.path.join(lang, "benchmarks", ptype, driver_dirname, driver_base + ext)
         problem_size = self.problem_sizes.get(name, {}).get(self.parallelism_model, "(1<<18)")
 
         outputs = []
         logging.info(f"Testing prompt {name} with {self}...")
-        for generated_output in prompt["outputs"]:
-            results = self.test_single_output(prompt["prompt"], generated_output, test_driver_file, problem_size)
+        for i, generated_output in enumerate(prompt["outputs"]):
+            results = self.test_single_output(
+                prompt["prompt"],
+                generated_output,
+                test_driver_file,
+                problem_size,
+                prompt_name=name,
+                problem_type=ptype,
+                output_index=i,
+            )
 
             outputs.append({
                 "generated_output": generated_output,

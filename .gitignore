@@ -18,3 +18,5 @@ a.out
 .venv
 *.json
 
+**/deepseek-ai
+scratch/
