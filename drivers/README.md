@@ -21,8 +21,8 @@ python run-all.py generated-outputs.json
 
 # usage: run-all.py [-h] [-o OUTPUT] [--scratch-dir SCRATCH_DIR] [--save-generated DIR] [--launch-configs LAUNCH_CONFIGS] [--problem-sizes PROBLEM_SIZES] [--yes-to-all]
 #                   [--dry] [--overwrite] [--hide-progress]
-#                   [--exclude-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...] | --include-models
-#                   {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...]]
+#                   [--exclude-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} ...] | --include-models
+#                   {serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} ...]]
 #                   [--problem PROBLEM | --problem-type PROBLEM_TYPE] [--early-exit-runs] [--build-timeout BUILD_TIMEOUT] [--run-timeout RUN_TIMEOUT]
 #                   [--log {INFO,DEBUG,WARNING,ERROR,CRITICAL}] [--log-build-errors] [--log-runs]
 #                   input_json
@@ -47,9 +47,9 @@ python run-all.py generated-outputs.json
 #   --dry                 Dry run. Do not actually run the code snippets.
 #   --overwrite           If ouputs are already in DB for a given prompt, then overwrite them. Default behavior is to skip existing results.
 #   --hide-progress       If provided, do not show progress bar.
-#   --exclude-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...]
+#   --exclude-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} ...]
 #                         Exclude the given parallelism models from testing.
-#   --include-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip} ...]
+#   --include-models {serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} [{serial,omp,mpi,mpi+omp,kokkos,cuda,hip,pycompss} ...]
 #                         Only test the given parallelism models.
 #   --problem PROBLEM     Only test this probem if provided.
 #   --problem-type PROBLEM_TYPE
@@ -103,6 +103,9 @@ prompts is in the `benchmarks/` subdirectory.
 
 Make sure to run `make` in the corresponding subdirectories for models that need
 to be compiled. For example in `cpp/` run `make` to build the driver binaries.
+
+For PyCOMPSs, there is no compilation step, but you must have the `runcompss`
+launcher available. Harness scripts should be placed under `drivers/python/benchmarks/...`.
 
 The way we currently launch executables in Python does not run them in a shell,
 but rather launches them directly. Because of this running

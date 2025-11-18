@@ -1,0 +1,165 @@
+""" Wrapper for calling python drivers
+    author: 
+    date: November 2025
+"""
+# std imports
+import copy
+import logging
+import os
+from os import PathLike
+import subprocess
+import sys
+import tempfile
+import shutil
+from pathlib import Path
+# local imports
+sys.path.append("..")
+from drivers.driver_wrapper import DriverWrapper, BuildOutput, RunOutput, GeneratedTextResult
+from util import run_command
+
+""" Map parallelism models to driver files """
+DRIVER_MAP = {
+    "pycompss": "pycompss_driver.py",
+}
+
+class PythonDriverWrapper(DriverWrapper):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.model_driver_file = os.path.join("python", "models", DRIVER_MAP[self.parallelism_model])
+
+    def write_source(self, content: str, fpath: PathLike) -> bool:
+        """ Write the given python source to the given file. """
+        with open(fpath, "w") as fp:
+            fp.write(content)
+        return True
+
+    """
+    def patch_prompt(self, content: str) -> str:
+        # Add NO_INLINE to the given source code.
+        # the last line of content should be: return_type function_name(args) {
+        # we want to add NO_INLINE after the return_typewwhe
+        parts = content.split("\n")[-1].split(" ")
+        assert len(parts) > 1, f"Could not parse return type from {parts}"
+        parts.insert(1, "NO_INLINE")
+        return "\n".join(content.split("\n")[:-1] + [" ".join(parts)])
+    """
+
+    def compile(
+        self,
+        *binaries: PathLike,
+        output_path: PathLike = "a_out.py",
+    ) -> BuildOutput:
+        """
+        Merge multiple Python source files into a single runnable Python file
+        for PyCOMPSs execution. This mimics C++ compilation.
+        
+        Parameters:
+        - binaries: e.g., (pycompss_driver.py, cpu.py)
+        - output_path: path to the combined file
+        """
+        try:
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if self.dry:
+                return BuildOutput(0, "Dry run: files would be merged", "")
+
+            with open(output_path, "w") as out_fp:
+                for src in binaries[::-1]:
+                    src_path = Path(src)
+                    if not src_path.exists():
+                        return BuildOutput(1, "", f"Source file {src} does not exist")
+
+                    with open(src_path, "r") as in_fp:
+                        content = in_fp.read()
+                        out_fp.write(f"# ===== {src_path.name} =====\n")
+                        out_fp.write(content + "\n\n")
+
+            logging.info(f"Merged {len(binaries)} files into {output_path}")
+            return BuildOutput(0, f"Merged files into {output_path}", "")
+
+        except Exception as e:
+            logging.error(f"Failed to merge files: {e}")
+            return BuildOutput(1, "", str(e))
+
+    def run(self, executable: PathLike, **run_config) -> RunOutput:
+        """ Run the given executable. """
+        launch_format = self.launch_configs["format"]
+        launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
+        try:
+            run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry)
+        except subprocess.TimeoutExpired as e:
+            return RunOutput(-1, str(e.stdout), f"[Timeout] {str(e.stderr)}", config=run_config)
+        except UnicodeDecodeError as e:
+            logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
+            return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
+        return RunOutput(run_process.returncode, run_process.stdout, run_process.stderr, config=run_config)
+
+    def test_single_output(self, prompt: str, output: str, test_driver_file: PathLike, problem_size: str, prompt_name: str = "prompt", problem_type: str = "problem", output_index: int = 0) -> GeneratedTextResult:
+        """ Test a single generated output for PyCOMPSs.
+            Writes generated_code.py, stages a harness (existing cpu_harness.py/cpu.py or a tiny adapter),
+            and launches the shared model driver under runcompss via a small runner.py.
+        """
+        logging.debug(f"Testing output (python/pycompss):\n{output[:500]}{'...' if len(output)>500 else ''}")
+
+
+        with tempfile.TemporaryDirectory(dir=self.scratch_dir) as tmpdir:
+            # 1) Write generated code to tmpdir/generated_code.py
+            src_ext = "py"
+            src_path = os.path.join(tmpdir, f"generated_code.{src_ext}")
+            write_success = self.write_source(prompt+"\n    "+output, src_path)
+            logging.debug(f"Wrote generated code to {src_path}.")
+
+            # optionally save a copy of the generated source before cleanup
+            if self.save_generated_dir:
+                try:
+                    safe_type = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in problem_type)
+                    safe_name = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in prompt_name)
+                    dst_dir = os.path.join(self.save_generated_dir, safe_type, safe_name)
+                    os.makedirs(dst_dir, exist_ok=True)
+                    dst_fname = f"{self.parallelism_model}_{output_index}.{src_ext}"
+                    dst_path = os.path.join(dst_dir, dst_fname)
+                    shutil.copyfile(src_path, dst_path)
+                    logging.debug(f"Saved generated source to {dst_path}.")
+                except Exception as e:
+                    logging.warning(f"Failed to save generated source: {e}")
+
+            exec_path = os.path.join(tmpdir, "a_out.py")
+
+            driver_dir = os.path.dirname(test_driver_file)
+            baseline_path = os.path.join(driver_dir, "baseline.py")
+
+            extra_sources = []
+            if os.path.exists(baseline_path):
+                extra_sources.append(baseline_path)
+            else:
+                logging.warning(f"No baseline.py found at {baseline_path}")
+            
+            extra_sources.append(src_path)
+
+            build_result = self.compile(self.model_driver_file, *extra_sources, test_driver_file, output_path=exec_path)
+
+            # run the code
+            configs = self.launch_configs["params"]
+            if build_result.did_build:
+                run_results = []
+                for c in configs:
+                    run_result = self.run(exec_path, **c)
+                    run_results.append(run_result)
+                    if self.display_runs:
+                        logging.debug(run_result.stderr)
+                        logging.debug(run_result.stdout)
+                    if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
+                        break
+            else:
+                run_results = None
+
+            logging.debug(f"Run results: {run_results}")
+            if run_results:
+                for rr in run_results:
+                    if rr.exit_code != 0:
+                        logging.debug(f"Outputs for failed run:\n\tstdout: {rr.stdout}\n\tstderr: {rr.stderr}")
+
+            return GeneratedTextResult(write_success, build_result, run_results)

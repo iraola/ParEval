@@ -134,7 +134,8 @@ DRIVER_MAP = {
     "mpi+omp": "cpu",
     "kokkos": "kokkos",
     "cuda": "gpu",
-    "hip": "gpu"
+    "hip": "gpu",
+    "pycompss": "cpu"
 }
 
 """ Validators """
@@ -145,7 +146,8 @@ VALIDATORS = {
     "mpi+omp": MPIandOMPValidator(),
     "kokkos": EmptyValidator(),
     "cuda": EmptyValidator(),
-    "hip": EmptyValidator()
+    "hip": EmptyValidator(),
+    "pycompss": EmptyValidator()
 }
 
 class DriverWrapper(ABC):

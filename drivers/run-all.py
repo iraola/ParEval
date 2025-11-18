@@ -17,12 +17,14 @@ from tqdm import tqdm
 # local imports
 from driver_wrapper import DriverWrapper
 from cpp.cpp_driver_wrapper import CppDriverWrapper
+from python.python_driver_wrapper import PythonDriverWrapper
 from util import await_input, load_json
 
 
 """ Map language names to driver wrappers """
 LANGUAGE_DRIVERS = {
     "cpp": CppDriverWrapper,
+    "python": PythonDriverWrapper,
 }
 
 def get_args():
@@ -44,9 +46,9 @@ def get_args():
         then overwrite them. Default behavior is to skip existing results.")
     parser.add_argument("--hide-progress", action="store_true", help="If provided, do not show progress bar.")
     model_group = parser.add_mutually_exclusive_group()
-    model_group.add_argument("--exclude-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"], 
+    model_group.add_argument("--exclude-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"], 
         help="Exclude the given parallelism models from testing.")
-    model_group.add_argument("--include-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"],
+    model_group.add_argument("--include-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"],
         help="Only test the given parallelism models.")
     model_group = parser.add_mutually_exclusive_group()
     model_group.add_argument("--problem", type=str, help="Only test this probem if provided.")
@@ -134,7 +136,7 @@ def main():
     logging.info(f"Using driver root: {DRIVER_ROOT}")
 
     # gather the list of parallelism models to test
-    models_to_test = args.include_models if args.include_models else ["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip"]
+    models_to_test = args.include_models if args.include_models else ["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"]
     if args.exclude_models:
         models_to_test = [m for m in models_to_test if m not in args.exclude_models]
 
