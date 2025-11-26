@@ -135,7 +135,7 @@ DRIVER_MAP = {
     "kokkos": "kokkos",
     "cuda": "gpu",
     "hip": "gpu",
-    "pycompss": "cpu"
+    "pycompss": "pycompss"
 }
 
 """ Validators """

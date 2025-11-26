@@ -1,22 +1,24 @@
-# Driver for 57_transform_inverse_offset
-# """ In the vector x compute 1 - (1 / x) for each element.
+# Driver for 59_transform_map_function
+# """ Apply the isPowerOfTwo function to every value in x.
 #     Use PyCOMPSs to compute in parallel.
 # """
 
-import random
 from pycompss.api.task import task
 from pycompss.api.parameter import INOUT
 from pycompss.api.api import compss_wait_on
+
+from python.utilities import fillRand, fequal
 
 # --- CONTEXT -----------------------------------------------------
 
 class Context:
     def __init__(self, size=5):
         self.size = size
-        self.x = [random.randint(-50, 50) for _ in range(size)]
+        self.x = [0] * size
+        fillRand(self.x, -50, 50)
 
 def reset(ctx):
-    ctx.x = [random.randint(-50, 50) for _ in range(ctx.size)]
+    fillRand(ctx.x, -50, 50)
 
 def init():
     return Context(size=5)
@@ -26,15 +28,15 @@ def init():
 def compute(ctx):
     """
     Run the generated PyCOMPSs task.
-    oneMinusInverse returns a PyCOMPSs Future → must wait later.
+    isPowerOfTwo returns a PyCOMPSs Future → must wait later.
     """
-    ctx.x = oneMinusInverse(ctx.x)
+    ctx.x = isPowerOfTwo(ctx.x)
 
 def best(ctx):
     """
     Run sequential baseline version
     """
-    correct_oneMinusInverse(ctx.x)
+    correct_isPowerOfTwo(ctx.x)
 
 # --- VALIDATE -----------------------------------------------------
 
@@ -42,18 +44,19 @@ def validate(ctx):
     import math
 
     for _ in range(5):
-        test      = [random.randint(-50, 50) for _ in range(5)]
+        test      = [0] * 5
+        fillRand(test, -50, 50)
+
         correct   = test.copy()
         test_comp = test.copy()
 
         # Compute reference (sequential)
-        correct_oneMinusInverse(correct)
+        correct_isPowerOfTwo(correct)
 
         # Compute PyCOMPSs version
-        test_result = oneMinusInverse(test_comp)
+        test_result = isPowerOfTwo(test_comp)
         # Compare
-        if not all(math.isclose(a, b, abs_tol=1e-6)
-                   for a, b in zip(correct, test_result)):
+        if fequal(correct, test_result, eps=1e-6) is False:
             return False
 
     return True

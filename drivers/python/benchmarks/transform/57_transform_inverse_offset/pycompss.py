@@ -1,23 +1,24 @@
-# Driver for 55_transform_relu
-# """ Compute the ReLU function on every element of x. Elements less than zero become zero,
-#     while elements greater than zero stay the same.
+# Driver for 57_transform_inverse_offset
+# """ In the vector x compute 1 - (1 / x) for each element.
+#     Use PyCOMPSs to compute in parallel.
 # """
 
-import random
 from pycompss.api.task import task
 from pycompss.api.parameter import INOUT
 from pycompss.api.api import compss_wait_on
+
+from python.utilities import fillRand, fequal
 
 # --- CONTEXT -----------------------------------------------------
 
 class Context:
     def __init__(self, size=5):
         self.size = size
-        self.x = [random.uniform(-50, 50) for _ in range(size)]
+        self.x = [0] * size
+        fillRand(self.x, -50, 50)
 
 def reset(ctx):
-    ctx.x = [random.uniform(-50, 50) for _ in range(ctx.size)]
-
+    fillRand(ctx.x, -50, 50)
 def init():
     return Context(size=5)
 
@@ -26,15 +27,15 @@ def init():
 def compute(ctx):
     """
     Run the generated PyCOMPSs task.
-    relu_task returns a PyCOMPSs Future → must wait later.
+    oneMinusInverse returns a PyCOMPSs Future → must wait later.
     """
-    ctx.x = relu(ctx.x)
+    ctx.x = oneMinusInverse(ctx.x)
 
 def best(ctx):
     """
     Run sequential baseline version
     """
-    correct_relu(ctx.x)
+    correct_oneMinusInverse(ctx.x)
 
 # --- VALIDATE -----------------------------------------------------
 
@@ -42,19 +43,19 @@ def validate(ctx):
     import math
 
     for _ in range(5):
-        test      = [random.uniform(-50, 50) for _ in range(5)]
+        test      = [0] * 5
+        fillRand(test, -50, 50)
+
         correct   = test.copy()
         test_comp = test.copy()
 
         # Compute reference (sequential)
-        correct_relu(correct)
+        correct_oneMinusInverse(correct)
 
         # Compute PyCOMPSs version
-        test_result = relu(test_comp)
-
+        test_result = oneMinusInverse(test_comp)
         # Compare
-        if not all(math.isclose(a, b, abs_tol=1e-6)
-                   for a, b in zip(correct, test_result)):
+        if not fequal(correct, test_result, eps=1e-6):
             return False
 
     return True
