@@ -1,0 +1,21 @@
+[
+    {
+        "problem_type": "transform",
+        "language": "python",
+        "name": "59_transform_map_function",
+        "parallelism_model": "pycompss",
+        "prompt": "\"\"\"Apply the isPowerOfTwo function to every value in x and store the results in mask.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [8, 0, 9, 7, 15, 64, 3]\n   output: [true, false, false, false, false, true, false]\n\"\"\"\n\ndef isPowerOfTwo(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value):\n    return value > 0 and (value & (value - 1)) == 0",
+            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value)\n    x = 1/0\n    return value > 0 and (value & (value - 1)) == 0",
+            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

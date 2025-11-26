@@ -1,0 +1,22 @@
+[
+    {
+        "problem_type": "transform",
+        "language": "python",
+        "name": "55_transform_relu",
+        "parallelism_model": "pycompss",
+        "prompt": "\"\"\"Apply the ReLU function to every value in x. Elements less than zero become zero, while elements greater than zero stay the same.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [-1.8, 24.0, 1.2, 0.0, -5.1, -0.2, 4.5]\n   output: [0, 24.0, 1.2, 0, 0, 0, 4.5]\n\"\"\"\n\ndef relu(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "futures = [relu_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef relu_task(value):\n    \"\"\"Return ReLU(value): 0 if negative, else value.\"\"\"\n    return value if value > 0 else 0",
+            "futures = [relu_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef relu_task(value)\n    \"\"\"Return ReLU(value): 0 if negative, else value.\"\"\"\n    return value if value > 0 else 0",
+            "futures = [relu_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef relu_task(value):\n    \"\"\"Make COMPSs task fail.\"\"\"\n    return 1/0"
+        ],
+        "raw_outputs": [
+            "\"\"\"Compute the ReLU function on every element of x using PyCOMPSs to compute in parallel.\nExample:\n\ninput: [-1.8, 24.0, 1.2, 0.0, -5.1, -0.2, 4.5]\noutput: [0, 24.0, 1.2, 0, 0, 0, 4.5]\n\"\"\"\n\nfrom pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=float)\ndef relu(value):\n    \"\"\"Return ReLU(value): 0 if negative, else value.\"\"\"\n    return value if value > 0 else 0\n\n\ndef main():\n    x = [-1.8, 24.0, 1.2, 0.0, -5.1, -0.2, 4.5]\n    futures = [relu(v) for v in x]\n    output = compss_wait_on(futures)\n    print(\"input: \", x)\n    print(\"output:\", output)\n\n\nif __name__ == \"__main__\":\n    main()"
+        ]
+    }
+]

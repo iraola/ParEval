@@ -1,0 +1,21 @@
+[
+    {
+        "problem_type": "transform",
+        "language": "python",
+        "name": "58_transform_squaring",
+        "parallelism_model": "pycompss",
+        "prompt": "\"\"\"Replace every element of x with the square of its value.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [5, 1, 2, -4, 8]\n   output: [25, 1, 4, 16, 64]\n\"\"\"\n\ndef squareEach(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value):\n    \"\"\"Replace every element of x with the square of its value.\"\"\"\n    return value * value",
+            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value)\n    \"\"\"Replace every element of x with the square of its value.\"\"\"\n    return value * value",
+            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value):\n    \"\"\"Make COMPSs task fail.\"\"\"\n    return 1/0"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

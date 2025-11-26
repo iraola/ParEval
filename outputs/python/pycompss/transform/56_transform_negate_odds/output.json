@@ -1,0 +1,21 @@
+[
+    {
+        "problem_type": "transform",
+        "language": "python",
+        "name": "56_transform_negate_odds",
+        "parallelism_model": "pycompss",
+        "prompt": "\"\"\"In the vector x negate the odd values and divide the even values by 2.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [16, 11, 12, 14, 1, 0, 5]\n   output: [8, -11, 6, 7, -1, 0, -5]\n\"\"\"\n\ndef negateOddsAndHalveEvens(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value):\n    \"\"\"In the vector x negate the odd values and divide the even values by 2.\"\"\"\n    if value % 2 == 0:\n        return value / 2\n    else:\n        return -value",
+            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value)\n    \"\"\"In the vector x negate the odd values and divide the even values by 2.\"\"\"\n    if value % 2 == 0:\n        return value / 2\n    else:\n        return -value",
+            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

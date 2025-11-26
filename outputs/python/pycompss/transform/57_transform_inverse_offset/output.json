@@ -1,0 +1,21 @@
+[
+    {
+        "problem_type": "transform",
+        "language": "python",
+        "name": "57_transform_inverse_offset",
+        "parallelism_model": "pycompss",
+        "prompt": "\"\"\"Replace every element of the vector x with 1-1/x.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [2, 4, 1, 12, -2]\n   output: [0.5, 0.75, 0, 0.91666666, 1.5]\n\"\"\"\n\ndef oneMinusInverse(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value):\n    \"\"\"Replace every element of the vector x with 1-1/x.\"\"\"\n    return 1 - (1 / value)",
+            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value)\n    \"\"\"Replace every element of the vector x with 1-1/x.\"\"\"\n    return 1 - (1 / value)",
+            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
