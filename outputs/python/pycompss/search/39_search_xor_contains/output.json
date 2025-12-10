@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "search",
+        "language": "python",
+        "name": "39_search_xor_contains",
+        "parallelism_model": "pycompss",
+        "prompt": "def xorContains(x, y, val):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "in_x = [check_element(elem, val) for elem in x]\n    in_y = [check_element(elem, val) for elem in y]\n    res_x = compss_wait_on(in_x)\n    res_y = compss_wait_on(in_y)\n    contains_x = any(res_x)\n    contains_y = any(res_y)\n    return contains_x != contains_y\n\n@task(returns=bool)\ndef check_element(element, val):\n    \"\"\"Return True if element == val, else False.\"\"\"\n    return element == val"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]
