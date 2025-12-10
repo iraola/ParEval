@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "search",
+        "language": "python",
+        "name": "36_search_check_if_array_contains_value",
+        "parallelism_model": "pycompss",
+        "prompt": "def contains(x, target):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "result = [task_contains(value, target) for value in x]\n    output = compss_wait_on(result)\n    return any(output)\n\n@task(returns=bool)\ndef task_contains(value, target):\n    \"\"\"Return True if value == target, else False.\"\"\"\n    return value == target"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]
