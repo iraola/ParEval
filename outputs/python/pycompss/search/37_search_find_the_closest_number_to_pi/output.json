@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "search",
+        "language": "python",
+        "name": "37_search_find_the_closest_number_to_pi",
+        "parallelism_model": "pycompss",
+        "prompt": "def findClosestToPi(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "futures = [distance_to_pi(i, v) for i, v in enumerate(x)]\n    output = compss_wait_on(futures)\n    closest_index = min(output, key=lambda t: t[1])[0]\n    return closest_index\n\n@task(returns=float)\ndef distance_to_pi(index, value):\n    \"\"\"Return absolute distance from pi.\"\"\"\n    from math import pi\n    return (index, abs(pi - value))"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]
