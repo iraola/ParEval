@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "search",
+        "language": "python",
+        "name": "38_search_find_the_first_even_number",
+        "parallelism_model": "pycompss",
+        "prompt": "def findFirstEven(x):",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "results = [check_even(idx, value) for idx, value in enumerate(x)]\n    results = compss_wait_on(results)\n    indices = [idx for idx in results if idx is not None]\n    return min(indices) if indices else -1\n\n@task(returns=int)\ndef check_even(index, value):\n    \"\"\"Return index if value is even, else None.\"\"\"\n    return index if value % 2 == 0 else None"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]
