@@ -16,7 +16,9 @@ a.out
 *~
 
 .venv
-*.json
+generate/*.json
+drivers/*.json
+prompts/*.json
 
-**/deepseek-ai
+/models
 scratch/
