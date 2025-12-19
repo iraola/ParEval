@@ -36,6 +36,17 @@ parser.add_argument('--prompted', action='store_true', help='Use prompted genera
 parser.add_argument('--hf_token', type=str, help='HuggingFace API token for loading models')
 args = parser.parse_args()
 
+local_model_path = os.path.join("..", "models", args.model)
+
+get_inference_model_path = args.model
+if os.path.isdir(local_model_path):
+    print(f"Found local model: {local_model_path}")
+    args.model = local_model_path
+else:
+    print(f"ℹModel not found at {local_model_path}")
+    print(f"   Attempting to load '{args.model}' from Hugging Face cache or absolute path.")
+
+
 """ Load prompts """
 with open(args.prompts, 'r') as json_file:
     prompts = json.load(json_file)
@@ -91,7 +102,7 @@ if not args.restart and args.restore_from and os.path.exists(args.restore_from):
 
 
 """ Initialize inference config """
-inference_config = get_inference_config(args.model, prompted=args.prompted)
+inference_config = get_inference_config(get_inference_model_path, prompted=args.prompted)
 
 # to use a torch.utils.data.DataSet with the HuggingFace pipeline, we need to flatten out the prompts
 # and repeat them for however many samples we want to generate per prompt

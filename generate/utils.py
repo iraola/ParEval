@@ -67,49 +67,68 @@ def find_matching_brace_index(code: str, open_brace_index: int) -> int:
 
 
 def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
-    """ Clean LLM output to find code solution. The output should be in a ```c++ ``` code block. If there are
-        multiple, then it tries to find the block with the function definition (as contained in the prompt).
-        The code block itself may include the function definition and body OR just the body. This will try
-        to parse both.
-    """
+    """ Clean LLM output to find code solution. """
     # 0. replace up to the end of the first instance of prompt
     prompt_loc = output.find(response_tag)
     if prompt_loc == -1:
-        raise ValueError(f"Response tag {response_tag} not found in output: {prompt}")
-    output = output[prompt_loc + len(response_tag):].strip()
-
-    # 1. Find all code blocks enclosed in triple backticks with "c++" language tag
-    code_blocks = re.findall(r"```\n(.*?)\n```", output, flags=re.DOTALL)
-    code_blocks = [block.removeprefix("```").removeprefix("cpp").removeprefix('c++').removesuffix('```') for block in code_blocks]
-
-    # 2. Prioritize code blocks containing the function definition from the prompt
-    sub_prompt = prompt.rstrip().removesuffix(response_tag).rstrip().removesuffix("```").split("```")[-1]
-    function_name = get_function_name(sub_prompt, "cuda" if "__global__" in sub_prompt else "serial")
-    prioritized_blocks = [block for block in code_blocks if function_name in block]
-
-    # 3. Choose the first block if multiple match, or any block if none match
-    if len(code_blocks) > 0:
-        selected_block = prioritized_blocks[0] if prioritized_blocks else code_blocks[0]
+        # Fallback: if tag not found, try to strip the raw prompt if possible, or just use raw output
+        # (You can leave the existing raise ValueError here if you prefer strictness)
+        pass 
     else:
-        if '```' in output: # starts with ```c++ but it didn't finish
-            code_idx = output.find('```')
-            selected_block = output[code_idx:].removeprefix('```')
+        output = output[prompt_loc + len(response_tag):].strip()
+
+    # 1. Find all code blocks (support python or c++)
+    # We use \w* to capture ```python, ```c++, or just ```
+    code_blocks = re.findall(r"```\w*\n(.*?)\n```", output, flags=re.DOTALL)
+
+    # 2. If PyCOMPSs, just return the first code block found
+    if "pycompss" in prompt.lower():
+        if len(code_blocks) > 0:
+            return code_blocks[0].strip()
         else:
-            selected_block = output
+            # If no code blocks, return the raw output (it might be code without backticks)
+            return output.strip()
 
-    # 4. Handle cases where the block contains only the function body
-    if function_name not in selected_block:
+    # 3. Existing C++ Logic (Strict filtering)
+    # If not PyCOMPSs, we assume it's C++ and attempt to filter by function name
+    try:
+        # Determine strict function name from the original prompt (stripped of markdown/tags)
+        # Note: We need the original C++ stub for this. 
+        # If 'prompt' passed here is the full instructed prompt, this extraction might need adjustment.
+        # Assuming 'prompt' here is the original input prompt string:
+        sub_prompt = prompt.rstrip().removesuffix(response_tag).rstrip()
+        if "```" in sub_prompt: 
+             sub_prompt = sub_prompt.split("```")[-1] # Extract just the C++ stub
+        
+        function_name = get_function_name(sub_prompt, "cuda" if "__global__" in sub_prompt else "serial")
+        prioritized_blocks = [block for block in code_blocks if function_name in block]
+        
+        if len(code_blocks) > 0:
+            selected_block = prioritized_blocks[0] if prioritized_blocks else code_blocks[0]
+        else:
+            if '```' in output:
+                 code_idx = output.find('```')
+                 selected_block = output[code_idx:].removeprefix('```')
+            else:
+                 selected_block = output
+
+        # Handle brace matching for C++
+        if function_name in selected_block:
+            # ... existing brace matching logic ...
+            function_start_index = selected_block.index(function_name)
+            open_brace_index = selected_block.find("{", function_start_index)
+            try:
+                close_brace_index = find_matching_brace_index(selected_block, open_brace_index)
+            except ValueError:
+                close_brace_index = len(selected_block)
+            return (selected_block[open_brace_index + 1 : close_brace_index] + "}").strip()
+            
         return selected_block
-    else:
-        function_start_index = selected_block.index(function_name)
-        open_brace_index = selected_block.find("{", function_start_index)
-        try:
-            close_brace_index = find_matching_brace_index(selected_block, open_brace_index)
-        except ValueError:
-            close_brace_index = len(selected_block)
 
-        function_body = selected_block[open_brace_index + 1 : close_brace_index]
-        return function_body + "}"
+    except ValueError:
+        # Fallback: if get_function_name fails (and it wasn't caught by the "pycompss" check)
+        # return the first block
+        return code_blocks[0] if code_blocks else output
 
 
 class InferenceConfig(ABC):
@@ -204,6 +223,57 @@ class CodeLlamaConfig(InferenceConfig):
 
     def clean_output(self, output: str, prompt: str) -> str:
         return clean_output(output, prompt)
+
+class Llama3InstructConfig(InferenceConfig):
+    """ Configuration for Llama 3 and 3.1 Instruct models """
+
+    PROMPT_TEMPLATE = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are an exceptionally intelligent coding assistant that consistently delivers accurate and reliable responses to user instructions.<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+{instruction}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+"""
+
+    def __init__(self, prompted : bool = False):
+        super().__init__(prompted=prompted)
+
+    def get_dtype(self):
+        return torch.bfloat16
+
+    def init_padding(self, tokenizer):
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+
+    def get_pad_token_id(self, tokenizer) -> int:
+        return tokenizer.pad_token_id
+
+    def get_eos_token_id(self, tokenizer) -> int:
+        return tokenizer.eos_token_id
+    
+    def trust_remote_code(self) -> bool:
+        return False
+
+    def format_prompt(self, prompt : str) -> str:
+        # 1. PyCOMPSs / Python Mode (Natural Language)
+        if "pycompss" in prompt.lower():
+            # Pass the prompt directly into the Llama 3 template
+            return self.PROMPT_TEMPLATE.format(instruction=prompt.strip())
+
+        # 2. Existing C++ Mode (Strict Function Signature)
+        # Identify function name for constraint
+        function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+        
+        # Wrap code in instructions
+        instruct_prompt = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        
+        # Apply Llama 3 chat template structure
+        return self.PROMPT_TEMPLATE.format(instruction=instruct_prompt)
+
+    def clean_output(self, output: str, prompt: str) -> str:
+        # Llama 3 uses a specific header for the assistant response
+        return clean_instruct_output(output, prompt, "<|start_header_id|>assistant<|end_header_id|>\n\n")
+
 
 class PolyCoderConfig(InferenceConfig):
 
@@ -391,7 +461,15 @@ class InstructConfig(InferenceConfig):
     def trust_remote_code(self) -> bool:
         return False
 
-    def format_prompt(self, prompt : str) -> str:
+    def format_prompt(self, prompt: str) -> str:
+        # 1. PyCOMPSs / Python Mode
+        if "pycompss" in prompt.lower():
+            # Pass the natural language prompt directly as the instruction
+            formatted = f"{self.instruction_tag}\n{prompt.strip()}\n{self.response_tag}\n"
+            return formatted
+
+        # 2. Existing C++ Mode
+        # (This preserves your exact current behavior for C++ files)
         function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
         prompt = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
         prompt = f"{self.instruction_tag}\n{prompt}\n{self.response_tag}\n"
@@ -484,6 +562,10 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return ChatMLConfig(**kwargs)
     elif model_name.startswith('Qwen/Qwen2.5'):
         return QwenConfig(**kwargs)
+    elif model_name == 'deepseek-ai/deepseek-coder-6.7b-instruct':
+        return InstructConfig(instruction_tag='### Instruction:', response_tag='### Response:', **kwargs)
+    elif 'Llama-3.1' in model_name and 'Instruct' in model_name:
+        return Llama3InstructConfig(**kwargs)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
