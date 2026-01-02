@@ -1,53 +1,42 @@
-"""
-PyCOMPSs driver
-"""
-
 import time
-
 NITER = 5
 
 def run_benchmark():
-
-    # --- INIT ---
+    # 1. Setup
     ctx = init()
 
-    # --- VALIDATE ---
+    # 2. Validation (Single point of failure)
     print("Validating...")
-    is_valid = validate(ctx)
-    print("Validation:", "PASS" if is_valid else "FAIL")
-
-    if not is_valid:
-        destroy(ctx)
+    if not validate(ctx):
+        print("Validation: FAIL")
         return
+    print("Validation: PASS")
 
-    # --- BENCHMARK COMPUTE ---
-    total_time = 0.0
+    # 3. Benchmark Parallel (Compute)
     print("Running compute() benchmark...")
-
+    total_parallel = 0.0
     for _ in range(NITER):
-        start = time.time()
-        compute(ctx)
-
-        total_time += time.time() - start
         reset(ctx)
+        start = time.time()
+      
+        result = compute(ctx)
+        
+        total_parallel += (time.time() - start)
+    
+    print(f"Time: {total_parallel / NITER:.6f}")
 
-    print("Time:", total_time / NITER)
-
-    # --- BENCHMARK BEST SEQUENTIAL ---
-    total_time = 0.0
+    # 4. Benchmark Sequential (Best)
     print("Running best() benchmark...")
-
+    total_seq = 0.0
     for _ in range(NITER):
-        start = time.time()
-        best(ctx)
-        total_time += time.time() - start
         reset(ctx)
+        start = time.time()
+        
+        best(ctx)
+        
+        total_seq += (time.time() - start)
 
-    print("BestSequential:", total_time / NITER)
-
-    # --- CLEANUP ---
-    destroy(ctx)
-
+    print(f"BestSequential: {total_seq / NITER:.6f}")
 
 if __name__ == "__main__":
     run_benchmark()

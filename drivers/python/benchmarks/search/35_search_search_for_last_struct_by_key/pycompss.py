@@ -2,87 +2,77 @@
 # """ Find last book with less than 100 pages.
 #     Use PyCOMPSs to compute in parallel.
 # """
-
-
 from pycompss.api.task import task
 from pycompss.api.parameter import INOUT
 from pycompss.api.api import compss_wait_on
 import random
 from python.utilities import fillRand, fequal, fillRandString
 
-# --- CONTEXT -----------------------------------------------------
+# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
+    """
+    Holds the state (list of books) for the benchmark.
+    """
     def __init__(self, size=5):
         self.size = size
-        self.books = [("", 0) for _ in range(size)]
-        self.pages = [0] * size
-        self.titles = [""] * size
+        self.books = []
+        # Initialize data immediately
+        self.reset_data()
 
-def reset(ctx):
-    """Reset context with random data, ensuring at least one book < 100 pages"""
-    fillRandString(ctx.titles, 5, 15)
-    fillRand(ctx.pages, 101, 1000)
-    
-    # Ensure at least one book with < 100 pages
-    min_idx = 0
-    max_idx = ctx.size // 4
-    ctx.pages[random.randint(min_idx, max_idx)] = 72
-    
-    # Populate Book tuples
-    for i in range(ctx.size):
-        ctx.books[i] = (ctx.titles[i], ctx.pages[i])
+    def reset_data(self):
+        """
+        Populates the list of books. 
+        Each book is a tuple: (title: str, pages: int).
+        """
+        titles = [""] * self.size
+        pages = [0] * self.size
+        
+        fillRandString(titles, 5, 15)
+        fillRand(pages, 101, 1000)
+        
+        # Guarantee at least one "short" book (< 100 pages)
+        # to ensure the search logic is exercised.
+        pages[random.randint(0, self.size - 1)] = random.randint(10, 99)
+        
+        # Store as a list of tuples
+        self.books = list(zip(titles, pages))
+
+# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
-    """Initialize context with default size"""
-    ctx = Context(size=5)
-    reset(ctx)
-    return ctx
+    """ 
+    Initializes context as a Class Instance.
+    """
+    return Context()
+
+def reset(ctx: Context):
+    """
+    Wrapper to call the class method. 
+    """
+    ctx.reset_data()
 
 # --- COMPUTE -----------------------------------------------------
 
-def compute(ctx):
-    """
-    Run the generated PyCOMPSs task.
-    findLastShortBook returns a PyCOMPSs Future → must wait later.
-    """
-    findLastShortBook(ctx.books)
+def compute(ctx: Context):
+    """ Calls the PyCOMPSs function/s using data from the context class. """
+    return findLastShortBook(ctx.books)
 
-def best(ctx):
-    """
-    Run sequential baseline version
-    """
-    correct_findLastShortBook(ctx.books)
+def best(ctx: Context):
+    """ Calls the sequential baseline using data from the context class. """
+    return correct_findLastShortBook(ctx.books)
 
-# --- VALIDATE -----------------------------------------------------
+# --- VALIDATE ----------------------------------------------------
 
-def validate(ctx):
+def validate(ctx: Context):
+    """ Verifies that parallel output matches sequential output. """
     for _ in range(5):
-        # Create test data with random books
-        test_titles = [""] * 5
-        test_pages = [0] * 5
-        fillRandString(test_titles, 5, 15)
-        fillRand(test_pages, 101, 1000)
-        
-        # Ensure at least one book with < 100 pages
-        test_pages[random.randint(0, 1)] = random.randint(50, 99)
-        
-        # Build book tuples
-        test = [(test_titles[i], test_pages[i]) for i in range(5)]
-        # Compute reference (sequential)
-        correct = test.copy()
-        correct_result = correct_findLastShortBook(correct)
+        reset(ctx)
 
-        # Compute PyCOMPSs version
-        test_result = findLastShortBook(test)
+        test_res = compute(ctx)
+        seq_res = best(ctx)
         
-        # Compare results (both should be tuples or None)
-        if correct_result != test_result:
+        if test_res != seq_res:
+            print(f"Validation Failed: Parallel({test_res}) != Sequential({seq_res})")
             return False
-    
     return True
-
-# --- DESTROY -----------------------------------------------------
-
-def destroy(ctx):
-    del ctx

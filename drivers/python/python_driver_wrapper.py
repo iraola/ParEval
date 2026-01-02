@@ -23,6 +23,10 @@ DRIVER_MAP = {
 }
 
 class PythonDriverWrapper(DriverWrapper):
+    
+    # GLOBAL TRACKER: This stays alive across all instances of the class
+    # to ensure folder _0, _1, _2 are assigned correctly.
+    _GLOBAL_PROMPT_TO_ID = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -89,7 +93,7 @@ class PythonDriverWrapper(DriverWrapper):
         launch_format = self.launch_configs["format"]
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
         try:
-            run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry)
+            run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
         except subprocess.TimeoutExpired as e:
             return RunOutput(-1, str(e.stdout), f"[Timeout] {str(e.stderr)}", config=run_config)
         except UnicodeDecodeError as e:
@@ -104,42 +108,45 @@ class PythonDriverWrapper(DriverWrapper):
         """
         logging.debug(f"Testing output (python/pycompss):\n{output[:500]}{'...' if len(output)>500 else ''}")
 
+        # 1. Use the Class-level global tracker
+        if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
+            PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt] = len(PythonDriverWrapper._GLOBAL_PROMPT_TO_ID)
+        
+        p_idx = PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt]
 
         with tempfile.TemporaryDirectory(dir=self.scratch_dir) as tmpdir:
-            # 1) Write generated code to tmpdir/generated_code.py
-            src_ext = "py"
-            src_path = os.path.join(tmpdir, f"generated_code.{src_ext}")
-            write_success = self.write_source(prompt+"\n    "+output, src_path)
-            logging.debug(f"Wrote generated code to {src_path}.")
+            src_path = os.path.join(tmpdir, "generated_code.py")
+            write_success = self.write_source(prompt + "\n" + output, src_path)
 
-            # optionally save a copy of the generated source before cleanup
+            # 2. Setup Directory
+            dst_dir = None
             if self.save_generated_dir:
-                try:
-                    safe_type = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in problem_type)
-                    safe_name = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in prompt_name)
-                    dst_dir = os.path.join(self.save_generated_dir, safe_type, safe_name)
-                    os.makedirs(dst_dir, exist_ok=True)
-                    dst_fname = f"{self.parallelism_model}_{output_index}.{src_ext}"
-                    dst_path = os.path.join(dst_dir, dst_fname)
-                    shutil.copyfile(src_path, dst_path)
-                    logging.debug(f"Saved generated source to {dst_path}.")
-                except Exception as e:
-                    logging.warning(f"Failed to save generated source: {e}")
+                safe_type = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in problem_type)
+                safe_name = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in prompt_name)
+                dst_dir = os.path.join(self.save_generated_dir, safe_type, f"{safe_name}_{p_idx}")
+                os.makedirs(dst_dir, exist_ok=True)
 
+                # Save metadata
+                prompt_file = os.path.join(dst_dir, "prompt.txt")
+                if not os.path.exists(prompt_file):
+                    with open(prompt_file, "w") as f:
+                        f.write(prompt)
+
+                # Save raw code
+                shutil.copyfile(src_path, os.path.join(dst_dir, f"{self.parallelism_model}_{output_index}.py"))
+
+            # 3. Build
             exec_path = os.path.join(tmpdir, "a_out.py")
-
             driver_dir = os.path.dirname(test_driver_file)
             baseline_path = os.path.join(driver_dir, "baseline.py")
-
-            extra_sources = []
-            if os.path.exists(baseline_path):
-                extra_sources.append(baseline_path)
-            else:
-                logging.warning(f"No baseline.py found at {baseline_path}")
             
-            extra_sources.append(src_path)
-
-            build_result = self.compile(self.model_driver_file, *extra_sources, test_driver_file, output_path=exec_path)
+            sources = [self.model_driver_file]
+            if os.path.exists(baseline_path):
+                sources.append(baseline_path)
+            sources.append(src_path)
+            
+            # Note: passing test_driver_file as the final part of compilation
+            build_result = self.compile(*sources, test_driver_file, output_path=exec_path)
 
             # run the code
             configs = self.launch_configs["params"]
@@ -161,5 +168,10 @@ class PythonDriverWrapper(DriverWrapper):
                 for rr in run_results:
                     if rr.exit_code != 0:
                         logging.debug(f"Outputs for failed run:\n\tstdout: {rr.stdout}\n\tstderr: {rr.stderr}")
+
+            # 5. Save Merged Code (Matching the output index)
+            if dst_dir and build_result.did_build:
+                merged_fname = f"{self.parallelism_model}_{output_index}_merged_a_out.py"
+                shutil.copyfile(exec_path, os.path.join(dst_dir, merged_fname))
 
             return GeneratedTextResult(write_success, build_result, run_results)

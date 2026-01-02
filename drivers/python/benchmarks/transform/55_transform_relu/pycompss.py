@@ -2,66 +2,81 @@
 # """ Compute the ReLU function on every element of x. Elements less than zero become zero,
 #     while elements greater than zero stay the same.
 # """
-
-from pycompss.api.task import task
-from pycompss.api.parameter import INOUT
+import random
 from pycompss.api.api import compss_wait_on
+from pycompss.api.task import task
+from python.utilities import fillRand, fequal 
 
-from python.utilities import fillRand, fequal
-
-# --- CONTEXT -----------------------------------------------------
+# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
-    def __init__(self, size=5):
+    """
+    Holds the state for the benchmark
+    """
+    def __init__(self, size=10):
         self.size = size
-        self.x = [0.0] * size
+        self.x = []
+        # Initialize data immediately
+        self.reset_data()
+
+    def reset_data(self):
+        """Refills the list with random floats."""
+        self.x = [0.0] * self.size
         fillRand(self.x, -50.0, 50.0)
 
-def reset(ctx):
-    fillRand(ctx.x, -50.0, 50.0)
+# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
-    return Context(size=5)
+    """ 
+    Initializes context as a Class Instance.
+    """
+    return Context()
+
+def reset(ctx: Context):
+    """
+    Wrapper to call the class method. 
+    Maintains compatibility with the generic driver.
+    """
+    ctx.reset_data()
 
 # --- COMPUTE -----------------------------------------------------
 
-def compute(ctx):
+def compute(ctx: Context):
     """
-    Run the generated PyCOMPSs task.
-    relu_task returns a PyCOMPSs Future → must wait later.
+    Launches parallel ReLU tasks.
+    Accesses data via dot notation (ctx.x).
     """
-    ctx.x = relu(ctx.x)
+    # Assuming 'relu' is the @task defined elsewhere
+    return relu(ctx.x)
 
-def best(ctx):
+def best(ctx: Context):
     """
-    Run sequential baseline version
+    Calls the sequential baseline.
     """
-    correct_relu(ctx.x)
+    # Assuming 'correct_relu' is defined elsewhere
+    return correct_relu(ctx.x)
 
-# --- VALIDATE -----------------------------------------------------
+# --- VALIDATE ----------------------------------------------------
 
-def validate(ctx):
-
+def validate(ctx: Context):
+    """ Verifies parallel ReLU matches sequential ReLU. """
     for _ in range(5):
-        test = [0.0] * 5
-        fillRand(test, -50.0, 50.0)
+        # Reset the data within the context for a new validation run
+        reset(ctx)
+        
+        # Create copies to avoid modifying the source data in place during comparison
+        # if the tasks operate in-place.
+        par_res = ctx.x[:]
+        seq_res = ctx.x[:]
 
-        correct   = test.copy()
-        test_comp = test.copy()
-
-        # Compute reference (sequential)
-        correct_relu(correct)
-
-        # Compute PyCOMPSs version
-        test_result = relu(test_comp)
-
-        # Compare
-        if not fequal(correct, test_result, eps=1e-6):
+        # Parallel execution
+        par_res = relu(par_res)
+        
+        # Sequential execution
+        correct_relu(seq_res)
+        
+        # Check equality
+        if not fequal(par_res, seq_res, eps=1e-6):
             return False
-
+            
     return True
-
-# --- DESTROY -----------------------------------------------------
-
-def destroy(ctx):
-    del ctx
