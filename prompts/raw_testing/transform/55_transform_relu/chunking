@@ -1,0 +1,11 @@
+"""
+Generate a PyCOMPSs Python module to compute the ReLU function on a list of floats. 
+To optimize for parallel performance, the code must divide the input list into 
+distinct 'chunks' or 'blocks.' 
+
+Requirements:
+- Define a @task function that processes a whole chunk of data at once.
+- The main(x) function should handle the partitioning of the list.
+- Synchronize using 'compss_wait_on' to return a standard Python list of floats.
+- Include all necessary PyCOMPSs imports.
+"""

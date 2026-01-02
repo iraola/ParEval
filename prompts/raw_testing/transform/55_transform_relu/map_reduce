@@ -1,0 +1,9 @@
+"""
+Generate a PyCOMPSs Python module that implements a Map-style parallelization 
+for the ReLU function.
+
+- 'Map' phase: Distribute slices of the input list to @task worker functions.
+- 'Gather' phase: The main(x) function should gather the results from all tasks.
+- Return: The complete list of processed floats.
+- Include imports for @task and compss_wait_on.
+"""

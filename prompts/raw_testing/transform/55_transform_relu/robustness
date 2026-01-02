@@ -1,0 +1,10 @@
+"""
+Create a robust PyCOMPSs module for parallel ReLU computation. 
+
+Features required:
+- Type checking: Ensure input 'x' is a list of numerical values.
+- Efficiency: Process the list in segments within the @task.
+- Orchestration: A main(x) function that waits for results and handles 
+  potential empty list inputs gracefully.
+- Return: A final list of floats.
+"""

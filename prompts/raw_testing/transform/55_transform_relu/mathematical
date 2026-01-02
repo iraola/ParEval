@@ -1,0 +1,11 @@
+"""
+Implement a parallel version of the Rectified Linear Unit (ReLU) defined 
+formally as f(x) = max(0, x). 
+
+Framework: PyCOMPSs.
+Specification:
+- The input is a list of floats 'x'.
+- Use task-based parallelism to compute f(x) for every element.
+- The implementation must include the @task definition and a main(x) orchestrator.
+- The final output must be a synchronized list of floats.
+"""

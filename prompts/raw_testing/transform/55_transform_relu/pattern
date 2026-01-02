@@ -1,0 +1,10 @@
+"""
+Using the pattern of a parallel 'Square' function (where a task computes 
+the square of a number), generate a PyCOMPSs module for a 'ReLU' function.
+
+The ReLU logic: If x < 0, result is 0; otherwise, result is x.
+The code must:
+- Use @task for the worker logic.
+- Use a main(x) function to manage task distribution.
+- Ensure the result returned by main(x) is a standard list of floats.
+"""

@@ -1,0 +1,13 @@
+"""
+Compute the ReLU function on every element of an input list x. Values less than
+zero become zero, others stay unchanged.
+Generate a Python module that uses PyCOMPSs to computate in parallel. The code 
+must include the required PyCOMPSs imports, one or more decorated functions 
+for the parallelization, and a function main(x) that orchestrates the tasks, 
+waits for completion, and returns a Python list of floats with the final result
+(not futures).
+
+Example:
+input:  [-1.8, 24.0, 1.2, 0.0, -5.1, -0.2, 4.5]
+output: [0.0, 24.0, 1.2, 0.0, 0.0, 0.0, 4.5]
+"""

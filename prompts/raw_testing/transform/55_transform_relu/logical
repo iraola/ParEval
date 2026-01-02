@@ -1,0 +1,10 @@
+"""
+Act as a parallel computing architect. First, briefly explain the logic of 
+distributing an element-wise ReLU operation across a cluster using PyCOMPSs. 
+
+Then, provide a Python implementation that:
+1. Imports the required PyCOMPSs decorators and API functions.
+2. Implements a @task decorated function for the ReLU calculation.
+3. Implements a main(x) function that orchestrates the parallel tasks.
+4. Returns the final synchronized result as a localized list of floats.
+"""

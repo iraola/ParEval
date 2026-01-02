@@ -1,0 +1,10 @@
+"""
+Generate a PyCOMPSs module to compute the ReLU function on a large list 'x'.
+Inside the @task function, use NumPy for vectorized ReLU computation on 
+list segments to maximize local performance.
+
+Requirements:
+- Input: List of floats.
+- Task: @task that accepts a list segment and returns a NumPy-processed list.
+- Main: Orchestrates segments and returns a single, unified Python list of floats.
+"""

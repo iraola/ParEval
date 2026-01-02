@@ -1,0 +1,11 @@
+"""
+Act as a Senior Software Engineer specializing in Distributed Systems. 
+Write a clean, PEP8-compliant Python module that uses PyCOMPSs to parallelize 
+the ReLU function on a list of floats.
+
+Include:
+- Clear docstrings for the worker tasks and the main function.
+- Proper module-level imports.
+- An efficient main(x) function that minimizes synchronization bottlenecks 
+  and returns a standard list.
+"""

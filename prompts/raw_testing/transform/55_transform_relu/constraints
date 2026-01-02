@@ -1,0 +1,10 @@
+"""
+Write a Python module using PyCOMPSs to perform a parallel ReLU operation.
+
+Constraints:
+- You must use the '@task' decorator with a 'returns=1' or 'returns=list' argument.
+- The parallelization must be done such that the main function initiates multiple tasks.
+- The main(x) function must wait for the tasks to finish and return a 
+  plain Python list (not a future object).
+- Ensure the code is self-contained with all imports.
+"""
