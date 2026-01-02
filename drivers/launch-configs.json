@@ -64,7 +64,7 @@
         "params": [{}]
     },
     "pycompss": {
-        "format": "runcompss --lang=python {exec_path} {args} --log_dir=$(pwd)",
+        "format": "runcompss --lang=python {exec_path} {args}",
         "params": [{}]
     }
 }

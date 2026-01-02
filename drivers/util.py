@@ -29,11 +29,13 @@ def mean(iterable) -> float:
         iterable = list(iterable)
     return sum(iterable) / len(iterable) if len(iterable) > 0 else 0
 
-def run_command(cmd: str, timeout: Optional[int] = None, dry: bool = False) -> CompletedProcess:
+def run_command(cmd: str, timeout: Optional[int] = None, dry: bool = False, parallelism_model: Optional[str] = None) -> CompletedProcess:
     """ Run the given command on the system and return the result """
     logging.debug(f"Running command: {cmd}")
     if dry:
         return CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
     else:
         cmd = shlex.split(cmd)
+        if parallelism_model == "pycompss":
+            subprocess.run("compss_clean_procs", capture_output=True, text=True, timeout=timeout)
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
