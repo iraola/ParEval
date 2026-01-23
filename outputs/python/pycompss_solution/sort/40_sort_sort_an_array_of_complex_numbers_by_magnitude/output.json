@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sort",
+        "language": "python",
+        "name": "40_sort_sort_an_array_of_complex_numbers_by_magnitude",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\nimport math\n\n\n@task(returns=float)\ndef magnitude(c):\n    \"\"\"Return the magnitude (absolute value) of a complex number.\"\"\"\n    return math.hypot(c.real, c.imag)\n\n\ndef main(x):\n    \"\"\"\n    Sort the list `x` of complex numbers by their magnitude (ascending) using\n    PyCOMPSs tasks at task level. This implementation launches one task per\n    element to compute its magnitude, then gathers the magnitudes and sorts\n    locally.\n\n    Returns a new list with complex numbers ordered by ascending magnitude.\n\n    Example:\n    input: [3.0-1.0j, 4.5+2.1j, 0.0-1.0j, 1.0-0.0j, 0.5+0.5j]\n    output: [0.5+0.5j, 0.0-1.0j, 1.0-0.0j, 3.0-1.0j, 4.5+2.1j]\n    \"\"\"\n    if x is None:\n        raise ValueError(\"input list x is None\")\n    arr = list(x)\n    if len(arr) == 0:\n        return []\n\n    # Launch one task per element to compute magnitude\n    mag_futures = [magnitude(c) for c in arr]\n\n    # Wait for results\n    mags = compss_wait_on(mag_futures)\n\n    # Pair and sort by magnitude\n    paired = sorted(zip(mags, arr), key=lambda t: t[0])\n\n    # Return only the complex numbers in sorted order\n    return [c for _, c in paired]"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]
