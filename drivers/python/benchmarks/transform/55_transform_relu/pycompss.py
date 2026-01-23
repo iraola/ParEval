@@ -3,8 +3,6 @@
 #     while elements greater than zero stay the same.
 # """
 import random
-from pycompss.api.api import compss_wait_on
-from pycompss.api.task import task
 from python.utilities import fillRand, fequal 
 
 # --- CONTEXT CLASS -----------------------------------------------
@@ -47,14 +45,14 @@ def compute(ctx: Context):
     Accesses data via dot notation (ctx.x).
     """
     # Assuming 'relu' is the @task defined elsewhere
-    return relu(ctx.x)
+    return main(ctx.x)
 
 def best(ctx: Context):
     """
     Calls the sequential baseline.
     """
     # Assuming 'correct_relu' is defined elsewhere
-    return correct_relu(ctx.x)
+    return correct_main(ctx.x)
 
 # --- VALIDATE ----------------------------------------------------
 
@@ -70,10 +68,10 @@ def validate(ctx: Context):
         seq_res = ctx.x[:]
 
         # Parallel execution
-        par_res = relu(par_res)
+        par_res = main(par_res)
         
         # Sequential execution
-        correct_relu(seq_res)
+        seq_res = correct_main(seq_res)
         
         # Check equality
         if not fequal(par_res, seq_res, eps=1e-6):
