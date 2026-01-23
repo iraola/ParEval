@@ -2,9 +2,6 @@
 # """ Find last book with less than 100 pages.
 #     Use PyCOMPSs to compute in parallel.
 # """
-from pycompss.api.task import task
-from pycompss.api.parameter import INOUT
-from pycompss.api.api import compss_wait_on
 import random
 from python.utilities import fillRand, fequal, fillRandString
 
@@ -56,12 +53,11 @@ def reset(ctx: Context):
 
 def compute(ctx: Context):
     """ Calls the PyCOMPSs function/s using data from the context class. """
-    return findLastShortBook(ctx.books)
+    return main(ctx.books)
 
 def best(ctx: Context):
     """ Calls the sequential baseline using data from the context class. """
-    return correct_findLastShortBook(ctx.books)
-
+    return correct_main(ctx.books)
 # --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):

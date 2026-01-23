@@ -1,7 +1,16 @@
-"""Return the index of the last Book item in the vector books where Book.pages is less than 100.
-   Use PyCOMPSs to search in parallel.
-	 Example:
+"""
+Generate a Python module to find the index of the last book with fewer than 100 pages 
+in parallel using the PyCOMPSs framework.
 
-   input: [{title="Green Eggs and Ham", pages=72}, {title="gulliver's travels", pages=362}, {title="Stories of Your Life", pages=54}, {title="Hamilton", pages=818}]
-   output: 2
+Task Specifications:
+- Functionality: The input is a list of tuples, where each tuple represents a book: (title, pages). Find the highest index i such that the book at i has strictly fewer than 100 pages.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to evaluate the condition for the elements.
+- Orchestration: Provide a main(books) function that distributes the work and manages task dependencies.
+- Synchronization: The main(books) function must explicitly wait for all tasks to complete before determining the final index.
+- Return Type: Return an integer representing the index (or -1 if no such book exists).
+
+Example:
+- Input: [("Green Eggs and Ham", 72), ("Gulliver's Travels", 362), ("Stories of Your Life", 54), ("Hamilton", 818)]
+- Output: 2
 """

@@ -4,14 +4,14 @@
         "language": "python",
         "name": "35_search_search_for_last_struct_by_key",
         "parallelism_model": "pycompss",
-        "prompt": "def findLastShortBook(books):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "futures = [check_short_book(idx, book) for idx, book in enumerate(books)]\n    output = compss_wait_on(futures)\n    indices = [idx for idx in output if idx is not None]\n    return max(indices) if indices else -1\n\n@task(returns=int)\ndef check_short_book(idx, book):\n    \"\"\"Return index if book.pages < 100, else None.\"\"\"\n    return idx if book[1] < 100 else None"
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\ndef main(books):\n    futures = [check_short_book(idx, book) for idx, book in enumerate(books)]\n    output = compss_wait_on(futures)\n    indices = [idx for idx in output if idx is not None]\n    return max(indices) if indices else -1\n\n@task(returns=int)\ndef check_short_book(idx, book):\n    \"\"\"Return index if book.pages < 100, else None.\"\"\"\n    return idx if book[1] < 100 else None"
             ],
         "raw_outputs": [
         ]
