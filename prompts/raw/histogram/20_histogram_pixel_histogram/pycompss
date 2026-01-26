@@ -1,9 +1,16 @@
-"""Count the number of pixels in image with each grayscale intensity.
-   The vector `image` is a grayscale image with values 0-255.
-   Store the results in `bins`.
-   Use PyCOMPSs to count in parallel.
-   Example:
-   
-   input: image=[2, 116, 201, 11, 92, 92, 201, 4, 2]
-   output: [0, 0, 2, 0, 1, ...]
+"""
+Generate a Python module to compute the histogram of pixel intensities (0-255) for an image 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: The input 'image' is a list of integers representing pixel intensities (0-255). Calculate the frequency of each intensity value.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to perform the counting logic in parallel.
+- Orchestration: Provide a main(image) function that distributes the work and gathers the results.
+- Synchronization: The main(image) function must explicitly wait for the tasks to complete.
+- Return Type: Return a standard Python list of 256 integers, where index i represents the count of pixels with intensity i.
+
+Example:
+- Input: [2, 116, 201, 11, 92, 92, 201, 4, 2]
+- Output: [0, 0, 2, 0, 1, ...] (Index 2 has value 2, Index 4 has value 1, etc.)
 """
