@@ -141,7 +141,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "10"
   },
   "16_graph_largest_component": {
     "serial": "(1<<12)",
