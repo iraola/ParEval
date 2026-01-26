@@ -135,18 +135,33 @@ class PythonDriverWrapper(DriverWrapper):
                 # Save raw code
                 shutil.copyfile(src_path, os.path.join(dst_dir, f"{self.parallelism_model}_{output_index}.py"))
 
+            # Create config file explicitly for this prompt run
+            config_path = os.path.join(tmpdir, "driver_config.py")
+            with open(config_path, "w") as f:
+                f.write(f"# Auto-generated configuration\n")
+                f.write(f"DRIVER_PROBLEM_SIZE = {problem_size}\n")
+                f.write(f"MAX_VALIDATION_ATTEMPTS = 5\n")
+
             # 3. Build
             exec_path = os.path.join(tmpdir, "a_out.py")
             driver_dir = os.path.dirname(test_driver_file)
             baseline_path = os.path.join(driver_dir, "baseline.py")
             
             sources = [self.model_driver_file]
+            sources.append(test_driver_file)
             if os.path.exists(baseline_path):
                 sources.append(baseline_path)
             sources.append(src_path)
+            sources.append(config_path)
             
-            # Note: passing test_driver_file as the final part of compilation
-            build_result = self.compile(*sources, test_driver_file, output_path=exec_path)
+            build_result = self.compile(*sources, output_path=exec_path)
+
+            # Save Merged Code immediately after build, so it's available for inspection
+            if dst_dir and build_result.did_build:
+                merged_fname = f"{self.parallelism_model}_{output_index}_merged_a_out.py"
+                merged_path = os.path.join(dst_dir, merged_fname)
+                shutil.copyfile(exec_path, merged_path)
+                logging.info(f"Saved merged executable to {merged_path}")
 
             # run the code
             configs = self.launch_configs["params"]
@@ -168,10 +183,5 @@ class PythonDriverWrapper(DriverWrapper):
                 for rr in run_results:
                     if rr.exit_code != 0:
                         logging.debug(f"Outputs for failed run:\n\tstdout: {rr.stdout}\n\tstderr: {rr.stderr}")
-
-            # 5. Save Merged Code (Matching the output index)
-            if dst_dir and build_result.did_build:
-                merged_fname = f"{self.parallelism_model}_{output_index}_merged_a_out.py"
-                shutil.copyfile(exec_path, os.path.join(dst_dir, merged_fname))
 
             return GeneratedTextResult(write_success, build_result, run_results)

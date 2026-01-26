@@ -11,8 +11,12 @@ class Context:
     """
     Holds the state (list of books) for the benchmark.
     """
-    def __init__(self, size=5):
-        self.size = size
+    def __init__(self, size=10):
+        try:
+            self.size = DRIVER_PROBLEM_SIZE
+        except NameError:
+            self.size = size
+
         self.books = []
         # Initialize data immediately
         self.reset_data()
@@ -62,7 +66,11 @@ def best(ctx: Context):
 
 def validate(ctx: Context):
     """ Verifies that parallel output matches sequential output. """
-    for _ in range(5):
+    try:
+        max_attempts = MAX_VALIDATION_ATTEMPTS
+    except NameError:
+        max_attempts = 5
+    for _ in range(max_attempts):
         reset(ctx)
 
         test_res = compute(ctx)

@@ -12,7 +12,11 @@ class Context:
     Holds the state for the benchmark
     """
     def __init__(self, size=10):
-        self.size = size
+        try:
+            self.size = DRIVER_PROBLEM_SIZE
+        except NameError:
+            self.size = size
+
         self.x = []
         # Initialize data immediately
         self.reset_data()
@@ -58,7 +62,12 @@ def best(ctx: Context):
 
 def validate(ctx: Context):
     """ Verifies parallel ReLU matches sequential ReLU. """
-    for _ in range(5):
+    try:
+        max_attempts = MAX_VALIDATION_ATTEMPTS
+    except NameError:
+        max_attempts = 5
+
+    for _ in range(max_attempts):
         # Reset the data within the context for a new validation run
         reset(ctx)
         
