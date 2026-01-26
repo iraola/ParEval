@@ -20,6 +20,17 @@ from cpp.cpp_driver_wrapper import CppDriverWrapper
 from python.python_driver_wrapper import PythonDriverWrapper
 from util import await_input, load_json
 
+# Fix for python versions older than 3.11 that don't have contextlib.chdir
+if not hasattr(contextlib, 'chdir'):
+    @contextlib.contextmanager
+    def chdir(path):
+        prev_cwd = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(prev_cwd)
+    contextlib.chdir = chdir
 
 """ Map language names to driver wrappers """
 LANGUAGE_DRIVERS = {
