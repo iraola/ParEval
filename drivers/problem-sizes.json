@@ -96,7 +96,8 @@
     "mpi+omp": "(1<<14)",
     "kokkos": "(1<<14)",
     "cuda": "(1<<14)",
-    "hip": "(1<<14)"
+    "hip": "(1<<14)",
+    "pycompss": "10"
   },
   "11_geometry_convex_hull_perimeter": {
     "serial": "(1<<14)",
