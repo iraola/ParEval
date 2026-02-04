@@ -278,7 +278,8 @@
     "mpi+omp": "(1<<23)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<23)",
-    "hip": "(1<<23)"
+    "hip": "(1<<23)",
+    "pycompss": "10"
   },
   "31_scan_scan_with_min_function": {
     "serial": "(1<<22)",
@@ -506,7 +507,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "10"
+    "pycompss": "5"
   },
   "56_transform_negate_odds": {
     "serial": "(1<<22)",
