@@ -233,7 +233,8 @@
     "mpi+omp": "(1<<24)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
-    "hip": "(1<<24)"
+    "hip": "(1<<24)",
+    "pycompss": "10"
   },
   "26_reduce_product_of_inverses": {
     "serial": "(1<<23)",
