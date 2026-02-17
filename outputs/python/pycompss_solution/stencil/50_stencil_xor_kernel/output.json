@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "stencil",
+        "language": "python",
+        "name": "50_stencil_xor_kernel",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.parameter import *\n\n@task(returns=1)\ndef xor_element(matrix, i, j, N):\n    n1 = n2 = n3 = n4 = n5 = n6 = n7 = n8 = 0\n\n    if i > 0:     n1 = matrix[i - 1][j]\n    if i < N - 1: n2 = matrix[i + 1][j]\n    if j > 0:     n3 = matrix[i][j - 1]\n    if j < N - 1: n4 = matrix[i][j + 1]\n    \n    if i > 0     and j > 0:     n5 = matrix[i - 1][j - 1]\n    if i > 0     and j < N - 1: n6 = matrix[i - 1][j + 1]\n    if i < N - 1 and j > 0:     n7 = matrix[i + 1][j - 1]\n    if i < N - 1 and j < N - 1: n8 = matrix[i + 1][j + 1]\n    \n    total = n1 + n2 + n3 + n4 + n5 + n6 + n7 + n8\n    \n    return 1 if total == 1 else 0\n\ndef main(matrix, N):\n    output_matrix = [[0] * N for _ in range(N)]\n    for i in range(N):\n        for j in range(N):\n            output_matrix[i][j] = xor_element(matrix, i, j, N)\n\n    output_matrix = compss_wait_on(output_matrix)\n\n    return output_matrix"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]

@@ -463,7 +463,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "3"
   },
   "51_stencil_edge_kernel": {
     "serial": "(1<<12)",
