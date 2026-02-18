@@ -6,7 +6,8 @@
     "mpi+omp": "(1<<10)",
     "kokkos": "(1<<9)",
     "cuda": "(1<<10)",
-    "hip": "(1<<10)"
+    "hip": "(1<<10)",
+    "pycompss": "5"
   },
   "01_dense_la_solve": {
     "serial": "(1<<10)",
