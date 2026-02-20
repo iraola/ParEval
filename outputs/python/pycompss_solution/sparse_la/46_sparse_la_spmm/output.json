@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sparse_la",
+        "language": "python",
+        "name": "46_sparse_la_spmm",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.parameter import *\n\n@task(Y=INOUT)\ndef operate(Y, a, x):\n\t\"\"\"\n\tTask to perform the operation Y[a['row']][x['column']] += a['value'] * x['value']\n\t\"\"\"\n\tY[0] += a['value'] * x['value']\n\ndef main(A, X, M, N):\n\t\"\"\"\n\tCompute matrix multiplication Y = AX.\n\tOutput is a standard 2D Python list [[...], [...]].\n\t\"\"\"\n\t\n\t# Initialize an M x N matrix with 0.0\n\tY = [[[0.0] for _ in range(N)] for _ in range(M)]\n\t\n\tfor a in A:\n\t\tfor x in X:\n\t\t\t# Match inner dimensions (Column of A == Row of X)\n\t\t\tif a['column'] == x['row']:\n\t\t\t\toperate(Y[a['row']][x['column']], a, x)\n\n\tY = compss_wait_on(Y)\n\tfinal_Y = [[val[0] for val in row] for row in Y]\n\treturn final_Y"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

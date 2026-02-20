@@ -429,7 +429,8 @@
     "mpi+omp": "(1<<8)",
     "kokkos": "(1<<8)",
     "cuda": "(1<<8)",
-    "hip": "(1<<8)"
+    "hip": "(1<<8)",
+    "pycompss": "12"
   },
   "47_sparse_la_spmv": {
     "serial": "(1<<11)",
