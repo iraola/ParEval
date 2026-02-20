@@ -7,37 +7,114 @@ import torch
 from torch.utils.data import Dataset
 from transformers import StoppingCriteria
 
-
-def clean_output(output : str, prompt : str) -> str:
-    """ Remove `prompt` from the begging of `output`.
-        Also truncate at the end of the function definition (i.e. matching closing brace).
+def extract_pycompss_solution(code: str) -> str:
     """
-    # replace up to the end of the first instance of prompt
+    Extracts Python code starting from imports/defs and ending strictly 
+    after the 'main' function returns.
+    """
+    lines = code.splitlines()
+    
+    # 1. Find Start (First Import or Function)
+    start_index = 0
+    start_pattern = re.compile(r'^\s*(import|from|@task|def)\s+')
+    
+    for i, line in enumerate(lines):
+        if start_pattern.match(line):
+            start_index = i
+            break
+            
+    # 2. Find 'def main'
+    main_start_index = -1
+    main_pattern = re.compile(r'^(\s*)def\s+main\s*\(')
+    
+    for i in range(start_index, len(lines)):
+        match = main_pattern.match(lines[i])
+        if match:
+            main_start_index = i
+            base_indent = len(match.group(1)) # Capture indent of main
+            break
+            
+    # Fallback: if no main found, return everything from start
+    if main_start_index == -1:
+        return "\n".join(lines[start_index:]).strip()
+
+    # 3. Find End (Iterate after main until indentation breaks)
+    last_valid_index = main_start_index
+    
+    for i in range(main_start_index + 1, len(lines)):
+        line = lines[i]
+        stripped = line.strip()
+        
+        # Skip empty lines without updating the valid index
+        if not stripped:
+            continue
+            
+        current_indent = len(line) - len(line.lstrip())
+        
+        # Handle comments
+        if stripped.startswith('#'):
+            # If the comment is properly indented, it belongs inside main
+            if current_indent > base_indent:
+                last_valid_index = i
+
+            continue
+            
+        # Check indentation of actual code
+        if current_indent <= base_indent:
+            break
+            
+        # Update pointer for valid indented code
+        last_valid_index = i
+
+    # Set end_index to immediately after the last confirmed line of the function
+    end_index = last_valid_index + 1
+
+    return "\n".join(lines[start_index:end_index]).strip()
+
+
+def clean_output(output: str, prompt: str) -> str:
+    """ 
+    Removes `prompt` from the beginning of `output`.
+    For C++/CUDA: Truncates at the matching closing brace.
+    For PyCOMPSs: Truncates after the 'main' function ends.
+    """
+    # 1. Remove the prompt from the output
     prompt_loc = output.find(prompt)
     if prompt_loc == -1:
-        raise ValueError(f"Prompt not found in output: {prompt}")
-    output = output[prompt_loc + len(prompt):].strip()
+        # If strict prompt not found, try stripping whitespace or proceed with full output
+        # (You can raise ValueError here if you prefer strictness)
+        raw_output = output
+    else:
+        raw_output = output[prompt_loc + len(prompt):].strip()
 
-    # temporarily add opening brace to the beginning
-    output = '{' + output
+    # 2. Check for PyCOMPSs / Python Mode
+    if "pycompss" in prompt.lower():
+        # Use the python-specific extractor
+        # Note: This assumes 'extract_pycompss_solution' is defined in your utils
+        return extract_pycompss_solution(raw_output)
 
-    # find the matching brace to output[0]
+    # 3. Default / C++ Mode (Original Logic)
+    # Temporarily add opening brace to the beginning to simulate function start
+    # This assumes the prompt ended with a function signature (e.g., "void foo() {")
+    # and the model generated the body starting with code or a brace.
+    
+    # We work on a copy to avoid messing up the python logic variables
+    cpp_output = '{' + raw_output
+
     stack = []
     index = 0
-    while index < len(output):
-        token = output[index]
+    while index < len(cpp_output):
+        token = cpp_output[index]
         if token == '{':
             stack.append(token)
         elif token == '}':
             stack.pop()
             if len(stack) == 0:
                 break
-
         index += 1
 
-    # truncate at the matching brace
-    output = output[1:index+1]
-    return output
+    # Truncate at the matching brace and remove the artificial opening brace
+    return cpp_output[1:index+1]
 
 GPU_FUNCTION_NAME_PATTERN = re.compile(r"__global__ void ([a-zA-Z0-9_]+)\(")
 CPU_FUNCTION_NAME_PATTERN = re.compile(r"\s*[a-zA-Z_]+ ([a-zA-Z0-9_]+)\(")
@@ -68,67 +145,71 @@ def find_matching_brace_index(code: str, open_brace_index: int) -> int:
 
 def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     """ Clean LLM output to find code solution. """
-    # 0. replace up to the end of the first instance of prompt
+    
+    # 0. Remove the prompt/instruction header if present
     prompt_loc = output.find(response_tag)
-    if prompt_loc == -1:
-        # Fallback: if tag not found, try to strip the raw prompt if possible, or just use raw output
-        # (You can leave the existing raise ValueError here if you prefer strictness)
-        pass 
-    else:
+    if prompt_loc != -1:
         output = output[prompt_loc + len(response_tag):].strip()
 
-    # 1. Find all code blocks (support python or c++)
-    # We use \w* to capture ```python, ```c++, or just ```
-    code_blocks = re.findall(r"```\w*\n(.*?)\n```", output, flags=re.DOTALL)
+    # 1. Extract Code Blocks (Generic)
+    # We find content inside ```python, ```c++, or just ```
+    code_blocks = re.findall(r"```(?:\w*)\n(.*?)\n```", output, flags=re.DOTALL)
+    
+    # Helper to get raw code if blocks exist, or fallback to full output
+    if len(code_blocks) > 0:
+        raw_code = code_blocks[0]
+    else:
+        # If no code blocks, strip potential backticks or use raw
+        raw_code = output.strip()
+        if raw_code.startswith("```"): raw_code = raw_code[3:]
+        if raw_code.endswith("```"): raw_code = raw_code[:-3]
 
-    # 2. If PyCOMPSs, just return the first code block found
+    # =========================================================
+    # PATH A: PyCOMPSs (Python)
+    # =========================================================
     if "pycompss" in prompt.lower():
-        if len(code_blocks) > 0:
-            return code_blocks[0].strip()
-        else:
-            # If no code blocks, return the raw output (it might be code without backticks)
-            return output.strip()
+        # Use the specific python extractor helper
+        return extract_pycompss_solution(raw_code)
 
-    # 3. Existing C++ Logic (Strict filtering)
-    # If not PyCOMPSs, we assume it's C++ and attempt to filter by function name
+    # =========================================================
+    # PATH B: C/C++ (Your Original Logic)
+    # =========================================================
     try:
-        # Determine strict function name from the original prompt (stripped of markdown/tags)
-        # Note: We need the original C++ stub for this. 
-        # If 'prompt' passed here is the full instructed prompt, this extraction might need adjustment.
-        # Assuming 'prompt' here is the original input prompt string:
+        # Reconstruct the sub-prompt to find the expected function name
         sub_prompt = prompt.rstrip().removesuffix(response_tag).rstrip()
         if "```" in sub_prompt: 
-             sub_prompt = sub_prompt.split("```")[-1] # Extract just the C++ stub
+             sub_prompt = sub_prompt.split("```")[-1] 
         
         function_name = get_function_name(sub_prompt, "cuda" if "__global__" in sub_prompt else "serial")
-        prioritized_blocks = [block for block in code_blocks if function_name in block]
         
+        # Select the best block containing the function name
+        selected_block = raw_code # Default
         if len(code_blocks) > 0:
-            selected_block = prioritized_blocks[0] if prioritized_blocks else code_blocks[0]
-        else:
-            if '```' in output:
-                 code_idx = output.find('```')
-                 selected_block = output[code_idx:].removeprefix('```')
+            prioritized_blocks = [block for block in code_blocks if function_name in block]
+            if prioritized_blocks:
+                selected_block = prioritized_blocks[0]
             else:
-                 selected_block = output
+                selected_block = code_blocks[0]
 
-        # Handle brace matching for C++
+        # Perform strict brace matching for C/C++
         if function_name in selected_block:
-            # ... existing brace matching logic ...
             function_start_index = selected_block.index(function_name)
             open_brace_index = selected_block.find("{", function_start_index)
-            try:
-                close_brace_index = find_matching_brace_index(selected_block, open_brace_index)
-            except ValueError:
-                close_brace_index = len(selected_block)
-            return (selected_block[open_brace_index + 1 : close_brace_index] + "}").strip()
+            
+            if open_brace_index != -1:
+                try:
+                    close_brace_index = find_matching_brace_index(selected_block, open_brace_index)
+                    # Return content inside braces + the closing brace
+                    return (selected_block[open_brace_index + 1 : close_brace_index] + "}").strip()
+                except ValueError:
+                    # If braces are unbalanced, return what we have
+                    pass
             
         return selected_block
 
     except ValueError:
-        # Fallback: if get_function_name fails (and it wasn't caught by the "pycompss" check)
-        # return the first block
-        return code_blocks[0] if code_blocks else output
+        # Fallback: if get_function_name fails, just return the first code block
+        return raw_code
 
 
 class InferenceConfig(ABC):
