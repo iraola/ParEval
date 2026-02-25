@@ -506,7 +506,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "3"
   },
   "55_transform_relu": {
     "serial": "(1<<22)",
