@@ -4,16 +4,14 @@
         "language": "python",
         "name": "59_transform_map_function",
         "parallelism_model": "pycompss",
-        "prompt": "\"\"\"Apply the isPowerOfTwo function to every value in x and store the results in mask.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [8, 0, 9, 7, 15, 64, 3]\n   output: [true, false, false, false, false, true, false]\n\"\"\"\n\ndef isPowerOfTwo(x):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value):\n    return value > 0 and (value & (value - 1)) == 0",
-            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value)\n    x = 1/0\n    return value > 0 and (value & (value - 1)) == 0",
-            "results = [isPowerOfTwo_task(value) for value in x]\n    results = compss_wait_on(results)\n    return results\n\n@task(returns=int)\ndef isPowerOfTwo_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
+            "from pycompss.api.task import task\nfrom pycompss.api.parameter import IN\nfrom pycompss.api.api import compss_wait_on\n\n@task(value=IN, returns=bool)\ndef task_is_power_of_two(value):\n    \"\"\"Check if a number is a power of two (PyCOMPSs task).\"\"\"\n    return not (value & (value - 1)) and value > 0\n\n\ndef main(x):\n    \"\"\"\n    Apply the isPowerOfTwo function to each element of the list x,\n    and store the result (True/False) in the mask list.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input: [8, 0, 9, 7, 15, 64, 3]\n    output: [true, false, false, false, false, true, false]\n    \"\"\"\n    mask = []\n    results = [task_is_power_of_two(value) for value in x]\n    results = compss_wait_on(results)\n    mask.extend(results)\n\n    return mask"
         ],
         "raw_outputs": [
         ]
