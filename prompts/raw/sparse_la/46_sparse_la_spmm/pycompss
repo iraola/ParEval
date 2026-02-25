@@ -1,8 +1,20 @@
-"""Compute the matrix multiplication Y=AX. A is a sparse MxK matrix in COO format.
-   X is a sparse KxN matrix in COO format. Y is a dense MxN matrix in row-major.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to compute sparse matrix multiplication 
+in parallel using the PyCOMPSs framework.
 
-   input: A=[{0,0,-2}, {0,1,1}, {1,1,-1}] X=[{0,1,2}, {1,0,-1}]
-   output: Y=[{-1,-4}, {1,0}]
+Task Specifications:
+- Functionality: Compute the matrix multiplication Y = AX, where 'A' and 'X' are sparse matrices represented in Coordinate (COO) format, and 'Y' is a dense MxN matrix. 
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., grouping the COO elements by row/column blocks and computing partial dense blocks of Y in parallel).
+- Orchestration: Provide a main(A, X, M, N) function that distributes the work, manages task dependencies, and aggregates the partial results into the final dense matrix.
+- Synchronization: The main(A, X, M, N) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of lists of floats representing the dense MxN matrix 'Y' (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: 
+    A = [{"row": 0, "column": 0, "value": -2.0}, {"row": 0, "column": 1, "value": 1.0}, {"row": 1, "column": 1, "value": -1.0}]
+    X = [{"row": 0, "column": 1, "value": 2.0}, {"row": 1, "column": 0, "value": -1.0}]
+    M = 2
+    N = 2
+- Output: [[-1.0, -4.0], [1.0, 0.0]]
 """

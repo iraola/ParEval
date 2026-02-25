@@ -1,14 +1,14 @@
 """
-Generate a Python module to count the total number of edges in a directed graph represented by an adjacency matrix 
+Generate a Python module to count the number of edges in a directed graph 
 in parallel using the PyCOMPSs framework.
 
 Task Specifications:
-- Functionality: The input 'A' is a list of lists (matrix) representing the adjacency matrix of a graph, where 1 indicates an edge and 0 indicates no edge. Calculate the total number of edges (total count of 1s).
+- Functionality: Count the total number of edges in a directed graph defined by an NxN adjacency matrix 'A'.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use a @task decorated function to count the edges in a single row (or chunk of rows).
-- Orchestration: Provide a main(A) function that distributes the row processing and aggregates the counts.
-- Synchronization: The main(A) function must explicitly wait for the task results before returning the total sum.
-- Return Type: Return a single integer representing the total number of edges.
+- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., counting the non-zero elements or edges within individual rows or chunks of the matrix).
+- Orchestration: Provide a main(A) function that distributes the work, manages task dependencies, and aggregates the partial counts.
+- Synchronization: The main(A) function must explicitly wait for all tasks to complete and compute the final sum.
+- Return Type: Return a standard Python integer representing the total number of edges (ensure it is the final synchronized result, not a future).
 
 Example:
 - Input: [[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1], [1, 1, 1, 0]]

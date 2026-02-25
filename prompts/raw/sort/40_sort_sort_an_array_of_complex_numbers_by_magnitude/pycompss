@@ -3,14 +3,14 @@ Generate a Python module to sort a list of complex numbers by their magnitude
 in parallel using the PyCOMPSs framework.
 
 Task Specifications:
-- Functionality: The input 'x' is a list of complex numbers. Sort the list in ascending order based on the magnitude (absolute value) of each number.
+- Functionality: Sort the input list 'x' of complex numbers in ascending order based on their absolute value (magnitude).
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use a @task decorated function to compute the magnitude of each complex number in parallel.
-- Orchestration: Provide a main(x) function that distributes the magnitude computation, waits for results, and performs the final sorting locally.
-- Synchronization: The main(x) function must explicitly wait for the magnitude tasks to complete before sorting.
-- Return Type: Return a new standard Python list containing the complex numbers in sorted order.
+- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., implementing a parallel merge sort or block sort algorithm).
+- Orchestration: Provide a main(x) function that distributes the work, manages task dependencies, and merges the sorted chunks.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of complex numbers (ensure it is the final synchronized result, not a list of futures).
 
 Example:
 - Input: [3.0-1.0j, 4.5+2.1j, 0.0-1.0j, 1.0-0.0j, 0.5+0.5j]
-- Output: [(0.5+0.5j), 0.0-1.0j, 1.0-0.0j, 3.0-1.0j, 4.5+2.1j]
+- Output: [0.5+0.5j, 0.0-1.0j, 1.0-0.0j, 3.0-1.0j, 4.5+2.1j]
 """

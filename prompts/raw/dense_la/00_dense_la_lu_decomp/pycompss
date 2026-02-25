@@ -1,9 +1,16 @@
-"""Factorize the matrix A into A=LU where L is a lower triangular matrix and U is an upper triangular matrix.
-   Store the results for L and U into the original matrix A. 
-   A is an NxN matrix stored in row-major.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to compute the LU factorization of a square matrix 
+in parallel using the PyCOMPSs framework.
 
-   input: [[4, 3], [6, 3]]
-   output: [[4, 3], [1.5, -1.5]]
+Task Specifications:
+- Functionality: Factorize an NxN matrix 'A' into A=LU, where L is a lower triangular matrix and U is an upper triangular matrix. The results for L and U must be stored in-place within the original matrix 'A'.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on, and any parameter directions like INOUT if needed).
+- Parallelization: Use one or more @task decorated functions to handle the block-wise or element-wise computations.
+- Orchestration: Provide a main(A, N) function that distributes the work and manages task dependencies.
+- Synchronization: The main(A, N) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of lists of floats representing the factorized matrix (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: [[4.0, 3.0], [6.0, 3.0]]
+- Output: [[4.0, 3.0], [1.5, -1.5]]
 """
