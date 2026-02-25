@@ -1,0 +1,24 @@
+"""
+Generate a Python module to compute the next state of a cellular automaton grid 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Compute the next state of an NxN grid `matrix`. Set every cell's value to 1 if it has exactly one neighbor (considering all 8 surrounding Moore neighbors) that is a 1. Otherwise, set it to 0. Note that we only consider the neighbors and not the cell's own current value when computing its new value.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., splitting the grid into chunks and passing the necessary "halo" or "ghost" boundary rows/columns to each task).
+- Orchestration: Provide a main(matrix, N) function that distributes the work, manages task dependencies, and reassembles the grid chunks.
+- Synchronization: The main(matrix, N) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of lists of integers representing the newly computed NxN grid (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: 
+    [[0, 1, 1, 0],
+     [1, 0, 0, 0],
+     [0, 0, 0, 0],
+     [0, 1, 0, 0]]
+- Output: 
+    [[0, 0, 1, 1],
+     [1, 0, 0, 1],
+     [0, 0, 1, 0],
+     [1, 0, 1, 0]]
+"""
