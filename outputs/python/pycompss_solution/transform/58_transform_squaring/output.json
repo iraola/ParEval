@@ -4,17 +4,15 @@
         "language": "python",
         "name": "58_transform_squaring",
         "parallelism_model": "pycompss",
-        "prompt": "\"\"\"Replace every element of x with the square of its value.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [5, 1, 2, -4, 8]\n   output: [25, 1, 4, 16, 64]\n\"\"\"\n\ndef squareEach(x):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value):\n    \"\"\"Replace every element of x with the square of its value.\"\"\"\n    return value * value",
-            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value)\n    \"\"\"Replace every element of x with the square of its value.\"\"\"\n    return value * value",
-            "futures = [squareEach_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef squareEach_task(value):\n    \"\"\"Make COMPSs task fail.\"\"\"\n    return 1/0"
-        ],
+            "from pycompss.api.task import task\nfrom pycompss.api.parameter import IN\nfrom pycompss.api.api import compss_wait_on\n\n\n@task(value=IN, returns=float)\ndef task_square(value):\n    \"\"\"Return the square of a single value (PyCOMPSs task).\"\"\"\n    return value * value\n\ndef main(x):\n    \"\"\"\n    Replace every element of the list x with its square.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input: [5, 1, 2, -4, 8]\n    output: [25, 1, 4, 16, 64]\n    \"\"\"\n    result = [task_square(value) for value in x]\n    result = compss_wait_on(result)\n    return result"
+          ],
         "raw_outputs": [
         ]
     }
