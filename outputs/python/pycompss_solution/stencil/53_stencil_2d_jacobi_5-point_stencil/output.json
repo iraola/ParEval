@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "stencil",
+        "language": "python",
+        "name": "53_stencil_2d_jacobi_5-point_stencil",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=1)\ndef compute_jacobi2D(input, i, j):\n    n1 = n2 = n3 = n4 = 0\n    if i > 0:     n1 = input[i - 1][j]\n    if i < len(input) - 1: n2 = input[i + 1][j]\n    if j > 0: n3 = input[i][j - 1]\n    if j < len(input[0]) - 1: n4 = input[i][j + 1]\n\n    return (n1 + n2 + n3 + n4 + input[i][j])/5\n\ndef main(input):\n    output = [[compute_jacobi2D(input, i, j) for j in range(len(input[0]))] for i in range(len(input))]\n    output = compss_wait_on(output)\n    return output"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

@@ -496,7 +496,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "3"
   },
   "54_stencil_game_of_life": {
     "serial": "(1<<12)",
