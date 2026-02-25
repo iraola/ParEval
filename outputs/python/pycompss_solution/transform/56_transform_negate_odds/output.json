@@ -4,17 +4,15 @@
         "language": "python",
         "name": "56_transform_negate_odds",
         "parallelism_model": "pycompss",
-        "prompt": "\"\"\"In the vector x negate the odd values and divide the even values by 2.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [16, 11, 12, 14, 1, 0, 5]\n   output: [8, -11, 6, 7, -1, 0, -5]\n\"\"\"\n\ndef negateOddsAndHalveEvens(x):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value):\n    \"\"\"In the vector x negate the odd values and divide the even values by 2.\"\"\"\n    if value % 2 == 0:\n        return value / 2\n    else:\n        return -value",
-            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value)\n    \"\"\"In the vector x negate the odd values and divide the even values by 2.\"\"\"\n    if value % 2 == 0:\n        return value / 2\n    else:\n        return -value",
-            "futures = [negateOddsAndHalveEvens_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef negateOddsAndHalveEvens_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
-        ],
+                "from pycompss.api.task import task\nfrom pycompss.api.parameter import IN\nfrom pycompss.api.api import compss_wait_on\n\n\n@task(value=IN, returns=int)\ndef task_negate_odds_and_halve_evens(value):\n    \"\"\"Negate odd numbers and halve even numbers (PyCOMPSs task).\"\"\"\n    return -value if value % 2 != 0 else value // 2\n\ndef main(x):\n    \"\"\"\n    Replace every element of the list x with -x if odd, or x/2 if even.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input: [16, 11, 12, 14, 1, 0, 5]\n    output: [8, -11, 6, 7, -1, 0, -5]\n    \"\"\"\n    result = [task_negate_odds_and_halve_evens(value) for value in x]\n    result = compss_wait_on(result)\n    return result"
+         ],
         "raw_outputs": [
         ]
     }

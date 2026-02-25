@@ -1,3 +1,8 @@
-def correct_negateOddsAndHalveEvens(x):
+def correct_main(x):
     for i in range(len(x)):
-        x[i] = -x[i] if x[i] % 2 != 0 else x[i] // 2
+        if x[i] % 2 != 0:
+            x[i] = -x[i]
+        else:
+            x[i] = x[i]//2
+
+    return x

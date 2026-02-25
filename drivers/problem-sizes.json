@@ -522,7 +522,8 @@
     "mpi+omp": "(1<<22)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
-    "hip": "(1<<22)"
+    "hip": "(1<<22)",
+    "pycompss": "5"
   },
   "57_transform_inverse_offset": {
     "serial": "(1<<21)",
