@@ -532,7 +532,8 @@
     "mpi+omp": "(1<<21)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
-    "hip": "(1<<21)"
+    "hip": "(1<<21)",
+    "pycompss": "5"
   },
   "58_transform_squaring": {
     "serial": "(1<<22)",

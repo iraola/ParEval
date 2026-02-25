@@ -4,16 +4,14 @@
         "language": "python",
         "name": "57_transform_inverse_offset",
         "parallelism_model": "pycompss",
-        "prompt": "\"\"\"Replace every element of the vector x with 1-1/x.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [2, 4, 1, 12, -2]\n   output: [0.5, 0.75, 0, 0.91666666, 1.5]\n\"\"\"\n\ndef oneMinusInverse(x):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value):\n    \"\"\"Replace every element of the vector x with 1-1/x.\"\"\"\n    return 1 - (1 / value)",
-            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value)\n    \"\"\"Replace every element of the vector x with 1-1/x.\"\"\"\n    return 1 - (1 / value)",
-            "futures = [oneMinusInverse_task(v) for v in x]\n    output = compss_wait_on(futures)\n    return output\n\n@task(returns=float)\ndef oneMinusInverse_task(value):\n    \"\"\"Make COMPSs taks fail.\"\"\"\n    return 1/0"
+            "from pycompss.api.task import task\nfrom pycompss.api.parameter import IN\nfrom pycompss.api.api import compss_wait_on\n\n\n@task(value=IN, returns=float)\ndef task_one_minus_inverse(value):\n    \"\"\"Compute 1 - 1/x (PyCOMPSs task).\"\"\"\n    return 1 - 1 / value\n\ndef main(x):\n    \"\"\"\n    Replace every element of the list x with 1 - 1/x.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input:  [2, 4, 1, 12, -2]\n    output: [0.5, 0.75, 0, 0.91666666, 1.5]\n    \"\"\"\n    result = [task_one_minus_inverse(value) for value in x]\n    result = compss_wait_on(result)\n    return result"
         ],
         "raw_outputs": [
         ]
