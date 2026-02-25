@@ -476,7 +476,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "3"
   },
   "52_stencil_1d_jacobi_3-point_stencil": {
     "serial": "(1<<24)",
