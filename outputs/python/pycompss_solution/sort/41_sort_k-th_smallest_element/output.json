@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sort",
+        "language": "python",
+        "name": "41_sort_k-th_smallest_element",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=2)\ndef compare(x_i, x_i_plus_1):\n    if x_i > x_i_plus_1:\n        return x_i_plus_1, x_i\n    return x_i, x_i_plus_1\n\n\ndef main(x, k):\n    n = len(x)\n\n    for phase in range(n):\n        if phase % 2 == 0:\n            indices = range(0, n-1, 2)\n        else:\n            indices = range(1, n-1, 2)\n\n        for i in indices:\n            x[i], x[i + 1] = compare(x[i], x[i + 1])\n\n    x = compss_wait_on(x)\n    \n    return x[k]"
+            ],
+        "raw_outputs": [
+        ]
+    }
+]

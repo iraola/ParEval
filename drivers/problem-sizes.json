@@ -384,7 +384,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "5"
   },
   "42_sort_sorted_ranks": {
     "serial": "(1<<17)",
@@ -393,7 +394,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "5"
   },
   "43_sort_sort_an_array_of_structs_by_key": {
     "serial": "(1<<17)",
@@ -402,7 +404,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "5"
   },
   "44_sort_sort_non-zero_elements": {
     "serial": "(1<<17)",
@@ -411,7 +414,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "5"
   },
   "45_sparse_la_sparse_solve": {
     "serial": "(1<<10)",
