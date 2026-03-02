@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "reduce",
+        "language": "python",
+        "name": "27_reduce_average",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n# TASK: Add two numbers together\n@task(returns=float)\ndef add_pair(a, b):\n    return a + b\n\ndef main(x):\n    \"\"\"\n    Computes average using a tree reduction strategy.\n    No manual chunking: we just combine pairs of numbers/futures iteratively.\n    \"\"\"\n    if not x:\n        return 0.0\n    \n    count = len(x)\n    \n    # We work on a copy so we don't modify original input\n    # This list will hold a mix of values and Future objects\n    working_list = list(x)\n    \n    # Tree Reduction Loop\n    # While we have more than one item, sum them in pairs\n    while len(working_list) > 1:\n        new_level = []\n        \n        # Step through the list in steps of 2: (0,1), (2,3), etc.\n        for i in range(0, len(working_list), 2):\n            if i + 1 < len(working_list):\n                # Found a pair: Launch a task to sum them\n                val_a = working_list[i]\n                val_b = working_list[i+1]\n                future_sum = add_pair(val_a, val_b)\n                new_level.append(future_sum)\n            else:\n                # Odd one out: Just carry it over to the next round\n                new_level.append(working_list[i])\n        \n        # The results of this round become the inputs for the next\n        working_list = new_level\n\n    # Wait for the final accumulated sum\n    total_sum = compss_wait_on(working_list[0])\n    \n    return total_sum / count"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

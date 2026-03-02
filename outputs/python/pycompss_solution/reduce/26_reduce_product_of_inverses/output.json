@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "reduce",
+        "language": "python",
+        "name": "26_reduce_product_of_inverses",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n# TASK: Process a pair (even_index, odd_index)\n@task(returns=float)\ndef compute_pair_ratio(numerator, denominator):\n    \"\"\"\n    Computes the term for a pair of elements.\n    Input: x[i] (even index), x[i+1] (odd index)\n    Logic: x[i] * (1 / x[i+1])  ==>  x[i] / x[i+1]\n    \"\"\"\n    if denominator == 0:\n        return 0.0 # Handle division by zero safely if needed\n    return numerator / denominator\n\ndef main(x):\n    \"\"\"\n    Calculates product of x where odd-indexed elements are inverted.\n    Strategy: \n    1. Compute ratios for pairs (x[0]/x[1], x[2]/x[3]...) in parallel.\n    2. Multiply results.\n    \"\"\"\n    if not x:\n        return 0.0\n        \n    partial_products = []\n    \n    # 1. Map Phase: Iterate through the list with a step of 2\n    # Indices: 0, 2, 4...\n    for i in range(0, len(x), 2):\n        if i + 1 < len(x):\n            # We have a pair: x[i] and x[i+1]\n            # Launch task to compute x[i] / x[i+1]\n            val = compute_pair_ratio(x[i], x[i+1])\n            partial_products.append(val)\n        else:\n            # We have a leftover element at the end (even index)\n            # It is just x[i], no inversion needed.\n            partial_products.append(x[i])\n\n    # 2. Sync: Wait for all pair computations\n    results = compss_wait_on(partial_products)\n    \n    # 3. Final Reduction (Sequential Product)\n    total_product = 1.0\n    for val in results:\n        total_product *= val\n        \n    return total_product"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

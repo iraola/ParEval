@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "reduce",
+        "language": "python",
+        "name": "29_reduce_sum_of_min_of_pairs",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n# TASK 1: Find min of two corresponding elements\n@task(returns=float)\ndef min_element(a, b):\n    return min(a, b)\n\n# TASK 2: Add two numbers (used for reduction)\n@task(returns=float)\ndef add_pair(a, b):\n    return a + b\n\ndef main(x, y):\n    \"\"\"\n    Computes sum(min(x[i], y[i])) for all i.\n    Uses 'No Chunking' strategy:\n    1. One task per index to find the min.\n    2. Tree reduction to sum the results.\n    \"\"\"\n    if not x or not y:\n        return 0.0\n    \n    # Ensure lengths match (handling edge cases simply)\n    n = min(len(x), len(y))\n    \n    # Phase 1: Map - Calculate minimums for all indices in parallel\n    min_values = []\n    for i in range(n):\n        # Launch task for every pair\n        val = min_element(x[i], y[i])\n        min_values.append(val)\n        \n    # Phase 2: Reduce - Sum the results using Tree strategy\n    working_list = min_values\n    \n    while len(working_list) > 1:\n        new_level = []\n        for i in range(0, len(working_list), 2):\n            if i + 1 < len(working_list):\n                # Sum the pair\n                s = add_pair(working_list[i], working_list[i+1])\n                new_level.append(s)\n            else:\n                # Carry over the last element\n                new_level.append(working_list[i])\n        working_list = new_level\n\n    # Wait for the final single result\n    return compss_wait_on(working_list[0])"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

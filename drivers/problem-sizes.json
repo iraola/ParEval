@@ -246,7 +246,8 @@
     "mpi+omp": "(1<<23)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<23)",
-    "hip": "(1<<23)"
+    "hip": "(1<<23)",
+    "pycompss": "10"
   },
   "27_reduce_average": {
     "serial": "(1<<24)",
@@ -255,7 +256,8 @@
     "mpi+omp": "(1<<24)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
-    "hip": "(1<<24)"
+    "hip": "(1<<24)",
+    "pycompss": "10"
   },
   "28_reduce_smallest_odd_number": {
     "serial": "(1<<24)",
@@ -264,7 +266,8 @@
     "mpi+omp": "(1<<24)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
-    "hip": "(1<<24)"
+    "hip": "(1<<24)",
+    "pycompss": "10"
   },
   "29_reduce_sum_of_min_of_pairs": {
     "serial": "(1<<24)",
@@ -273,7 +276,8 @@
     "mpi+omp": "(1<<24)",
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
-    "hip": "(1<<24)"
+    "hip": "(1<<24)",
+    "pycompss": "10"
   },
   "30_scan_prefix_sum": {
     "serial": "(1<<23)",
