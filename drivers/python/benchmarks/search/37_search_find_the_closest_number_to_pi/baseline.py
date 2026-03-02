@@ -1,4 +1,4 @@
-def correct_findClosestToPi(x):
+def correct_main(x):
     closest_index = -1
     closest_diff = float('inf')
     pi = 3.141592653589793

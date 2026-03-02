@@ -4,15 +4,15 @@
         "language": "python",
         "name": "38_search_find_the_first_even_number",
         "parallelism_model": "pycompss",
-        "prompt": "def findFirstEven(x):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "results = [check_even(idx, value) for idx, value in enumerate(x)]\n    results = compss_wait_on(results)\n    indices = [idx for idx in results if idx is not None]\n    return min(indices) if indices else -1\n\n@task(returns=int)\ndef check_even(index, value):\n    \"\"\"Return index if value is even, else None.\"\"\"\n    return index if value % 2 == 0 else None"
-            ],
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n\n# --- Task definitions ---\n\n@task(returns=int)\ndef check_even(idx, value):\n    \"\"\"Return index if value is even, else None (PyCOMPSs task).\"\"\"\n    return idx if value % 2 == 0 else None\n\n@task(returns=int)\ndef combine_indices(idx1, idx2):\n    \"\"\"Return the smaller index, ignoring None values.\"\"\"\n    if idx1 is None:\n        return idx2\n    if idx2 is None:\n        return idx1\n    return min(idx1, idx2)\n\ndef main(x):\n    \"\"\"\n    Find the index of the first even number in the list x.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input: [7, 3, 9, 5, 5, 7, 2, 9, 12, 11]\n    output: 6\n\n    input: [3, 8, 9, 9, 3, 4, 8, 6]\n    output: 1\n    \"\"\"\n    results = [check_even(idx, value) for idx, value in enumerate(x)]\n\n    while len(results) > 1:\n        for i in range(0, len(results), 2):\n            if i + 1 < len(results):\n                results[i // 2] = combine_indices(results[i], results[i + 1])\n            else:\n                results[i // 2] = results[i]  \n        results = results[: (len(results) + 1) // 2]\n        \n    results = compss_wait_on(results)\n\n    return results[0] if results[0] is not None else -1"
+        ],
         "raw_outputs": [
         ]
     }

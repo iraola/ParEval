@@ -1,4 +1,4 @@
-def correct_xorContains(x, y, val):
+def correct_main(x, y, val):
     found_in_x = False
     found_in_y = False
     

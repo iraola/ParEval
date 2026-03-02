@@ -4,15 +4,15 @@
         "language": "python",
         "name": "36_search_check_if_array_contains_value",
         "parallelism_model": "pycompss",
-        "prompt": "def contains(x, target):",
+        "prompt": "",
         "temperature": 0.2,
         "top_p": 0.95,
         "do_sample": false,
         "max_new_tokens": 1024,
         "prompted": false,
         "outputs": [
-            "result = [task_contains(value, target) for value in x]\n    output = compss_wait_on(result)\n    return any(output)\n\n@task(returns=bool)\ndef task_contains(value, target):\n    \"\"\"Return True if value == target, else False.\"\"\"\n    return value == target"
-            ],
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n\n@task(returns=bool)\ndef task_contains(value, target):\n    \"\"\"Return True if value equals target (PyCOMPSs task).\"\"\"\n    return value == target\n\n@task(returns=bool)\ndef combine_results(result1, result2):\n    \"\"\"Combine two boolean results using logical OR (PyCOMPSs task).\"\"\"\n    return result1 or result2\n\ndef main(x, target):\n    \"\"\"\n    Check if the list x contains the target value.\n    Use PyCOMPSs to compute in parallel.\n\n    Example:\n\n    input: x=[1, 8, 2, 6, 4, 6], target=3\n    output: false\n\n    input: x=[1, 8, 2, 6, 4, 6], target=8\n    output: true\n    \"\"\"\n    result = [task_contains(value, target) for value in x]\n\n    while len(result) > 1:\n        for i in range(0, len(result), 2):\n            if i + 1 < len(result):\n                result[i // 2] = combine_results(result[i], result[i + 1])\n            else:\n                result[i // 2] = result[i]  \n        result = result[: (len(result) + 1) // 2]\n\n    result = compss_wait_on(result)\n    return result[0]"
+        ],
         "raw_outputs": [
         ]
     }

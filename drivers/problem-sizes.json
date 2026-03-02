@@ -338,7 +338,8 @@
     "mpi+omp": "(1<<21)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
-    "hip": "(1<<21)"
+    "hip": "(1<<21)",
+    "pycompss": "5"
   },
   "37_search_find_the_closest_number_to_pi": {
     "serial": "(1<<21)",
@@ -347,7 +348,8 @@
     "mpi+omp": "(1<<21)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
-    "hip": "(1<<21)"
+    "hip": "(1<<21)",
+    "pycompss": "5"
   },
   "38_search_find_the_first_even_number": {
     "serial": "(1<<21)",
@@ -356,7 +358,8 @@
     "mpi+omp": "(1<<21)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
-    "hip": "(1<<21)"
+    "hip": "(1<<21)",
+    "pycompss": "5"
   },
   "39_search_xor_contains": {
     "serial": "(1<<21)",
@@ -365,7 +368,8 @@
     "mpi+omp": "(1<<21)",
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
-    "hip": "(1<<21)"
+    "hip": "(1<<21)",
+    "pycompss": "5"
   },
   "40_sort_sort_an_array_of_complex_numbers_by_magnitude": {
     "serial": "(1<<17)",

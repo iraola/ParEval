@@ -1,65 +1,87 @@
 # Driver for 38_search_find_the_first_even_number
 # """ Find the first even number in an array.
-#     Use PyCOMPSs to compute in parallel.
 # """
-
-
-from pycompss.api.task import task
-from pycompss.api.parameter import INOUT
-from pycompss.api.api import compss_wait_on
 import random
-from python.utilities import fillRand, fequal, fillRandString
+from python.utilities import fillRand, fequal 
 
-# --- CONTEXT -----------------------------------------------------
+# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
-    def __init__(self, size=5):
-        self.size = size
-        self.x = [0] * size
+    """
+    Holds the state for the benchmark
+    """
+    def __init__(self, size=10):
+        try:
+            self.size = DRIVER_PROBLEM_SIZE
+        except NameError:
+            self.size = size
 
-def reset(ctx):
-    """Reset context with random data"""
-    fillRand(ctx.x, 0, 100)
+        self.x = []
+        # Initialize data immediately
+        self.reset_data()
+
+    def reset_data(self):
+        """Refills the list with random integers."""
+        self.x = [0] * self.size
+        fillRand(self.x, -10, 10)
+        for val in self.x:
+            if val % 2 == 0:
+                return
+        # Ensure at least one even number is present
+        self.x[0] = 2
+
+# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
-    """Initialize context with default size"""
-    ctx = Context(size=5)
-    reset(ctx)
-    return ctx
+    """ 
+    Initializes context as a Class Instance.
+    """
+    return Context()
+
+def reset(ctx: Context):
+    """
+    Wrapper to call the class method. 
+    Maintains compatibility with the generic driver.
+    """
+    ctx.reset_data()
 
 # --- COMPUTE -----------------------------------------------------
 
-def compute(ctx):
+def compute(ctx: Context):
     """
-    Run the generated PyCOMPSs task.
-    findLastShortBook returns a PyCOMPSs Future → must wait later.
+    Launches parallel tasks to find the number in the array closest to pi.
+    Accesses data via dot notation (ctx.x).
     """
-    findFirstEven(ctx.x)
+    return main(ctx.x)
 
-def best(ctx):
+def best(ctx: Context):
     """
-    Run sequential baseline version
+    Calls the sequential baseline.
     """
-    correct_findFirstEven(ctx.x)
+    # Assuming 'correct_main' is defined elsewhere
+    return correct_main(ctx.x)
 
-# --- VALIDATE -----------------------------------------------------
+# --- VALIDATE ----------------------------------------------------
 
-def validate(ctx):
-    for _ in range(5):
-        # Create test data with random books
-        test = [0] * 5
-        fillRand(test, 0, 100)
+def validate(ctx: Context):
+    """ Verifies parallel tasks match sequential tasks. """
+    try:
+        max_attempts = MAX_VALIDATION_ATTEMPTS
+    except NameError:
+        max_attempts = 5
+
+    for _ in range(max_attempts):
+        # Reset the data within the context for a new validation run
+        reset(ctx)
+
+        # Parallel execution
+        par_res = main(ctx.x)
         
-        # Compute reference (sequential)
-        correct_result = correct_findFirstEven(test)
-
-        # Compute PyCOMPSs version
-        test_result = findFirstEven(test)
+        # Sequential execution
+        seq_res = correct_main(ctx.x)
         
-        # Compare results (bool)
-        return correct_result == test_result
-
-# --- DESTROY -----------------------------------------------------
-
-def destroy(ctx):
-    del ctx
+        # Check equality
+        if par_res != seq_res:
+            return False
+            
+    return True
