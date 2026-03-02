@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "scan",
+        "language": "python",
+        "name": "32_scan_sum_of_prefix_sum_array",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=float)\ndef sum_slice(data_slice):\n    \"\"\"Computes the sum of a list.\"\"\"\n    return sum(data_slice)\n\ndef main(x):\n    prefix_sum_values = []\n\n    # 1. Compute every Prefix Sum individually\n    for i in range(len(x)):\n        # Create a slice from 0 to i+1\n        # Example: if i=2, slice is x[0], x[1], x[2]\n        current_slice = x[:i+1]\n        \n        # Task: Sum this slice\n        p_val = sum_slice(current_slice)\n        prefix_sum_values.append(p_val)\n\n    # 2. Sum the results\n    # We can do this on the master since it's just a list of floats now\n    # or use a reduction task. Let's do a simple wait and sum.\n    prefix_sum_values = compss_wait_on(prefix_sum_values)\n    \n    return sum(prefix_sum_values)"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
