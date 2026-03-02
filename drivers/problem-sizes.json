@@ -200,7 +200,8 @@
     "mpi+omp": "(1<<22)",
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
-    "hip": "(1<<22)"
+    "hip": "(1<<22)",
+    "pycompss": "(1<<22)"
   },
   "22_histogram_count_quadrants": {
     "serial": "(1<<22)",
@@ -209,7 +210,8 @@
     "mpi+omp": "(1<<22)",
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
-    "hip": "(1<<22)"
+    "hip": "(1<<22)",
+    "pycompss": "(1<<22)"
   },
   "23_histogram_first_letter_counts": {
     "serial": "(1<<22)",
@@ -218,7 +220,8 @@
     "mpi+omp": "(1<<22)",
     "kokkos": "(1<<22)",
     "cuda": "(1<<17)",
-    "hip": "(1<<22)"
+    "hip": "(1<<22)",
+    "pycompss": "10"
   },
   "24_histogram_count_quartile": {
     "serial": "(1<<22)",
@@ -227,7 +230,8 @@
     "mpi+omp": "(1<<22)",
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
-    "hip": "(1<<22)"
+    "hip": "(1<<22)",
+    "pycompss": "(1<<22)"
   },
   "25_reduce_xor": {
     "serial": "(1<<24)",

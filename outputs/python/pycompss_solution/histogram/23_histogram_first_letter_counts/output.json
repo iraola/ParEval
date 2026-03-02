@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "histogram",
+        "language": "python",
+        "name": "23_histogram_first_letter_counts",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=int)\ndef count_strings_starting_with(strings, target_char):\n    \"\"\"\n    Scans the list and counts strings starting with target_char.\n    \"\"\"\n    count = 0\n    for s in strings:\n        if s.startswith(target_char):\n            count += 1\n    return count\n\ndef main(strings):\n    # We want counts for 'a' through 'z'\n    alphabet = \"abcdefghijklmnopqrstuvwxyz\"\n    bins = []\n    \n    # Launch 26 tasks\n    for char in alphabet:\n        # Pass the whole list to the task\n        count_future = count_strings_starting_with(strings, char)\n        bins.append(count_future)\n        \n    # Wait for all 26 tasks to finish\n    results = compss_wait_on(bins)\n    return results"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

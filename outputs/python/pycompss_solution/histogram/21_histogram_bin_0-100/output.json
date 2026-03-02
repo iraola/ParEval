@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "histogram",
+        "language": "python",
+        "name": "21_histogram_bin_0-100",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=list)\ndef compute_partial_bins(x, start, end):\n    \"\"\"Compute the histogram bins for a given range.\"\"\"\n    count = 0\n    for value in x:\n        if start <= value < end:\n            count += 1\n    return count\n\ndef main(x):\n    \"\"\"\n    Compute histogram bins of width 10 for the input array x.\n    The bins are: [0-10), [10-20), ..., [90-100]\n\n    Examples:\n\n    input: [7, 32, 95, 12, 39, 32, 11, 71, 70, 66]\n    output: [1, 2, 0, 3, 0, 0, 1, 2, 0, 1]\n    \"\"\"\n    bin_ranges = [(i, i + 10) for i in range(0, 100, 10)]\n    bin_ranges[-1] = (90, 101)  # Include 100 in the last bin\n    \n    partial_bins = [compute_partial_bins(x, start, end) for start, end in bin_ranges]\n    \n    partial_bins = compss_wait_on(partial_bins)\n    \n    return partial_bins"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

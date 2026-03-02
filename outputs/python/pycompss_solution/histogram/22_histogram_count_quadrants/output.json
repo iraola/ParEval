@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "histogram",
+        "language": "python",
+        "name": "22_histogram_count_quadrants",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n# 1. Define a task that counts points for a SPECIFIC quadrant\n@task(returns=int)\ndef count_specific_quadrant(points, quadrant_id):\n    \"\"\"\n    quadrant_id map:\n    0 -> Q1 (+x, +y)\n    1 -> Q2 (-x, +y)\n    2 -> Q3 (-x, -y)\n    3 -> Q4 (+x, -y)\n    \"\"\"\n    count = 0\n    for x, y in points:\n        match = False\n        if quadrant_id == 0:   # Q1\n            if x > 0 and y > 0: match = True\n        elif quadrant_id == 1: # Q2\n            if x < 0 and y > 0: match = True\n        elif quadrant_id == 2: # Q3\n            if x < 0 and y < 0: match = True\n        elif quadrant_id == 3: # Q4\n            if x > 0 and y < 0: match = True\n            \n        if match:\n            count += 1\n            \n    return count\n\ndef main(points):\n    # We want counts for [Q1, Q2, Q3, Q4]\n    bins = []\n    \n    # Launch 4 tasks, one for each quadrant\n    for q_id in range(4):\n        count_future = count_specific_quadrant(points, q_id)\n        bins.append(count_future)\n        \n    # Synchronization\n    bins = compss_wait_on(bins)\n    return bins"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
