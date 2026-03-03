@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "graph",
+        "language": "python",
+        "name": "17_graph_highest_degree",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=int)\ndef calculate_degree(row):\n    return sum(row)\n\ndef main(A):\n    degree_futures = []\n\n    for row in A:\n        future_degree = calculate_degree(row)\n        degree_futures.append(future_degree)\n\n    all_degrees = compss_wait_on(degree_futures)\n    \n    if not all_degrees:\n        return 0\n        \n    return max(all_degrees)"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

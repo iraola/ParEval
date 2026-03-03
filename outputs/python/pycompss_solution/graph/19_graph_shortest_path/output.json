@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "graph",
+        "language": "python",
+        "name": "19_graph_shortest_path",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=1)\ndef get_neighbors_task(node_row):\n    return [i for i, connected in enumerate(node_row) if connected == 1]      \n\ndef main(A, source, dest):\n    if source == dest:\n        return 0\n        \n    visited = {source}\n    frontier = [source]\n    distance = 0\n\n    while frontier:\n        distance += 1\n        \n        neighbor_tasks = [get_neighbors_task(A[node]) for node in frontier]\n        \n        neighbor_lists = compss_wait_on(neighbor_tasks)\n        \n        next_frontier = set()\n        for neighbors in neighbor_lists:\n            for neighbor in neighbors:\n                if neighbor == dest:\n                    return distance\n                if neighbor not in visited:\n                    visited.add(neighbor)\n                    next_frontier.add(neighbor)\n        \n        frontier = list(next_frontier)\n    \n    return -1"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

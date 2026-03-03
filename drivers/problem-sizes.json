@@ -154,7 +154,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "10"
   },
   "17_graph_highest_degree": {
     "serial": "(1<<12)",
@@ -163,7 +164,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "10"
   },
   "18_graph_count_components": {
     "serial": "(1<<12)",
@@ -172,7 +174,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "10"
   },
   "19_graph_shortest_path": {
     "serial": "(1<<12)",
@@ -181,7 +184,8 @@
     "mpi+omp": "(1<<12)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
-    "hip": "(1<<12)"
+    "hip": "(1<<12)",
+    "pycompss": "10"
   },
   "20_histogram_pixel_histogram": {
     "serial": "(1<<22)",
