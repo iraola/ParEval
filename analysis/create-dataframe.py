@@ -65,7 +65,9 @@ def main():
                     "did_build": output["did_build"],
                     "is_source_valid": output["is_source_valid"],
                     "best_sequential_runtime": output["best_sequential_runtime"],
-                    "output_idx": output_idx
+                    "output_idx": output_idx,
+                    "num_threads": None,
+                    "num_procs": None
                 }
                 rows.append(row)
                 continue
@@ -88,6 +90,8 @@ def main():
                     "best_sequential_runtime": output["best_sequential_runtime"],
                     "output_idx": output_idx,
                     "run_idx": run_idx,
+                    "num_threads": run.get("num_threads", None),
+                    "num_procs": run.get("num_procs", None),
                     **run
                 }
                 rows.append(row)
