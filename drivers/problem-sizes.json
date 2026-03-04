@@ -108,7 +108,8 @@
     "mpi+omp": "(1<<14)",
     "kokkos": "(1<<14)",
     "cuda": "(1<<14)",
-    "hip": "(1<<14)"
+    "hip": "(1<<14)",
+    "pycompss": "10"
   },
   "12_geometry_smallest_triangle": {
     "serial": "(1<<8)",
@@ -117,7 +118,8 @@
     "mpi+omp": "(1<<8)",
     "kokkos": "(1<<7)",
     "cuda": "(1<<10)",
-    "hip": "(1<<10)"
+    "hip": "(1<<10)",
+    "pycompss": "5"
   },
   "13_geometry_closest_pair_2d": {
     "serial": "(1<<14)",
@@ -126,7 +128,8 @@
     "mpi+omp": "(1<<14)",
     "kokkos": "(1<<13)",
     "cuda": "(1<<14)",
-    "hip": "(1<<14)"
+    "hip": "(1<<14)",
+    "pycompss": "5"
   },
   "14_geometry_closest_pair_1d": {
     "serial": "(1<<14)",
@@ -135,7 +138,8 @@
     "mpi+omp": "(1<<14)",
     "kokkos": "(1<<13)",
     "cuda": "(1<<14)",
-    "hip": "(1<<14)"
+    "hip": "(1<<14)",
+    "pycompss": "5"
   },
   "15_graph_edge_count": {
     "serial": "(1<<12)",
