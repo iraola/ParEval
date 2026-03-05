@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "fft",
+        "language": "python",
+        "name": "07_fft_fft_conjugate",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "import cmath\nfrom pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=list)\ndef compute_transform_pair(x, k_start, N):\n    pair_result = []\n    for k in range(k_start, min(k_start + 2, N)):\n        X_k = 0.0j\n        for n in range(N):\n            angle = -2j * cmath.pi * k * n / N\n            X_k += x[n] * cmath.exp(angle)\n        pair_result.append(X_k)\n    return pair_result\n\n@task(returns=list)\ndef conjugate_pair(pair_data):\n    return [val.conjugate() for val in pair_data]\n\ndef main(x):\n    N = len(x)\n    transform_futures = []\n    \n    for k_start in range(0, N, 2):\n        res = compute_transform_pair(x, k_start, N)\n        transform_futures.append(res)\n        \n    final_futures = [conjugate_pair(f) for f in transform_futures]\n\n    results = compss_wait_on(final_futures)\n    \n    x[:] = [item for sublist in results for item in sublist]\n    \n    return x"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

@@ -62,7 +62,8 @@
     "mpi+omp": "(1<<11)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<11)",
-    "hip": "(1<<11)"
+    "hip": "(1<<11)",
+    "pycompss": "10"
   },
   "07_fft_fft_conjugate": {
     "serial": "(1<<18)",
@@ -71,7 +72,8 @@
     "mpi+omp": "(1<<19)",
     "kokkos": "(1<<18)",
     "cuda": "(1<<18)",
-    "hip": "(1<<18)"
+    "hip": "(1<<18)",
+    "pycompss": "10"
   },
   "08_fft_split_fft": {
     "serial": "(1<<17)",
@@ -80,7 +82,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "10"
   },
   "09_fft_fft_out_of_place": {
     "serial": "(1<<17)",
@@ -89,7 +92,8 @@
     "mpi+omp": "(1<<17)",
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
-    "hip": "(1<<17)"
+    "hip": "(1<<17)",
+    "pycompss": "10"
   },
   "10_geometry_convex_hull": {
     "serial": "(1<<14)",
