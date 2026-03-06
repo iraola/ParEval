@@ -67,9 +67,6 @@ class PythonDriverWrapper(DriverWrapper):
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            if self.dry:
-                return BuildOutput(0, "Dry run: files would be merged", "")
-
             with open(output_path, "w") as out_fp:
                 for src in binaries[::-1]:
                     src_path = Path(src)
