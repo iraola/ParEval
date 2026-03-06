@@ -1,0 +1,16 @@
+{
+    "problem_type": "histogram",
+    "language": "python",
+    "name": "21_histogram_bin_0-100",
+    "parallelism_model": "pycompss",
+    "prompt": "\"\"\"Vector x contains values between 0 and 100, inclusive. Count the number of\n   values in [0,10), [10, 20), [20, 30), ... and store the counts in `bins`.\n   Use PyCOMPSs to compute in parallel.\n   Example:\n\n   input: [7, 32, 95, 12, 39, 32, 11, 71, 70, 66]\n   output: [1, 2, 0, 3, 0, 0, 1, 2, 0, 1]\n\"\"\"",
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "do_sample": false,
+    "max_new_tokens": 1024,
+    "prompted": false,
+    "outputs": [
+        "from pycompss.api.task import task\nfrom pycompss.api.parameter import *\nfrom pycompss.api.api import compss_wait_on\n\n# Initialize the vector\nx = [7, 32, 95, 12, 39, 32, 11, 71, 70, 66]\n\n# Define a function to count the number of values in each bin\n@task(returns=int)\ndef count_values_in_bin(bin_start, bin_end, values):\n    return sum(bin_start <= value < bin_end for value in values)\n\n# Define a function to compute the bins\ndef compute_bins(values):\n    bins = []\n    for i in range(0, 10):\n        bins.append(count_values_in_bin(i * 10, (i + 1) * 10, values))\n    return bins\n\n# Compute the bins\nbins = compute_bins(x)\n\n# Wait for the computation to finish\nbins = compss_wait_on(bins)\n\nprint(bins)"
+    ],
+    "raw_outputs": []
+}
