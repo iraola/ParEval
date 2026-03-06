@@ -1,9 +1,10 @@
-# local
-.vscode
+# IDE management
+.idea/
+*.code-workspace
 
 # python
 *.pyc
-__pycache__
+**/__pycache__/
 .env
 
 # cpp
@@ -20,5 +21,7 @@ generate/*.json
 drivers/*.json
 prompts/*.json
 
+# local data
 /models
 scratch/
+saved/
