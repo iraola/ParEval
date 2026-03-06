@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "dense_la",
+        "language": "python",
+        "name": "03_dense_la_axpy",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=float)\ndef compute_element(alpha, x_i, y_i):\n    val = alpha * x_i\n    val += y_i\n    return val\n\ndef main(alpha, x, y):\n    if alpha == 0:\n        return y\n    \n    M = len(x)\n    tasks = [compute_element(alpha, x[i], y[i]) for i in range(M)]\n    \n    return compss_wait_on(tasks)"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

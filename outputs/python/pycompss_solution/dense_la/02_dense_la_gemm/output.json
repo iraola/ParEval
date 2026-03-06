@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "dense_la",
+        "language": "python",
+        "name": "02_dense_la_gemm",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=list)\ndef compute_row(A_row, B):\n    N = len(B[0])\n    K = len(B)\n    row_result = []\n    for j in range(N):\n        val = 0\n        for k in range(K):\n            val += A_row[k] * B[k][j]\n        row_result.append(val)\n    return row_result\n\ndef main(A, B):\n    M = len(A)\n    tasks = [compute_row(A[i], B) for i in range(M)]\n    \n    return compss_wait_on(tasks)"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "dense_la",
+        "language": "python",
+        "name": "01_dense_la_solve",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.parameter import *\n\n@task(A_i=INOUT)\ndef lu_factorize_row(A_i, A_k, k, N):\n    factor = A_i[k] / A_k[k]\n    A_i[k] = factor\n    for j in range(k + 1, N):\n        A_i[j] -= factor * A_k[j]\n    \n\ndef lu_decomp(A):\n    N = len(A)\n    \n    for k in range(N):\n        for i in range(k + 1, N):\n            lu_factorize_row(A[i], A[k], k, N)\n    \n    A = compss_wait_on(A) \n    return A\n\n\n@task(returns=1)\ndef update_value(current_val, matrix_val, known_val):\n    return current_val - matrix_val * known_val\n\n\n@task(returns=1)\ndef divide_value(current_val, diag_val):\n    return current_val / diag_val\n\n\ndef forward_and_backward_substitution(A, b):\n    N = len(A)\n\n    y = list(b) \n    \n    for j in range(N):\n        for i in range(j + 1, N):\n            y[i] = update_value(y[i], A[i][j], y[j])\n            \n    x = list(y)\n    \n    for j in range(N - 1, -1, -1):\n        x[j] = divide_value(x[j], A[j][j])\n        \n        for i in range(j):\n            x[i] = update_value(x[i], A[i][j], x[j])\n            \n    x = compss_wait_on(x)\n    return x\n\n\ndef main(A, b):\n    A = lu_decomp(A)\n    \n    x = forward_and_backward_substitution(A, b)\n\n    x = compss_wait_on(x)\n    \n    return x"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
