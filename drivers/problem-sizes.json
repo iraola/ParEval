@@ -456,7 +456,8 @@
     "mpi+omp": "(1<<10)",
     "kokkos": "(1<<9)",
     "cuda": "(1<<10)",
-    "hip": "(1<<10)"
+    "hip": "(1<<10)",
+    "pycompss": "5"
   },
   "46_sparse_la_spmm": {
     "serial": "(1<<8)",
@@ -475,7 +476,8 @@
     "mpi+omp": "(1<<11)",
     "kokkos": "(1<<11)",
     "cuda": "(1<<11)",
-    "hip": "(1<<11)"
+    "hip": "(1<<11)",
+    "pycompss": "5"
   },
   "48_sparse_la_sparse_axpy": {
     "serial": "(1<<21)",
@@ -484,7 +486,8 @@
     "mpi+omp": "(1<<20)",
     "kokkos": "(1<<19)",
     "cuda": "(1<<20)",
-    "hip": "(1<<20)"
+    "hip": "(1<<20)",
+    "pycompss": "10"
   },
   "49_sparse_la_sparse_lu_decomp": {
     "serial": "(1<<9)",
@@ -493,7 +496,8 @@
     "mpi+omp": "(1<<9)",
     "kokkos": "(1<<8)",
     "cuda": "(1<<9)",
-    "hip": "(1<<9)"
+    "hip": "(1<<9)",
+    "pycompss": "5"
   },
   "50_stencil_xor_kernel": {
     "serial": "(1<<12)",

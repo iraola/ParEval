@@ -1,0 +1,105 @@
+# Driver for 45_sparse_la_sparse_solve
+# """ Solve a sparse linear system.
+# """
+
+import random
+from python.utilities import fillRand, fequal
+
+# --- CONTEXT CLASS -----------------------------------------------
+
+class Context:
+    """
+    Holds the state for the benchmark
+    """
+    def __init__(self, size=10):
+        try:
+            self.size = DRIVER_PROBLEM_SIZE
+        except NameError:
+            self.size = size
+
+        self.A_coo = []
+        self.b = []
+        self.N = self.size
+        
+        self.reset_data()
+
+    def reset_data(self):
+        """
+        Generates a solvable sparse linear system in COO format with 15% density.
+        """
+        total_elements = self.N * self.N
+        nnz = int(0.15 * total_elements)
+        
+        flat_indices = random.sample(range(total_elements), nnz)
+        
+        values = [0.0] * nnz
+        fillRand(values, -10.0, 10.0)
+        
+        self.A_coo = []
+        for i, idx in enumerate(flat_indices):
+            r = idx // self.N
+            c = idx % self.N
+            self.A_coo.append({'row': r, 'column': c, 'value': values[i]})
+            
+        self.A_coo.sort(key=lambda item: (item['row'], item['column']))
+        
+        x = [0.0] * self.N
+        fillRand(x, -10.0, 10.0)
+        
+        self.b = [0.0] * self.N
+        for element in self.A_coo:
+            self.b[element['row']] += element['value'] * x[element['column']]
+
+# --- DRIVER INTERFACE --------------------------------------------
+
+def init():
+    """ 
+    Initializes context as a Class Instance.
+    """
+    return Context()
+
+def reset(ctx: Context):
+    """
+    Wrapper to call the class method. 
+    Maintains compatibility with the generic driver.
+    """
+    ctx.reset_data()
+
+# --- COMPUTE -----------------------------------------------------
+
+def compute(ctx: Context):
+    # Assuming 'main' is the @task defined elsewhere
+    return main(ctx.A_coo, ctx.b)
+
+def best(ctx: Context):
+    # Assuming 'correct_main' is defined elsewhere
+    return correct_main(ctx.A_coo, ctx.b)
+
+# --- VALIDATE ----------------------------------------------------
+
+def validate(ctx: Context):
+    """ Verifies parallel execution matches sequential execution. """
+    try:
+        max_attempts = MAX_VALIDATION_ATTEMPTS
+    except NameError:
+        max_attempts = 5
+        
+    for _ in range(max_attempts):
+        # Reset the data within the context for a new validation run
+        reset(ctx)
+        
+        import copy
+        b_copy = copy.deepcopy(ctx.b)
+        A_copy = copy.deepcopy(ctx.A_coo)
+
+        # Parallel execution
+        par_res = main(ctx.A_coo, ctx.b, ctx.N)
+        
+        # Sequential execution
+        seq_res = correct_main(A_copy, b_copy, ctx.N)
+        
+        # Check equality
+        if not fequal(par_res, seq_res, eps=1e-6):
+            return False
+            
+    return True

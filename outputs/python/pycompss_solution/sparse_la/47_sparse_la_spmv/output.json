@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sparse_la",
+        "language": "python",
+        "name": "47_sparse_la_spmv",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\nfrom pycompss.api.parameter import *\n\n@task(returns=1)\ndef operate_row(alpha, beta, A_row, x, y_val):\n    dot_product = 0.0\n    for a in A_row:\n        dot_product += a['value'] * x[a['column']]\n    return alpha * dot_product + beta * y_val\n\ndef main(alpha, beta, A, x, y):\n    N = len(x)\n    M = len(y)\n\n    A_by_row = {i: [] for i in range(M)}\n    for a in A:\n        A_by_row[a['row']].append(a)\n\n    futures = []\n    for i in range(M):\n        futures.append(operate_row(alpha, beta, A_by_row[i], x, y[i]))\n\n    z = compss_wait_on(futures)\n\n    return z"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

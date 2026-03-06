@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sparse_la",
+        "language": "python",
+        "name": "49_sparse_la_sparse_lu_decomp",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=2)\ndef process_row(A_row_i, A_row_k, k):\n    pivot = A_row_k.get(k, 0.0)\n    if pivot == 0.0:\n        raise ValueError(f\"Zero pivot encountered at index {k}\")\n    \n    l_ik = A_row_i.get(k, 0.0) / pivot\n    \n    if l_ik != 0.0:\n        for j, u_kj in A_row_k.items():\n            if j >= k:\n                current_val = A_row_i.get(j, 0.0)\n                new_val = current_val - (l_ik * u_kj)\n                \n                if new_val != 0.0:\n                    A_row_i[j] = new_val\n                elif j in A_row_i:\n                    del A_row_i[j]\n                    \n    return A_row_i, l_ik\n\ndef main(A, N):\n    A_rows = [{} for _ in range(N)]\n    for item in A:\n        A_rows[item['row']][item['column']] = float(item['value'])\n        \n    L_elements = []\n    \n    for k in range(N):\n        A_row_k = A_rows[k]\n        \n        for i in range(k + 1, N):\n            updated_row, l_ik = process_row(A_rows[i], A_row_k, k)\n            \n            A_rows[i] = updated_row\n            L_elements.append((i, k, l_ik))\n\n    A_rows = compss_wait_on(A_rows)\n    \n    L_futures = [elem[2] for elem in L_elements]\n    L_values = compss_wait_on(L_futures)\n    \n    L_sparse = []\n    U_sparse = []\n    \n    for i in range(N):\n        L_sparse.append({'row': i, 'column': i, 'value': 1.0})\n        \n    for (i, k, _), val in zip(L_elements, L_values):\n        if val != 0.0:\n            L_sparse.append({'row': i, 'column': k, 'value': val})\n            \n    for i in range(N):\n        for j, val in A_rows[i].items():\n            if j >= i and val != 0.0:\n                U_sparse.append({'row': i, 'column': j, 'value': val})\n                \n    return L_sparse, U_sparse"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]

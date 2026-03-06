@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "sparse_la",
+        "language": "python",
+        "name": "45_sparse_la_sparse_solve",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "from pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n\n@task(returns=1)\ndef compute_jacobi_row(row_elements, diag_val, b_val, x_old):\n    sum_Ax = 0.0\n    for col, val in row_elements:\n        sum_Ax += val * x_old[col]\n        \n    return (b_val - sum_Ax) / diag_val\n\ndef main(A_coo, b, max_iterations=50, tolerance=1e-5):\n    N = len(b)\n    \n    A_rows = [[] for _ in range(N)]\n    A_diagonals = [0.0] * N\n    \n    for elem in A_coo:\n        r = elem['row']\n        c = elem['column']\n        v = elem['value']\n        \n        if r == c:\n            A_diagonals[r] = v\n        else:\n            A_rows[r].append((c, v))\n            \n    x = [0.0] * N \n    \n    for iteration in range(1, max_iterations + 1):\n        x_new_futures = []\n        \n        for i in range(N):\n            future_x_i = compute_jacobi_row(A_rows[i], A_diagonals[i], b[i], x)\n            x_new_futures.append(future_x_i)\n            \n        x_new = compss_wait_on(x_new_futures)\n\n        current_error = max(abs(x_new[i] - x[i]) for i in range(N))\n        \n        if current_error < tolerance:\n            print(f\"      [!] Converged early at iteration {iteration} (Delta: {current_error:.2e})\")\n            break\n            \n        x = x_new\n        \n    return x"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
