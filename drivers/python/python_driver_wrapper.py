@@ -22,6 +22,44 @@ DRIVER_MAP = {
     "pycompss": "pycompss_driver.py",
 }
 
+
+def try_to_find_path(src_path):
+    """
+    Try to resolve a benchmark file path when the numeric prefix of the benchmark
+    directory doesn't match the expected name. Searches for a folder under
+    python/benchmarks/<problem_type>/ whose name contains the example name and
+    returns the path to the file within it. Returns None if the path cannot be resolved.
+    """
+    src_str = str(src_path)
+    if "benchmarks" in src_str and src_str.startswith("python/benchmarks"):
+        # Match: python/benchmarks/<problem_type>/<orig_folder>/<file>
+        import re
+        m = re.match(
+            r"(python/benchmarks/)([^/]+)/(\d+_)?([^_/]+)_(.+?)/([^/]+)$",
+            src_str)
+        if m:
+            base_dir = Path(m.group(1)) / m.group(2)
+            problem_type = m.group(2)
+            problem_type_2 = m.group(4)
+            example_name = m.group(5)
+            file_name = m.group(6)
+            # Make sure problem types match
+            if not problem_type_2 in problem_type:
+                return None
+            # Find actual benchmark dir with the same example name
+            for folder in base_dir.iterdir():
+                ref_folder = str(folder.name).replace("-", "_")
+                recvd_folder = example_name.replace("-", "_")
+                if recvd_folder in ref_folder:
+                    return folder / file_name
+            else:
+                return None
+        else:
+            return None
+    else:
+        return None
+
+
 class PythonDriverWrapper(DriverWrapper):
     
     # GLOBAL TRACKER: This stays alive across all instances of the class
@@ -71,7 +109,9 @@ class PythonDriverWrapper(DriverWrapper):
                 for src in binaries[::-1]:
                     src_path = Path(src)
                     if not src_path.exists():
-                        return BuildOutput(1, "", f"Source file {src} does not exist")
+                        src_path = try_to_find_path(src_path)
+                        if src_path is None:
+                            return BuildOutput(1, "", f"Could not find source file {src}")
 
                     with open(src_path, "r") as in_fp:
                         content = in_fp.read()
