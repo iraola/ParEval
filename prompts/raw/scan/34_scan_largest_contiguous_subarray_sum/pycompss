@@ -1,9 +1,15 @@
-"""Return the largest sum of any contiguous subarray in the vector x.
-   i.e. if x=[−2, 1, −3, 4, −1, 2, 1, −5, 4] then [4, −1, 2, 1] is the contiguous
-   subarray with the largest sum of 6.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to compute the maximum contiguous subarray sum in parallel using the PyCOMPSs framework.
 
-   input: [−2, 1, −3, 4, −1, 2, 1, −5, 4]
-   output: 6
+Task Specifications:
+- Functionality: Find the largest sum of any contiguous subarray within the input list 'x'.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python integer representing the maximum subarray sum (ensure it is the final synchronized result, not a future).
+
+Example:
+- Input: x=[-2, 1, -3, 4, -1, 2, 1, -5, 4]
+- Output: 6
 """

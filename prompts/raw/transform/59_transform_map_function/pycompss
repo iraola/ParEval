@@ -1,7 +1,15 @@
-"""Apply the isPowerOfTwo function to every value in x and store the results in mask.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to apply a "Power of Two" check to each element in a list in parallel using the PyCOMPSs framework.
 
-   input: [8, 0, 9, 7, 15, 64, 3]
-   output: [true, false, false, false, false, true, false]
+Task Specifications:
+- Functionality: For each integer in the input list 'x', determine if it is a power of two. A number 'n' is a power of two if n > 0 and the bitwise operation (n & (n - 1)) equals 0.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x) function that manages the data partitioning, distributes the work to tasks, and collects the boolean results.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete before returning the final synchronized list.
+- Return Type: Return a standard Python list of booleans representing the results (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: x = [8, 0, 9, 7, 15, 64, 3]
+- Output: [True, False, False, False, False, True, False]
 """

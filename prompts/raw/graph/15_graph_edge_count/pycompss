@@ -5,7 +5,7 @@ in parallel using the PyCOMPSs framework.
 Task Specifications:
 - Functionality: Count the total number of edges in a directed graph defined by an NxN adjacency matrix 'A'.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., counting the non-zero elements or edges within individual rows or chunks of the matrix).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(A) function that distributes the work, manages task dependencies, and aggregates the partial counts.
 - Synchronization: The main(A) function must explicitly wait for all tasks to complete and compute the final sum.
 - Return Type: Return a standard Python integer representing the total number of edges (ensure it is the final synchronized result, not a future).

@@ -5,7 +5,7 @@ in parallel using the PyCOMPSs framework.
 Task Specifications:
 - Functionality: Return the index of the last book in the input list 'books' where the number of pages is less than 100. 
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., searching chunks of the list in parallel to find the maximum valid index).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(books) function that distributes the work and manages task dependencies.
 - Synchronization: The main(books) function must explicitly wait for all tasks to complete and resolve the final maximum index.
 - Return Type: Return a standard Python integer representing the index (or -1 if no such book exists). Ensure it is the final synchronized result, not a future.

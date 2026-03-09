@@ -5,7 +5,7 @@ in parallel using the PyCOMPSs framework.
 Task Specifications:
 - Functionality: Compute the matrix multiplication Y = AX, where 'A' and 'X' are sparse matrices represented in Coordinate (COO) format, and 'Y' is a dense MxN matrix. 
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., grouping the COO elements by row/column blocks and computing partial dense blocks of Y in parallel).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(A, X, M, N) function that distributes the work, manages task dependencies, and aggregates the partial results into the final dense matrix.
 - Synchronization: The main(A, X, M, N) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of lists of floats representing the dense MxN matrix 'Y' (ensure it is the final synchronized result, not a list of futures).

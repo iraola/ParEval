@@ -5,7 +5,7 @@ in parallel using the PyCOMPSs framework.
 Task Specifications:
 - Functionality: Find the set of points that defines the smallest convex polygon containing all the points in the input list 'points'.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation (e.g., using a divide-and-conquer strategy like parallel QuickHull or MergeHull).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
 - Synchronization: The main(points) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of tuples of floats `(x, y)` representing the vertices of the convex hull (ensure it is the final synchronized result, not a list of futures).

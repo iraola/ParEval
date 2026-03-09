@@ -1,8 +1,16 @@
-"""Return the number of vertices in the largest component of the undirected graph defined by the adjacency matrix A.
-   A is an NxN adjacency matrix stored in row-major. A is an undirected graph.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to compute the size of the largest connected component 
+in a graph in parallel using the PyCOMPSs framework.
 
-	 input: [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
-   output: 2
+Task Specifications:
+- Functionality: Find the number of vertices in the largest connected component of an undirected graph defined by the NxN adjacency matrix 'A'.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(A) function that distributes the work and manages task dependencies.
+- Synchronization: The main(A) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python integer representing the maximum number of vertices in a single component (ensure it is the final synchronized result, not a future).
+
+Example:
+- Input: A=[[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+- Output: 2
 """

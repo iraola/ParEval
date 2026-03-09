@@ -1,7 +1,16 @@
-"""Return the distance between the closest two points in the vector points.
-   Use PyCOMPSs to compute in parallel.
-   Example: 
+"""
+Generate a Python module to compute the distance between the closest pair of points 
+in parallel using the PyCOMPSs framework.
 
-   input: [{2, 3}, {12, 30}, {40, 50}, {5, 1}, {12, 10}, {3, 4}]
-   output: 1.41421
+Task Specifications:
+- Functionality: Find the minimum Euclidean distance between any two points in the input list 'points'. Assume points are given as lists or tuples of two floats [x, y].
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(points) function that distributes the work and manages task dependencies (e.g., using a reduction to find the global minimum distance).
+- Synchronization: The main(points) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python float representing the minimum distance (ensure it is the final synchronized result, not a future).
+
+Example:
+- Input: points=[[2.0, 3.0], [12.0, 30.0], [40.0, 50.0], [5.0, 1.0], [12.0, 10.0], [3.0, 4.0]]
+- Output: 1.41421
 """

@@ -1,8 +1,16 @@
-"""Return the length of the shortest path from source to dest in the undirected graph defined by the adjacency matrix A.
-   A is an NxN adjacency matrix stored in row-major. A is an undirected graph.
-   Use PyCOMPSs to compute in parallel.
-   Example:
+"""
+Generate a Python module to compute the shortest path length in a graph 
+in parallel using the PyCOMPSs framework.
 
-	 input: [[0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]], source=0, dest=3
-   output: 2
+Task Specifications:
+- Functionality: Find the length of the shortest path from a 'source' node to a 'destination' node in an undirected graph defined by the NxN adjacency matrix 'A'.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(A, source, destination) function that distributes the work and manages task dependencies.
+- Synchronization: The main(A, source, destination) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python integer representing the shortest path length (ensure it is the final synchronized result, not a future). Return -1 if no path exists.
+
+Example:
+- Input: A=[[0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]], source=0, destination=3
+- Output: 2
 """
