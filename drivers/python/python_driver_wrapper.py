@@ -193,13 +193,20 @@ class PythonDriverWrapper(DriverWrapper):
 
             # 3. Build
             exec_path = os.path.join(tmpdir, "a_out.py")
+            if not Path(test_driver_file).exists():
+                resolved = try_to_find_path(Path(test_driver_file))
+                if resolved is not None:
+                    test_driver_file = str(resolved)
+                else:
+                    raise FileNotFoundError(f"pycompss.py driver file not found: {test_driver_file}")
             driver_dir = os.path.dirname(test_driver_file)
             baseline_path = os.path.join(driver_dir, "baseline.py")
+            if not os.path.exists(baseline_path):
+                raise FileNotFoundError(f"Baseline file not found: {baseline_path}")
             
             sources = [self.model_driver_file]
             sources.append(test_driver_file)
-            if os.path.exists(baseline_path):
-                sources.append(baseline_path)
+            sources.append(baseline_path)
             sources.append(src_path)
             sources.append(config_path)
             

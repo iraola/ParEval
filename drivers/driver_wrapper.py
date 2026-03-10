@@ -14,6 +14,21 @@ from util import all_equal, mean
 from cpp.parallel_validation import Validator, OMPValidator, MPIValidator, MPIandOMPValidator, EmptyValidator
 
 
+def _find_problem_size(problem_sizes: dict, name: str, parallelism_model: str, default: str) -> str:
+    """ Look up problem size for `name`, falling back to substring matching if no exact match. """
+    entry = problem_sizes.get(name)
+    if entry is None:
+        norm_name = name.replace("-", "_")
+        for key, val in problem_sizes.items():
+            norm_key = key.replace("-", "_")
+            if norm_name in norm_key or norm_key in norm_name:
+                entry = val
+                break
+    if entry is None:
+        return default
+    return entry.get(parallelism_model, default)
+
+
 class BuildOutput:
     """ Represents the output of a single build. """
     exit_code: int
@@ -233,7 +248,8 @@ class DriverWrapper(ABC):
         driver_dirname = f"{name}"
         driver_base = DRIVER_MAP[self.parallelism_model]
         test_driver_file = os.path.join(lang, "benchmarks", ptype, driver_dirname, driver_base + ext)
-        problem_size = self.problem_sizes.get(name, {}).get(self.parallelism_model, "(1<<18)")
+        problem_size = _find_problem_size(self.problem_sizes, name, self.parallelism_model, "(1<<18)")
+        logging.debug("Using problem size: %s", problem_size)
 
         outputs = []
         logging.info(f"Testing prompt {name} with {self}...")
