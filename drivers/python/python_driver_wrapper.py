@@ -139,7 +139,12 @@ class PythonDriverWrapper(DriverWrapper):
         try:
             run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
         except subprocess.TimeoutExpired as e:
-            return RunOutput(-1, str(e.stdout), f"[Timeout] {str(e.stderr)}", config=run_config)
+            def _decode(b) -> str:
+                """Use this function to improve printing of timeout errors."""
+                if b is None:
+                    return ""
+                return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b)
+            return RunOutput(-1, _decode(e.stdout), f"[Timeout] {_decode(e.stderr)}", config=run_config)
         except UnicodeDecodeError as e:
             logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
             return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
