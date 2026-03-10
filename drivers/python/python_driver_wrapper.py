@@ -155,7 +155,7 @@ class PythonDriverWrapper(DriverWrapper):
             Writes generated_code.py, stages a harness (existing cpu_harness.py/cpu.py or a tiny adapter),
             and launches the shared model driver under runcompss via a small runner.py.
         """
-        logging.debug(f"Testing output (python/pycompss):\n{output[:500]}{'...' if len(output)>500 else ''}")
+        logging.debug(f"Testing output (python/pycompss):\n  --- code ---\n{output[:500]}{'...' if len(output)>500 else ''}\n  --- end code ---")
 
         # 1. Use the Class-level global tracker
         if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
@@ -226,19 +226,18 @@ class PythonDriverWrapper(DriverWrapper):
                 for c in configs:
                     run_result = self.run(exec_path, **c)
                     run_results.append(run_result)
-                    if self.display_runs:
-                        logging.debug(run_result.stderr)
-                        logging.debug(run_result.stdout)
                     if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
                         break
             else:
                 run_results = None
 
             logging.debug(f"Run results: {run_results}")
-            if run_results:
+            if self.display_runs and run_results:
                 for rr in run_results:
-                    if rr.exit_code != 0:
-                        logging.debug(f"Outputs for failed run:\n\tstdout: {rr.stdout}\n\tstderr: {rr.stderr}")
+                    logging.debug(
+                        f"Run output:\n  --- stdout ---\n{rr.stdout}\n  --- end stdout ---\n"
+                        f"  --- stderr ---\n{rr.stderr}\n  --- end stderr ---"
+                    )
 
             # Relaxation retry: if the run failed (or didn't happen) and relaxations
             # are configured, try each one by modifying generated_code.py, rebuilding,
@@ -263,11 +262,14 @@ class PythonDriverWrapper(DriverWrapper):
                     for c in configs:
                         run_result = self.run(exec_path, **c)
                         new_runs.append(run_result)
-                        if self.display_runs:
-                            logging.debug(run_result.stderr)
-                            logging.debug(run_result.stdout)
                         if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
                             break
+                    if self.display_runs:
+                        for rr in new_runs:
+                            logging.debug(
+                                f"\n  --- stdout ---\n{rr.stdout}\n  --- end stdout ---\n"
+                                f"  --- stderr ---\n{rr.stderr}\n  --- end stderr ---"
+                            )
 
                     if _runs_succeeded(new_runs):
                         logging.info(f"Relaxation '{relaxation.name}' succeeded for {prompt_name}[{output_index}].")
