@@ -60,6 +60,13 @@ def try_to_find_path(src_path):
         return None
 
 
+def _runs_succeeded(run_results) -> bool:
+    """Return True if at least one run completed and validated successfully."""
+    if not run_results:
+        return False
+    return any(r.exit_code == 0 and r.is_valid for r in run_results)
+
+
 class PythonDriverWrapper(DriverWrapper):
     
     # GLOBAL TRACKER: This stays alive across all instances of the class
@@ -221,4 +228,42 @@ class PythonDriverWrapper(DriverWrapper):
                     if rr.exit_code != 0:
                         logging.debug(f"Outputs for failed run:\n\tstdout: {rr.stdout}\n\tstderr: {rr.stderr}")
 
-            return GeneratedTextResult(write_success, build_result, run_results)
+            # Relaxation retry: if the run failed (or didn't happen) and relaxations
+            # are configured, try each one by modifying generated_code.py, rebuilding,
+            # and rerunning. Stop at the first relaxation that produces a passing run.
+            applied_relaxations = []
+            if self.relaxations and not _runs_succeeded(run_results):
+                for relaxation in self.relaxations:
+                    modified_output = relaxation.apply(output)
+                    if modified_output is None:
+                        logging.debug(f"Relaxation '{relaxation.name}' does not apply, skipping.")
+                        continue
+
+                    logging.info(f"Applying relaxation '{relaxation.name}' for {prompt_name}[{output_index}].")
+                    self.write_source(prompt + "\n" + modified_output, src_path)
+                    new_build = self.compile(*sources, output_path=exec_path)
+
+                    if not new_build.did_build:
+                        logging.debug(f"Relaxation '{relaxation.name}': build failed after transform.")
+                        continue
+
+                    new_runs = []
+                    for c in configs:
+                        run_result = self.run(exec_path, **c)
+                        new_runs.append(run_result)
+                        if self.display_runs:
+                            logging.debug(run_result.stderr)
+                            logging.debug(run_result.stdout)
+                        if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
+                            break
+
+                    if _runs_succeeded(new_runs):
+                        logging.info(f"Relaxation '{relaxation.name}' succeeded for {prompt_name}[{output_index}].")
+                        build_result = new_build
+                        run_results = new_runs
+                        applied_relaxations.append(relaxation.name)
+                        break
+                    else:
+                        logging.debug(f"Relaxation '{relaxation.name}': run still failed after transform.")
+
+            return GeneratedTextResult(write_success, build_result, run_results, relaxations_applied=applied_relaxations)

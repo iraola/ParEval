@@ -18,6 +18,7 @@ from tqdm import tqdm
 from driver_wrapper import DriverWrapper
 from cpp.cpp_driver_wrapper import CppDriverWrapper
 from python.python_driver_wrapper import PythonDriverWrapper
+from python.relaxations import ALL_RELAXATIONS, RELAXATION_MAP
 from util import await_input, load_json
 
 # Fix for python versions older than 3.11 that don't have contextlib.chdir
@@ -71,20 +72,43 @@ def get_args():
         type=str.upper, help="logging level")
     parser.add_argument("--log-build-errors", action="store_true", help="On build error, display the stderr of the build process.")
     parser.add_argument("--log-runs", action="store_true", help="Display the stderr and stdout of runs.")
+    relaxation_names = list(RELAXATION_MAP.keys())
+    parser.add_argument(
+        "--relaxations",
+        nargs="+",
+        metavar="RELAXATION",
+        choices=relaxation_names + ["all"],
+        default=None,
+        help=(
+            "Apply source-code relaxations when a run fails, then retry. "
+            "Use 'all' to enable every relaxation, or pass one or more names to enable specific ones. "
+            "Available: " + ", ".join(relaxation_names) + ". "
+            "Disabled by default."
+        ),
+    )
     return parser.parse_args()
 
+def resolve_relaxations(relaxations_arg):
+    """ Resolve the --relaxations CLI argument to a list of Relaxation instances. """
+    if relaxations_arg is None:
+        return []
+    if "all" in relaxations_arg:
+        return list(ALL_RELAXATIONS)
+    return [RELAXATION_MAP[name] for name in relaxations_arg]
+
+
 def get_driver(
-    prompt: dict, 
-    scratch_dir: Optional[os.PathLike], 
-    launch_configs: dict, 
-    build_configs: dict, 
-    problem_sizes: dict, 
-    dry: bool, 
+    prompt: dict,
+    scratch_dir: Optional[os.PathLike],
+    launch_configs: dict,
+    build_configs: dict,
+    problem_sizes: dict,
+    dry: bool,
     **kwargs
 ) -> DriverWrapper:
     """ Get the language drive wrapper for this prompt """
     driver_cls = LANGUAGE_DRIVERS[prompt["language"]]
-    return driver_cls(parallelism_model=prompt["parallelism_model"], launch_configs=launch_configs, 
+    return driver_cls(parallelism_model=prompt["parallelism_model"], launch_configs=launch_configs,
         build_configs=build_configs, problem_sizes=problem_sizes, scratch_dir=scratch_dir, dry=dry, **kwargs)
 
 def already_has_results(prompt: dict) -> bool:
@@ -151,6 +175,11 @@ def main():
     if args.exclude_models:
         models_to_test = [m for m in models_to_test if m not in args.exclude_models]
 
+    # resolve relaxations
+    relaxations = resolve_relaxations(args.relaxations)
+    if relaxations:
+        logging.info(f"Relaxations enabled: {[r.name for r in relaxations]}")
+
     # run each prompt
     all_prompts = data if args.hide_progress else tqdm(data, desc="Testing prompts")
     for prompt in all_prompts:
@@ -188,6 +217,7 @@ def main():
             build_timeout=args.build_timeout,
             run_timeout=args.run_timeout,
             save_generated_dir=args.save_generated,
+            relaxations=relaxations,
         )
 
         with contextlib.chdir(DRIVER_ROOT):

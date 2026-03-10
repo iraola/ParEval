@@ -78,12 +78,14 @@ class GeneratedTextResult:
     source_write_success: bool
     build_output: BuildOutput
     run_outputs: Optional[List[RunOutput]]
+    relaxations_applied: List[str]
 
-    def __init__(self, source_write_success: bool, build_output: BuildOutput, run_outputs: Optional[List[RunOutput]] = None):
+    def __init__(self, source_write_success: bool, build_output: BuildOutput, run_outputs: Optional[List[RunOutput]] = None, relaxations_applied: Optional[List[str]] = None):
         self.source_write_success = source_write_success
         self.build_output = build_output
         self.run_outputs = run_outputs
-        
+        self.relaxations_applied = relaxations_applied or []
+
         assert self.build_output.did_build == (self.run_outputs is not None), \
             "Build output and run output must be consistent."
         
@@ -179,7 +181,8 @@ class DriverWrapper(ABC):
         display_runs: bool = False,
         early_exit_runs: bool = False,
         dry: bool = False,
-        save_generated_dir: Optional[PathLike] = None
+        save_generated_dir: Optional[PathLike] = None,
+        relaxations: Optional[list] = None,
     ):
         self.parallelism_model = parallelism_model
         self.validator = VALIDATORS[parallelism_model]
@@ -194,6 +197,7 @@ class DriverWrapper(ABC):
         self.early_exit_runs = early_exit_runs
         self.dry = dry
         self.save_generated_dir = save_generated_dir
+        self.relaxations = relaxations or []
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(parallelism_model={self.parallelism_model}, scratch_dir={self.scratch_dir})"
@@ -254,6 +258,7 @@ class DriverWrapper(ABC):
                 "are_any_valid": results.are_any_valid(),
                 "are_all_valid": results.are_all_valid(),
                 "best_sequential_runtime": results.best_sequential_runtime(),
+                "relaxations_applied": results.relaxations_applied,
                 "runs": [
                     {
                         "did_run": r.exit_code == 0,
