@@ -19,9 +19,10 @@ def run_benchmark():
         reset(ctx)
         start = time.time()
       
-        result = compute(ctx)
-        
-        total_parallel += (time.time() - start)
+        compute(ctx)
+        iteration_time = time.time() - start
+        total_parallel += iteration_time
+        print(f"Parallel Iteration time: {iteration_time:.6f}")
     
     print(f"Time: {total_parallel / NITER:.6f}")
 
@@ -30,11 +31,12 @@ def run_benchmark():
     total_seq = 0.0
     for _ in range(NITER):
         reset(ctx)
-        start = time.time()
+        start = time.perf_counter()
         
         best(ctx)
-        
-        total_seq += (time.time() - start)
+        iteration_time = time.perf_counter() - start
+        total_seq += iteration_time
+        print(f"Sequential Iteration time: {iteration_time:.6f}")
 
     print(f"BestSequential: {total_seq / NITER:.6f}")
 
