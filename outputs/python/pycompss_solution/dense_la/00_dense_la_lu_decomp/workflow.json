@@ -1,0 +1,19 @@
+[
+    {
+        "problem_type": "dense_la",
+        "language": "python",
+        "name": "00_dense_la_lu_decomp",
+        "parallelism_model": "pycompss",
+        "prompt": "",
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "do_sample": false,
+        "max_new_tokens": 1024,
+        "prompted": false,
+        "outputs": [
+            "import math\nfrom pycompss.api.task import task\nfrom pycompss.api.api import compss_wait_on\n\n@task(returns=1)\ndef block_lu(A00):\n    b = len(A00)\n    for k in range(b):\n        for i in range(k + 1, b):\n            factor = A00[i][k] / A00[k][k]\n            A00[i][k] = factor\n            for j in range(k + 1, b):\n                A00[i][j] -= factor * A00[k][j]\n    return A00\n\n\n@task(returns=1)\ndef solve_lower(L00, A01):\n    b = len(L00)\n    m = len(A01[0])\n    for k in range(b):\n        for i in range(k + 1, b):\n            for j in range(m):\n                A01[i][j] -= L00[i][k] * A01[k][j]\n    return A01\n\n\n@task(returns=1)\ndef solve_upper(U00, A10):\n    b = len(U00)\n    m = len(A10)\n    for k in range(b):\n        for i in range(m):\n            A10[i][k] /= U00[k][k]\n            for j in range(k + 1, b):\n                A10[i][j] -= A10[i][k] * U00[k][j]\n    return A10\n\n\n@task(returns=1)\ndef update_block(L10, U01, A11):\n    m = len(A11)\n    n = len(A11[0])\n    b = len(L10[0])\n    for i in range(m):\n        for j in range(n):\n            for k in range(b):\n                A11[i][j] -= L10[i][k] * U01[k][j]\n    return A11\n\n\ndef main(A, N):\n    B = max(1, math.ceil(N / 4))\n        \n    num_blocks = math.ceil(N / B)\n    A_blocks = []\n    for i in range(num_blocks):\n        row_blocks = []\n        for j in range(num_blocks):\n            row_start = i * B\n            row_end = min((i + 1) * B, N)\n            col_start = j * B\n            col_end = min((j + 1) * B, N)\n            \n            block = []\n            for r in range(row_start, row_end):\n                block.append(A[r][col_start:col_end])\n            row_blocks.append(block)\n        A_blocks.append(row_blocks)\n        \n    for k in range(num_blocks):\n        A_blocks[k][k] = block_lu(A_blocks[k][k])\n        \n        for j in range(k + 1, num_blocks):\n            A_blocks[k][j] = solve_lower(A_blocks[k][k], A_blocks[k][j])\n        \n        for i in range(k + 1, num_blocks):\n            A_blocks[i][k] = solve_upper(A_blocks[k][k], A_blocks[i][k])\n            \n        for i in range(k + 1, num_blocks):\n            for j in range(k + 1, num_blocks):\n                A_blocks[i][j] = update_block(A_blocks[i][k], A_blocks[k][j], A_blocks[i][j])\n                \n    A_blocks = compss_wait_on(A_blocks)\n    \n    for i in range(num_blocks):\n        for j in range(num_blocks):\n            row_start = i * B\n            row_end = min((i + 1) * B, N)\n            col_start = j * B\n            col_end = min((j + 1) * B, N)\n            \n            block = A_blocks[i][j]\n            for r_idx, r in enumerate(range(row_start, row_end)):\n                A[r][col_start:col_end] = block[r_idx]\n                \n    return A"
+        ],
+        "raw_outputs": [
+        ]
+    }
+]
