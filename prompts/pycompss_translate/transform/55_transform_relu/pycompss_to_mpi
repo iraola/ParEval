@@ -1,0 +1,29 @@
+"""
+Translate the provided parallel PyCOMPSs Python code into an MPI implementation in standard C.
+
+Task Specifications:
+- Paradigm & Language Shift: Convert the Python master-worker, task-based execution model into a Single Program, Multiple Data (SPMD) model in C. Translate Python lists or NumPy arrays into dynamically allocated C arrays using `malloc` and `free`.
+- Data Distribution: Replace PyCOMPSs's implicit parameter passing with explicit MPI collective communications. Use `MPI_Scatter` or `MPI_Scatterv` to distribute data chunks from the root rank (Rank 0) to all available processes.
+- Execution Logic: Remove all `@task` decorators and Python-specific abstractions. Use `MPI_Comm_rank` and `MPI_Comm_size` to manage the workload division. Ensure you calculate the correct local array sizes and offsets for each rank, handling remainders appropriately.
+- Synchronization & Collection: Replace `compss_wait_on` and task returns with `MPI_Gather` or `MPI_Gatherv` to collect the processed data back to the root rank for final output.
+
+PyCOMPSs Code to Translate:
+from pycompss.api.task import task
+from pycompss.api.parameter import IN
+from pycompss.api.api import compss_wait_on
+
+
+@task(value=IN, returns=float)
+def task_relu(value):
+    return value if value > 0 else 0
+
+def relu(x):
+    result = [task_relu(value) for value in x]
+    result = compss_wait_on(result)
+    return result
+    
+Example Expected Output Structure:
+- Required C libraries and MPI headers (`#include <mpi.h>`, `#include <stdlib.h>`, etc.).
+- `main()` function with MPI initialization (`MPI_Init`), rank/size discovery, and SPMD execution flow.
+- Explicit memory allocation, scatter, local computation, gather, and memory cleanup blocks.
+"""

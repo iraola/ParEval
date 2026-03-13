@@ -1,0 +1,26 @@
+"""
+Translate the provided parallel PyCOMPSs Python code into a standard, serial Python implementation.
+
+Task Specifications:
+- De-parallelization Strategy: Remove all PyCOMPSs-specific decorators (e.g., `@task`), imports, and synchronization calls (e.g., `compss_wait_on`). 
+- Logic Flattening: If the PyCOMPSs code uses chunking or splits data for distribution, flatten this logic back into standard, contiguous loops or operations where appropriate.
+- Functionality & Accuracy: The serial version must preserve the exact mathematical and logical operations of the PyCOMPSs code and produce identical output.
+
+PyCOMPSs Code to Translate:
+from pycompss.api.task import task
+from pycompss.api.parameter import IN
+from pycompss.api.api import compss_wait_on
+
+
+@task(value=IN, returns=float)
+def task_relu(value):
+    return value if value > 0 else 0
+
+def relu(x):
+    result = [task_relu(value) for value in x]
+    result = compss_wait_on(result)
+    return result
+
+Example Expected Output Structure:
+- Clean serial Python code (no PyCOMPSs dependencies).
+"""

@@ -1,0 +1,22 @@
+"""
+Translate the provided serial Python code into a parallel implementation using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality & Accuracy: The parallel version must preserve the exact logic of the serial code and produce identical output. 
+- Imports: Include all necessary PyCOMPSs imports (e.g., `@task`, `compss_wait_on`).
+- Parallelization Strategy: Identify independent operations or loop iterations in the serial code. Extract these into one or more `@task` decorated functions. If dealing with large arrays/lists, implement chunking to avoid creating too many fine-grained tasks.
+- Orchestration: Rewrite the main execution flow to dispatch the tasks asynchronously and manage the resulting futures.
+- Synchronization: Explicitly synchronize the results using `compss_wait_on` where the main program requires the actual values.
+
+Serial Code to Translate:
+def main(x):
+    for i in range(len(x)):
+        if x[i] < 0:
+            x[i] = 0
+    return x
+
+Example Expected Output Structure:
+- Required PyCOMPSs imports.
+- Task definitions with appropriate decorators.
+- Orchestration function main(x) managing task dispatch and synchronization.
+"""
