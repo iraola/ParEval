@@ -17,10 +17,10 @@ def run_benchmark():
     total_parallel = 0.0
     for _ in range(NITER):
         reset(ctx)
-        start = time.time()
+        start = time.perf_counter()
       
         compute(ctx)
-        iteration_time = time.time() - start
+        iteration_time = time.perf_counter() - start
         total_parallel += iteration_time
         print(f"Parallel Iteration time: {iteration_time:.6f}")
     
