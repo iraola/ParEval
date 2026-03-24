@@ -76,79 +76,101 @@ class TestExtractStartDetection(unittest.TestCase):
         self.assertTrue(result.startswith("import os"))
 
 
-class TestExtractMainDetection(unittest.TestCase):
-    """Step 2 – locating def main and capturing base_indent."""
+class TestExtractFunctionInclusion(unittest.TestCase):
+    """Step 2 – any function (decorated or not) and its body is included."""
 
-    def test_main_at_top_level(self):
+    def test_single_function_included(self):
+        code = "import os\n\ndef foo():\n    x = 1"
+        result = extract_pycompss_solution(code)
+        self.assertIn("def foo", result)
+        self.assertIn("x = 1", result)
+
+    def test_def_main_included_as_any_other_function(self):
         code = "import os\n\ndef main():\n    x = 1"
         self.assertIn("def main", extract_pycompss_solution(code))
 
-    def test_main_with_arguments(self):
-        code = "import os\n\ndef main(args):\n    x = 1"
-        self.assertIn("def main(args)", extract_pycompss_solution(code))
-
-    def test_main_with_extra_spaces_before_paren(self):
-        # Pattern is def\s+main\s*\( so spaces before ( are allowed
-        code = "import os\n\ndef main  ():\n    x = 1"
-        self.assertIn("def main", extract_pycompss_solution(code))
-
-    def test_main_indented_sets_base_indent(self):
-        # base_indent = 4; body must be indented deeper to be included
-        code = "import os\n\n    def main():\n        x = 1"
+    def test_multiple_functions_all_included(self):
+        code = (
+            "import os\n\n"
+            "def foo():\n"
+            "    return 1\n\n"
+            "def bar():\n"
+            "    return 2\n\n"
+            "def main():\n"
+            "    print(foo(), bar())"
+        )
         result = extract_pycompss_solution(code)
+        self.assertIn("def foo", result)
+        self.assertIn("def bar", result)
         self.assertIn("def main", result)
-        self.assertIn("x = 1", result)
 
-    def test_no_main_fallback_returns_everything_from_start(self):
-        code = "import os\n\ndef helper():\n    return 1\n\nx = helper()"
+    def test_decorated_function_included(self):
+        code = (
+            "from pycompss.api.task import task\n\n"
+            "@task(returns=1)\n"
+            "def compute(x):\n"
+            "    return x * 2\n\n"
+            "def main():\n"
+            "    pass"
+        )
         result = extract_pycompss_solution(code)
-        self.assertTrue(result.startswith("import os"))
-        self.assertIn("def helper", result)
-        self.assertIn("x = helper()", result)
+        self.assertIn("@task(returns=1)", result)
+        self.assertIn("def compute", result)
 
-    def test_no_main_fallback_result_is_stripped(self):
-        code = "\n\nimport os\n\n"
-        self.assertEqual("import os", extract_pycompss_solution(code))
+    def test_function_with_arguments_included(self):
+        code = "import os\n\ndef process(data, n):\n    return data[:n]"
+        self.assertIn("def process(data, n)", extract_pycompss_solution(code))
 
-    def test_function_named_main_helper_is_not_matched(self):
-        # 'def main_helper' must not satisfy def\s+main\s*\(
+    def test_function_named_main_helper_included(self):
+        # Previously this was a fallback edge case; now it's just a normal function
         code = "import os\n\ndef main_helper():\n    pass"
+        self.assertIn("def main_helper", extract_pycompss_solution(code))
+
+
+class TestExtractStoppingCondition(unittest.TestCase):
+    """Step 3 – stop at non-indented code that is not import/decorator/def."""
+
+    def test_if_name_main_block_excluded(self):
+        code = (
+            "import os\n\n"
+            "def main():\n"
+            "    x = 1\n\n"
+            "if __name__ == '__main__':\n"
+            "    main()"
+        )
         result = extract_pycompss_solution(code)
-        # Falls back: no 'def main(' found — returns everything from start
-        self.assertIn("def main_helper", result)
+        self.assertNotIn("if __name__", result)
+        self.assertIn("main()", result)
 
-    def test_main_search_starts_from_start_index(self):
-        # def main before any import: start_index == 0 (def IS a valid start
-        # pattern), so the first def main is found at start_index
-        code = "def main():\n    x = 1\n\nimport os"
+    def test_top_level_assignment_excluded(self):
+        code = (
+            "import os\n\n"
+            "def main():\n"
+            "    x = 1\n\n"
+            "result = main()"
+        )
         result = extract_pycompss_solution(code)
-        self.assertIn("def main", result)
+        self.assertNotIn("result = main()", result)
 
-
-class TestExtractEndOfMainDetection(unittest.TestCase):
-    """Step 3 – walking lines after def main to determine where it ends."""
-
-    def test_normal_body_lines_included(self):
+    def test_function_body_lines_included(self):
         code = "import os\n\ndef main():\n    x = 1\n    y = 2"
         result = extract_pycompss_solution(code)
         self.assertIn("x = 1", result)
         self.assertIn("y = 2", result)
 
-    def test_code_after_main_at_same_indent_excluded(self):
+    def test_multiple_functions_separated_by_blank_lines_all_included(self):
         code = (
             "import os\n\n"
+            "def foo():\n"
+            "    return 1\n\n\n"
             "def main():\n"
-            "    x = 1\n"
-            "\n"
-            "def other():\n"
-            "    y = 2"
+            "    x = 1"
         )
         result = extract_pycompss_solution(code)
-        self.assertIn("x = 1", result)
-        self.assertNotIn("def other", result)
-        self.assertNotIn("y = 2", result)
+        self.assertIn("def foo", result)
+        self.assertIn("def main", result)
 
-    def test_blank_lines_inside_main_do_not_break_early(self):
+    def test_blank_lines_inside_function_do_not_break_early(self):
         code = (
             "import os\n\n"
             "def main():\n"
@@ -163,68 +185,38 @@ class TestExtractEndOfMainDetection(unittest.TestCase):
         self.assertIn("y = 2", result)
         self.assertIn("z = 3", result)
 
-    def test_blank_lines_between_main_and_next_function_do_not_include_next(self):
-        code = (
-            "import os\n\n"
-            "def main():\n"
-            "    x = 1\n"
-            "\n\n\n"
-            "def other():\n"
-            "    pass"
-        )
-        result = extract_pycompss_solution(code)
-        self.assertNotIn("def other", result)
-
-    def test_comment_indented_inside_main_is_included(self):
+    def test_comment_inside_function_included(self):
         code = (
             "import os\n\n"
             "def main():\n"
             "    # step 1\n"
             "    x = 1"
         )
-        result = extract_pycompss_solution(code)
-        self.assertIn("# step 1", result)
+        self.assertIn("# step 1", extract_pycompss_solution(code))
 
-    def test_comment_at_base_indent_is_not_included(self):
+    def test_top_level_comment_between_functions_included(self):
+        # Top-level comments are valid code annotations; they are included
         code = (
             "import os\n\n"
+            "# helper function\n"
+            "def foo():\n"
+            "    return 1\n\n"
             "def main():\n"
-            "    x = 1\n"
-            "# top-level comment\n"
-            "def other():\n"
             "    pass"
         )
         result = extract_pycompss_solution(code)
-        self.assertNotIn("# top-level comment", result)
+        self.assertIn("# helper function", result)
 
-    def test_comment_at_base_indent_does_not_break_loop(self):
-        # The comment at base_indent does NOT cause a break — only a
-        # non-comment line at base_indent does. So the comment is skipped
-        # and the next real code line (def other) is what breaks.
+    def test_trailing_top_level_comment_included(self):
+        # A top-level comment at the end (before if __name__) is included
         code = (
             "import os\n\n"
             "def main():\n"
             "    x = 1\n"
-            "# top-level comment\n"
-            "def other():\n"
-            "    pass"
+            "# end of solution"
         )
         result = extract_pycompss_solution(code)
-        # def other triggers the break, so it and its body are excluded
-        self.assertNotIn("def other", result)
-        self.assertNotIn("pass", result)
-
-    def test_trailing_top_level_comment_does_not_affect_last_valid_index(self):
-        # A base-indent comment after the body should not extend last_valid_index
-        code = (
-            "import os\n\n"
-            "def main():\n"
-            "    x = 1\n"
-            "# trailing comment"
-        )
-        result = extract_pycompss_solution(code)
-        self.assertIn("x = 1", result)
-        self.assertNotIn("# trailing comment", result)
+        self.assertIn("# end of solution", result)
 
     def test_deeply_nested_code_included(self):
         code = (
@@ -239,12 +231,19 @@ class TestExtractEndOfMainDetection(unittest.TestCase):
         self.assertIn("if i > 5", result)
         self.assertIn("print(i)", result)
 
-    def test_empty_main_body_stops_at_def_line(self):
-        # main has no body before the next top-level definition
-        code = "import os\n\ndef main():\ndef other():\n    pass"
+    def test_blank_lines_before_if_name_not_included_in_output(self):
+        # Trailing blank lines before the stopping line are not included
+        # because blank lines never update last_valid_index
+        code = (
+            "import os\n\n"
+            "def main():\n"
+            "    x = 1\n"
+            "\n\n"
+            "if __name__ == '__main__':\n"
+            "    main()"
+        )
         result = extract_pycompss_solution(code)
-        self.assertIn("def main", result)
-        self.assertNotIn("def other", result)
+        self.assertFalse(result.endswith("\n\n"))
 
 
 class TestExtractOutputStripping(unittest.TestCase):
@@ -316,7 +315,7 @@ class TestCleanOutputPycompssDetection(unittest.TestCase):
         output = prompt + "\nimport os\n\ndef main():\n    x = 1"
         self.assertIn("import os", clean_output(output, prompt))
 
-    def test_extraction_trims_code_after_main(self):
+    def test_extraction_stops_at_if_name_main(self):
         # Proves that clean_output delegates to extract_pycompss_solution
         prompt = PYCOMPSS_PROMPT
         output = (
@@ -324,12 +323,12 @@ class TestCleanOutputPycompssDetection(unittest.TestCase):
             "import os\n\n"
             "def main():\n"
             "    x = 1\n\n"
-            "def should_not_appear():\n"
-            "    pass"
+            "if __name__ == '__main__':\n"
+            "    main()"
         )
         result = clean_output(output, prompt)
         self.assertIn("x = 1", result)
-        self.assertNotIn("def should_not_appear", result)
+        self.assertNotIn("if __name__", result)
 
 
 # ===========================================================================
@@ -423,19 +422,19 @@ class TestCleanInstructOutputCodeBlockExtraction(unittest.TestCase):
 class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
     """Step 3 – 'pycompss' in prompt routes raw_code through extract_pycompss_solution."""
 
-    def test_code_after_main_is_trimmed(self):
+    def test_if_name_main_block_is_trimmed(self):
         tag = PYCOMPSS_RESPONSE_TAG
         code = (
             "import os\n\n"
             "def main():\n"
             "    x = 1\n\n"
-            "def extra():\n"
-            "    pass"
+            "if __name__ == '__main__':\n"
+            "    main()"
         )
         output = f"{tag}\n```python\n{code}\n```\n"
         result = clean_instruct_output(output, PYCOMPSS_PROMPT, tag)
         self.assertIn("x = 1", result)
-        self.assertNotIn("def extra", result)
+        self.assertNotIn("if __name__", result)
 
     def test_pycompss_detection_is_case_insensitive(self):
         tag = PYCOMPSS_RESPONSE_TAG
@@ -445,19 +444,19 @@ class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
         result = clean_instruct_output(output, prompt, tag)
         self.assertIn("import os", result)
 
-    def test_pycompss_extraction_without_fenced_block(self):
+    def test_if_name_main_trimmed_without_fenced_block(self):
         tag = PYCOMPSS_RESPONSE_TAG
         code = (
             "import os\n\n"
             "def main():\n"
             "    x = 1\n\n"
-            "def extra():\n"
-            "    pass"
+            "if __name__ == '__main__':\n"
+            "    main()"
         )
         output = f"{tag}\n{code}"
         result = clean_instruct_output(output, PYCOMPSS_PROMPT, tag)
         self.assertIn("x = 1", result)
-        self.assertNotIn("def extra", result)
+        self.assertNotIn("if __name__", result)
 
     def test_full_realistic_llama3_pycompss_output(self):
         """End-to-end: Llama-3 response tag + python fenced block + full pycompss structure."""
@@ -503,14 +502,15 @@ class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
             "    result = add(1, 2)\n"
             "    print(result)\n"
             "\n"
-            "# end of file\n"
+            "if __name__ == '__main__':\n"
+            "    main()\n"
         )
         output = f"Explanation here.\n{tag}\n{code}"
         result = clean_instruct_output(output, prompt, tag)
         self.assertIn("from pycompss", result)
         self.assertIn("def main", result)
         self.assertIn("print(result)", result)
-        self.assertNotIn("# end of file", result)
+        self.assertNotIn("if __name__", result)
 
 
 if __name__ == "__main__":

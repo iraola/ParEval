@@ -9,11 +9,12 @@ from transformers import StoppingCriteria
 
 def extract_pycompss_solution(code: str) -> str:
     """
-    Extracts Python code starting from imports/defs and ending strictly 
-    after the 'main' function returns.
+    Extracts Python code starting from imports/defs and ending before any
+    non-indented statement that is not an import, decorator, or function
+    definition (e.g. `if __name__ == '__main__'` blocks).
     """
     lines = code.splitlines()
-    
+
     # Find start (first import or function definition)
     start_index = 0
     start_pattern = re.compile(r'^\s*(import|from|def)\s+|^\s*@task')
@@ -22,40 +23,33 @@ def extract_pycompss_solution(code: str) -> str:
         if start_pattern.match(line):
             start_index = i
             break
-            
-    # Find 'def main'
-    main_start_index = -1
-    main_pattern = re.compile(r'^(\s*)def\s+main\s*\(')
-    for i in range(start_index, len(lines)):
-        match = main_pattern.match(lines[i])
-        if match:
-            main_start_index = i
-            base_indent = len(match.group(1))
-            break
-            
-    # Fallback: if no main found, return everything from start
-    if main_start_index == -1:
-        return "\n".join(lines[start_index:]).strip()
 
-    # Find end (walk lines until indentation breaks)
-    last_valid_index = main_start_index
-    for i in range(main_start_index + 1, len(lines)):
+    # Walk lines and include imports, decorators and functions
+    top_level_ok = re.compile(r'^\s*(import|from|@|def)\s*')
+    last_valid_index = start_index
+
+    for i in range(start_index, len(lines)):
         line = lines[i]
         stripped = line.strip()
+
         if not stripped:
             continue
-        current_indent = len(line) - len(line.lstrip())
-        if stripped.startswith('#'):
-            # Only include comments that are indented inside main
-            if current_indent > base_indent:
-                last_valid_index = i
-            continue
-        if current_indent <= base_indent:
-            break
-        last_valid_index = i
-    end_index = last_valid_index + 1
 
-    return "\n".join(lines[start_index:end_index]).strip()
+        current_indent = len(line) - len(line.lstrip())
+        if current_indent > 0:
+            # Inside a function body: always include
+            last_valid_index = i
+            continue
+
+        # Top-level line
+        if stripped.startswith('#') or top_level_ok.match(line):
+            last_valid_index = i
+            continue
+
+        # Non-indented, non-function code (e.g. if __name__ == '__main__'): stop
+        break
+
+    return "\n".join(lines[start_index:last_valid_index + 1]).strip()
 
 
 def clean_output(output: str, prompt: str) -> str:
