@@ -5,7 +5,6 @@
 import random
 from python.utilities import fillRand, fequal
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -50,7 +49,6 @@ class Context:
         for element in self.A_coo:
             self.b[element['row']] += element['value'] * x[element['column']]
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -65,7 +63,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     # Assuming 'main' is the @task defined elsewhere
@@ -75,7 +72,6 @@ def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.A_coo, ctx.b)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

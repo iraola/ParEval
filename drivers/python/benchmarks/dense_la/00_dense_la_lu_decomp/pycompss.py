@@ -5,7 +5,6 @@
 import random
 from python.utilities import fillRand, fequal 
 import copy
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -26,7 +25,6 @@ class Context:
         for row in self.A:
             fillRand(row, -50.0, 50.0)
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -41,7 +39,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -58,7 +55,6 @@ def best(ctx: Context):
     # Assuming 'correct_relu' is defined elsewhere
     return correct_main(ctx.A, ctx.N)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

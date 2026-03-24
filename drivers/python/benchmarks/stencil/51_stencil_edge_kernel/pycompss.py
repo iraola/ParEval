@@ -4,7 +4,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -25,7 +24,6 @@ class Context:
 
         for i in range(len(self.matrix)):
             fillRand(self.matrix[i], 0, 256)  # Random integers 0 to 255
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -40,7 +38,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -57,7 +54,6 @@ def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.matrix, ctx.N)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

@@ -4,7 +4,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -28,7 +27,6 @@ class Context:
         fillRand(self.x, -10.0, 10.0)
         
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -43,7 +41,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     # Assuming 'main' is the @task defined elsewhere
@@ -52,7 +49,6 @@ def compute(ctx: Context):
 def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.A, ctx.x)
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

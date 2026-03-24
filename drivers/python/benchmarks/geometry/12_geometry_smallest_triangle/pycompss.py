@@ -2,7 +2,6 @@
 # """ Compute the smallest triangle area from a set of points.
 
 import random
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -19,7 +18,6 @@ class Context:
 
     def reset_data(self):
         self.points = [(random.randint(0, 100), random.randint(0, 100)) for _ in range(self.size)]
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -34,7 +32,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     # Assuming 'main' is the @task defined elsewhere
@@ -44,7 +41,6 @@ def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.points)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

@@ -5,7 +5,6 @@
 import random
 from python.utilities import fillRand, fequal, fillRandString
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -39,7 +38,6 @@ class Context:
         # Store as a list of tuples
         self.books = list(zip(titles, pages))
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -53,7 +51,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """ Calls the PyCOMPSs function/s using data from the context class. """
@@ -62,7 +59,6 @@ def compute(ctx: Context):
 def best(ctx: Context):
     """ Calls the sequential baseline using data from the context class. """
     return correct_main(ctx.books)
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies that parallel output matches sequential output. """

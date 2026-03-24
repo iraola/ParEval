@@ -3,7 +3,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -31,7 +30,6 @@ class Context:
             i = random.uniform(-50.0, 50.0)
             self.x.append(complex(r, i))
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -46,7 +44,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -63,7 +60,6 @@ def best(ctx: Context):
     # Assuming 'correct_relu' is defined elsewhere
     return correct_main(ctx.x)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

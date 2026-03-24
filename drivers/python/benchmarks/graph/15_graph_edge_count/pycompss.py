@@ -5,7 +5,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -28,7 +27,6 @@ class Context:
         # Fill the adjacency matrix with random 0s and 1s
         for i in range(len(self.A)):
             fillRand(self.A[i], 0, 2)  # Random integers 0 or 1
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -43,7 +41,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -60,7 +57,6 @@ def best(ctx: Context):
     # Assuming 'correct_relu' is defined elsewhere
     return correct_main(ctx.A)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

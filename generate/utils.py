@@ -14,59 +14,45 @@ def extract_pycompss_solution(code: str) -> str:
     """
     lines = code.splitlines()
     
-    # 1. Find Start (First Import or Function)
+    # Find start (first import or function definition)
     start_index = 0
-    start_pattern = re.compile(r'^\s*(import|from|@task|def)\s+')
-    
+    start_pattern = re.compile(r'^\s*(import|from|def)\s+|^\s*@task')
+
     for i, line in enumerate(lines):
         if start_pattern.match(line):
             start_index = i
             break
             
-    # 2. Find 'def main'
+    # Find 'def main'
     main_start_index = -1
     main_pattern = re.compile(r'^(\s*)def\s+main\s*\(')
-    
     for i in range(start_index, len(lines)):
         match = main_pattern.match(lines[i])
         if match:
             main_start_index = i
-            base_indent = len(match.group(1)) # Capture indent of main
+            base_indent = len(match.group(1))
             break
             
     # Fallback: if no main found, return everything from start
     if main_start_index == -1:
         return "\n".join(lines[start_index:]).strip()
 
-    # 3. Find End (Iterate after main until indentation breaks)
+    # Find end (walk lines until indentation breaks)
     last_valid_index = main_start_index
-    
     for i in range(main_start_index + 1, len(lines)):
         line = lines[i]
         stripped = line.strip()
-        
-        # Skip empty lines without updating the valid index
         if not stripped:
             continue
-            
         current_indent = len(line) - len(line.lstrip())
-        
-        # Handle comments
         if stripped.startswith('#'):
-            # If the comment is properly indented, it belongs inside main
+            # Only include comments that are indented inside main
             if current_indent > base_indent:
                 last_valid_index = i
-
             continue
-            
-        # Check indentation of actual code
         if current_indent <= base_indent:
             break
-            
-        # Update pointer for valid indented code
         last_valid_index = i
-
-    # Set end_index to immediately after the last confirmed line of the function
     end_index = last_valid_index + 1
 
     return "\n".join(lines[start_index:end_index]).strip()
@@ -78,27 +64,16 @@ def clean_output(output: str, prompt: str) -> str:
     For C++/CUDA: Truncates at the matching closing brace.
     For PyCOMPSs: Truncates after the 'main' function ends.
     """
-    # 1. Remove the prompt from the output
     prompt_loc = output.find(prompt)
     if prompt_loc == -1:
-        # If strict prompt not found, try stripping whitespace or proceed with full output
-        # (You can raise ValueError here if you prefer strictness)
         raw_output = output
     else:
         raw_output = output[prompt_loc + len(prompt):].strip()
 
-    # 2. Check for PyCOMPSs / Python Mode
     if "pycompss" in prompt.lower():
-        # Use the python-specific extractor
-        # Note: This assumes 'extract_pycompss_solution' is defined in your utils
         return extract_pycompss_solution(raw_output)
 
-    # 3. Default / C++ Mode (Original Logic)
-    # Temporarily add opening brace to the beginning to simulate function start
-    # This assumes the prompt ended with a function signature (e.g., "void foo() {")
-    # and the model generated the body starting with code or a brace.
-    
-    # We work on a copy to avoid messing up the python logic variables
+    # Prepend '{' to simulate a complete function body and reuse brace-matching logic
     cpp_output = '{' + raw_output
 
     stack = []
@@ -113,7 +88,7 @@ def clean_output(output: str, prompt: str) -> str:
                 break
         index += 1
 
-    # Truncate at the matching brace and remove the artificial opening brace
+    # Strip the artificial opening brace before returning
     return cpp_output[1:index+1]
 
 GPU_FUNCTION_NAME_PATTERN = re.compile(r"__global__ void ([a-zA-Z0-9_]+)\(")
@@ -146,43 +121,30 @@ def find_matching_brace_index(code: str, open_brace_index: int) -> int:
 def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     """ Clean LLM output to find code solution. """
     
-    # 0. Remove the prompt/instruction header if present
     prompt_loc = output.find(response_tag)
     if prompt_loc != -1:
         output = output[prompt_loc + len(response_tag):].strip()
 
-    # 1. Extract Code Blocks (Generic)
-    # We find content inside ```python, ```c++, or just ```
+    # Extract code blocks (```python, ```c++, or plain ```)
     code_blocks = re.findall(r"```(?:\w*)\n(.*?)\n```", output, flags=re.DOTALL)
-    
-    # Helper to get raw code if blocks exist, or fallback to full output
+
     if len(code_blocks) > 0:
         raw_code = code_blocks[0]
     else:
-        # If no code blocks, strip potential backticks or use raw
         raw_code = output.strip()
         if raw_code.startswith("```"): raw_code = raw_code[3:]
         if raw_code.endswith("```"): raw_code = raw_code[:-3]
 
-    # =========================================================
-    # PATH A: PyCOMPSs (Python)
-    # =========================================================
     if "pycompss" in prompt.lower():
-        # Use the specific python extractor helper
         return extract_pycompss_solution(raw_code)
 
-    # =========================================================
-    # PATH B: C/C++ (Your Original Logic)
-    # =========================================================
     try:
-        # Reconstruct the sub-prompt to find the expected function name
         sub_prompt = prompt.rstrip().removesuffix(response_tag).rstrip()
-        if "```" in sub_prompt: 
-             sub_prompt = sub_prompt.split("```")[-1] 
-        
+        if "```" in sub_prompt:
+             sub_prompt = sub_prompt.split("```")[-1]
+
         function_name = get_function_name(sub_prompt, "cuda" if "__global__" in sub_prompt else "serial")
-        
-        # Select the best block containing the function name
+
         selected_block = raw_code # Default
         if len(code_blocks) > 0:
             prioritized_blocks = [block for block in code_blocks if function_name in block]
@@ -191,24 +153,20 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
             else:
                 selected_block = code_blocks[0]
 
-        # Perform strict brace matching for C/C++
         if function_name in selected_block:
             function_start_index = selected_block.index(function_name)
             open_brace_index = selected_block.find("{", function_start_index)
-            
+
             if open_brace_index != -1:
                 try:
                     close_brace_index = find_matching_brace_index(selected_block, open_brace_index)
-                    # Return content inside braces + the closing brace
                     return (selected_block[open_brace_index + 1 : close_brace_index] + "}").strip()
                 except ValueError:
-                    # If braces are unbalanced, return what we have
                     pass
-            
+
         return selected_block
 
     except ValueError:
-        # Fallback: if get_function_name fails, just return the first code block
         return raw_code
 
 
@@ -336,23 +294,14 @@ You are an exceptionally intelligent coding assistant that consistently delivers
         return False
 
     def format_prompt(self, prompt : str) -> str:
-        # 1. PyCOMPSs / Python Mode (Natural Language)
         if "pycompss" in prompt.lower():
-            # Pass the prompt directly into the Llama 3 template
             return self.PROMPT_TEMPLATE.format(instruction=prompt.strip())
 
-        # 2. Existing C++ Mode (Strict Function Signature)
-        # Identify function name for constraint
         function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
-        
-        # Wrap code in instructions
         instruct_prompt = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
-        
-        # Apply Llama 3 chat template structure
         return self.PROMPT_TEMPLATE.format(instruction=instruct_prompt)
 
     def clean_output(self, output: str, prompt: str) -> str:
-        # Llama 3 uses a specific header for the assistant response
         return clean_instruct_output(output, prompt, "<|start_header_id|>assistant<|end_header_id|>\n\n")
 
 
@@ -543,14 +492,10 @@ class InstructConfig(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        # 1. PyCOMPSs / Python Mode
         if "pycompss" in prompt.lower():
-            # Pass the natural language prompt directly as the instruction
             formatted = f"{self.instruction_tag}\n{prompt.strip()}\n{self.response_tag}\n"
             return formatted
 
-        # 2. Existing C++ Mode
-        # (This preserves your exact current behavior for C++ files)
         function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
         prompt = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
         prompt = f"{self.instruction_tag}\n{prompt}\n{self.response_tag}\n"

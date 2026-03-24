@@ -3,7 +3,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -24,7 +23,6 @@ class Context:
         if 0 in self.x:
             # Ensure no zeros to avoid division by zero in the product of inverses
             self.x = [val if val != 0 else 1 for val in self.x]
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -39,7 +37,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -56,7 +53,6 @@ def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.x)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

@@ -2,17 +2,17 @@ import time
 NITER = 5
 
 def run_benchmark():
-    # 1. Setup
+    # Setup
     ctx = init()
 
-    # 2. Validation (Single point of failure)
+    # Validation
     print("Validating...")
     if not validate(ctx):
         print("Validation: FAIL")
         return
     print("Validation: PASS")
 
-    # 3. Benchmark Parallel (Compute)
+    # Benchmark parallel
     print("Running compute() benchmark...")
     total_parallel = 0.0
     for _ in range(NITER):
@@ -26,7 +26,7 @@ def run_benchmark():
     
     print(f"Time: {total_parallel / NITER:.6f}")
 
-    # 4. Benchmark Sequential (Best)
+    # Benchmark sequential
     print("Running best() benchmark...")
     total_seq = 0.0
     for _ in range(NITER):

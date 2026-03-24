@@ -4,7 +4,6 @@
 import copy
 from python.utilities import fillRand, fequal 
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -38,36 +37,28 @@ class Context:
         nVals_A = int(self.M * self.K * self.sparsity)
         nVals_X = int(self.K * self.N * self.sparsity)
 
-        # 1. Pre-allocate and fill arrays for A
+        # Pre-allocate and fill arrays for A
         a_rows = [0] * nVals_A
         a_cols = [0] * nVals_A
         a_vals = [0.0] * nVals_A
-        
-        # fillRand uses randint(min, max-1) for ints, so we pass self.M and self.K
-        fillRand(a_rows, 0, self.M) 
+        fillRand(a_rows, 0, self.M)
         fillRand(a_cols, 0, self.K)
         fillRand(a_vals, -1.0, 1.0)
-
-        # Pack into dictionaries
         self.A = [{'row': r, 'column': c, 'value': v} for r, c, v in zip(a_rows, a_cols, a_vals)]
 
-        # 2. Pre-allocate and fill arrays for X
+        # Pre-allocate and fill arrays for X
         x_rows = [0] * nVals_X
         x_cols = [0] * nVals_X
         x_vals = [0.0] * nVals_X
-        
         fillRand(x_rows, 0, self.K)
         fillRand(x_cols, 0, self.N)
         fillRand(x_vals, -1.0, 1.0)
-
-        # Pack into dictionaries
         self.X = [{'row': r, 'column': c, 'value': v} for r, c, v in zip(x_rows, x_cols, x_vals)]
 
-        # 3. Sort elements: primarily by row, secondarily by column
+        # Sort elements: primarily by row, secondarily by column
         self.A.sort(key=lambda item: (item['row'], item['column']))
         self.X.sort(key=lambda item: (item['row'], item['column']))
 
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -82,7 +73,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -98,7 +88,6 @@ def best(ctx: Context):
     """
     return correct_main(ctx.A, ctx.X, ctx.M, ctx.N)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

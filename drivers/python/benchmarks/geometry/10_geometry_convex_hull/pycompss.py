@@ -2,7 +2,6 @@
 # """ Compute the convex hull of a set of points.
 
 import random
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -19,7 +18,6 @@ class Context:
 
     def reset_data(self):
         self.points = [(random.randint(0, 100), random.randint(0, 100)) for _ in range(self.size)]
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -34,21 +32,11 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
-    """
-    Launches parallel ReLU tasks.
-    Accesses data via dot notation (ctx.x).
-    """
-    # Assuming 'relu' is the @task defined elsewhere
     return main(ctx.points)
 
 def best(ctx: Context):
-    """
-    Calls the sequential baseline.
-    """
-    # Assuming 'correct_relu' is defined elsewhere
     return correct_main(ctx.points)
 
 def points_equal(p1, p2, eps=1e-6):
@@ -59,16 +47,14 @@ def hulls_equal(hull_a, hull_b, eps=1e-6):
     if len(hull_a) != len(hull_b):
         return False
     
-    # 1. Normalize: find the 'lexicographically smallest' point to start from
-    # (e.g., the point with the smallest X, then smallest Y)
+    # Normalize: find the lexicographically smallest point to start from
     start_point = min(hull_a)
-    
-    # 2. Reorder hull_a to start from that point
+
+    # Reorder hull_a to start from that point
     idx = hull_a.index(start_point)
     hull_a = hull_a[idx:] + hull_a[:idx]
-    
-    # 3. Check both orientations (CW and CCW) against hull_b
-    # This handles the "direction" problem
+
+    # Check both orientations (CW and CCW) against hull_b
     def check_match(ha, hb):
         return all(points_equal(p1, p2, eps) for p1, p2 in zip(ha, hb))
 
@@ -79,7 +65,6 @@ def hulls_equal(hull_a, hull_b, eps=1e-6):
     
     return False
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

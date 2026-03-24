@@ -157,7 +157,6 @@ class PythonDriverWrapper(DriverWrapper):
         """
         logging.debug(f"Testing output (python/pycompss):\n  --- code ---\n{output[:500]}{'...' if len(output)>500 else ''}\n  --- end code ---")
 
-        # 1. Use the Class-level global tracker
         if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
             PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt] = len(PythonDriverWrapper._GLOBAL_PROMPT_TO_ID)
         
@@ -167,7 +166,7 @@ class PythonDriverWrapper(DriverWrapper):
             src_path = os.path.join(tmpdir, "generated_code.py")
             write_success = self.write_source(prompt + "\n" + output, src_path)
 
-            # 2. Setup Directory
+            # Setup directory
             dst_dir = None
             if self.save_generated_dir:
                 safe_type = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in problem_type)
@@ -191,7 +190,7 @@ class PythonDriverWrapper(DriverWrapper):
                 f.write(f"DRIVER_PROBLEM_SIZE = {problem_size}\n")
                 f.write(f"MAX_VALIDATION_ATTEMPTS = 5\n")
 
-            # 3. Build
+            # Build
             exec_path = os.path.join(tmpdir, "a_out.py")
             if not Path(test_driver_file).exists():
                 resolved = try_to_find_path(Path(test_driver_file))

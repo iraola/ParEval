@@ -5,7 +5,6 @@ import copy
 from python.utilities import fillRand, fequal 
 import random
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
 
@@ -47,7 +46,6 @@ class Context:
             self.A.extend(row_entries)
 
         
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -62,7 +60,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     return main(ctx.A, ctx.N)
@@ -70,7 +67,6 @@ def compute(ctx: Context):
 def best(ctx: Context):
     return correct_main(ctx.A, ctx.N)
 
-# --- VALIDATE ----------------------------------------------------
 
 def compare_sparse_matrices(mat_par, mat_seq, eps=1e-6):
     par_dict = {(elem['row'], elem['column']): elem['value'] for elem in mat_par}

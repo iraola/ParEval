@@ -5,7 +5,6 @@ import copy
 from python.utilities import fillRand, fequal 
 import random
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
 
@@ -58,7 +57,6 @@ class Context:
                 
             self.A.sort(key=lambda item: (item['row'], item['column']))
         
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -73,7 +71,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     return main(ctx.alpha, ctx.beta, ctx.A, ctx.x, ctx.y)
@@ -81,7 +78,6 @@ def compute(ctx: Context):
 def best(ctx: Context):
     return correct_main(ctx.alpha, ctx.beta, ctx.A, ctx.x, ctx.y)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

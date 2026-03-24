@@ -5,7 +5,6 @@ import copy
 from python.utilities import fillRand, fequal 
 import random
 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
 
@@ -42,7 +41,6 @@ class Context:
                 self.y.append({'index': i, 'value': random.uniform(-10.0, 10.0)})
 
         
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -57,7 +55,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     return main(ctx.alpha, ctx.x, ctx.y, ctx.N)
@@ -65,7 +62,6 @@ def compute(ctx: Context):
 def best(ctx: Context):
     return correct_main(ctx.alpha, ctx.x, ctx.y, ctx.N)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

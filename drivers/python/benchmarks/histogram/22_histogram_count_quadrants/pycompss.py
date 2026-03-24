@@ -3,7 +3,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -26,7 +25,6 @@ class Context:
         fillRand(self.x, -50.0, 50.0)
         fillRand(self.y, -50.0, 50.0)
         self.points = list(zip(self.x, self.y))
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -41,7 +39,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     # Assuming 'main' is the @task defined elsewhere
@@ -54,7 +51,6 @@ def best(ctx: Context):
     # Assuming 'correct_main' is defined elsewhere
     return correct_main(ctx.points)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

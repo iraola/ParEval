@@ -3,7 +3,6 @@
 
 import random
 from python.utilities import fillRand, fequal 
-# --- CONTEXT CLASS -----------------------------------------------
 
 class Context:
     """
@@ -22,7 +21,6 @@ class Context:
         self.x = [0] * self.size
         fillRand(self.x, 0, 2)  # Fill with random 0s and 1s
         self.x = [bool(val) for val in self.x]  # Convert to boolean
-# --- DRIVER INTERFACE --------------------------------------------
 
 def init():
     """ 
@@ -37,7 +35,6 @@ def reset(ctx: Context):
     """
     ctx.reset_data()
 
-# --- COMPUTE -----------------------------------------------------
 
 def compute(ctx: Context):
     """
@@ -54,7 +51,6 @@ def best(ctx: Context):
     # Assuming 'correct_relu' is defined elsewhere
     return correct_main(ctx.x)
 
-# --- VALIDATE ----------------------------------------------------
 
 def validate(ctx: Context):
     """ Verifies parallel execution matches sequential execution. """

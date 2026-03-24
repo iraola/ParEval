@@ -1,10 +1,9 @@
 import cmath
 
-# --- Iterative FFT (Sequential) ---
 def fft_iterative(x):
     n = len(x)
-    
-    # 1. Bit-reversal permutation
+
+    # Bit-reversal permutation
     j = 0
     for i in range(1, n):
         bit = n >> 1
@@ -15,7 +14,7 @@ def fft_iterative(x):
         if i < j:
             x[i], x[j] = x[j], x[i]
 
-    # 2. Cooley-Tukey Butterfly Operations
+    # Cooley-Tukey butterfly operations
     length = 2
     while length <= n:
         angle = -2.0 * cmath.pi / length
@@ -31,14 +30,8 @@ def fft_iterative(x):
         length <<= 1
     return x
 
-# --- IFFT Wrapper ---
 def correct_main(x):
     N = len(x)
-    # 1. Conjugate
     x = [val.conjugate() for val in x]
-    
-    # 2. Forward FFT (Iterative)
     x = fft_iterative(x)
-    
-    # 3. Conjugate and Scale
     return [val.conjugate() / N for val in x]
