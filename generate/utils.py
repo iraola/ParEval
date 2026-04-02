@@ -114,7 +114,12 @@ def find_matching_brace_index(code: str, open_brace_index: int) -> int:
 
 def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     """ Clean LLM output to find code solution. """
-    
+
+    # Strip thinking tokens emitted by reasoning models (e.g. DeepSeek-R1, Qwen3)
+    think_end = output.rfind('</think>')
+    if think_end != -1:
+        output = output[think_end + len('</think>'):].strip()
+
     prompt_loc = output.find(response_tag)
     if prompt_loc != -1:
         output = output[prompt_loc + len(response_tag):].strip()
@@ -546,14 +551,121 @@ class ChatMLConfig(InferenceConfig):
     def trust_remote_code(self) -> bool:
         return False
 
-    def format_prompt(self, prompt : str) -> str:
-        function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
-        prompt = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
-        prompt = f"<|im_start|>system\nYou are an exceptionally intelligent coding assistant that consistently delivers accurate and reliable responses to user instructions.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
-        return prompt
+    def format_prompt(self, prompt: str) -> str:
+        if "pycompss" in prompt.lower():
+            instruction = prompt.strip()
+        else:
+            function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+            instruction = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        return f"<|im_start|>system\nYou are an exceptionally intelligent coding assistant that consistently delivers accurate and reliable responses to user instructions.<|im_end|>\n<|im_start|>user\n{instruction}<|im_end|>\n<|im_start|>assistant\n"
 
     def clean_output(self, output: str, prompt: str) -> str:
         return clean_instruct_output(output, prompt,"<|im_start|>assistant\n")
+
+class MistralInstructConfig(InferenceConfig):
+    """Configuration for Mistral instruct models (Codestral, Mistral Small, etc.)"""
+
+    def __init__(self, prompted: bool = False):
+        super().__init__(prompted=prompted)
+
+    def get_dtype(self):
+        return torch.bfloat16
+
+    def init_padding(self, tokenizer):
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+
+    def get_pad_token_id(self, tokenizer) -> int:
+        return tokenizer.pad_token_id
+
+    def get_eos_token_id(self, tokenizer) -> int:
+        return tokenizer.eos_token_id
+
+    def trust_remote_code(self) -> bool:
+        return False
+
+    def format_prompt(self, prompt: str) -> str:
+        if "pycompss" in prompt.lower():
+            instruction = prompt.strip()
+        else:
+            function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+            instruction = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        return f"<s>[INST] {instruction} [/INST]"
+
+    def clean_output(self, output: str, prompt: str) -> str:
+        return clean_instruct_output(output, prompt, "[/INST]")
+
+
+class DeepSeekR1Config(InferenceConfig):
+    """Configuration for DeepSeek-R1 distilled models (Llama and Qwen variants).
+    These models use DeepSeek's own User/Assistant tokens regardless of backbone architecture,
+    and always emit a <think>...</think> block before the answer."""
+
+    def __init__(self, prompted: bool = False):
+        super().__init__(prompted=prompted)
+
+    def get_dtype(self):
+        return torch.bfloat16
+
+    def init_padding(self, tokenizer):
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+
+    def get_pad_token_id(self, tokenizer) -> int:
+        return tokenizer.pad_token_id
+
+    def get_eos_token_id(self, tokenizer) -> int:
+        return tokenizer.eos_token_id
+
+    def trust_remote_code(self) -> bool:
+        return False
+
+    def format_prompt(self, prompt: str) -> str:
+        if "pycompss" in prompt.lower():
+            instruction = prompt.strip()
+        else:
+            function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+            instruction = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        return f"<｜User｜>{instruction}<｜Assistant｜>"
+
+    def clean_output(self, output: str, prompt: str) -> str:
+        return clean_instruct_output(output, prompt, "<｜Assistant｜>")
+
+
+
+class HarmonyConfig(InferenceConfig):
+    """Configuration for OpenAI open-weight models using the Harmony chat format (e.g. gpt-oss-20b, gpt-oss-120b)."""
+
+    def __init__(self, prompted: bool = False):
+        super().__init__(prompted=prompted)
+
+    def get_dtype(self):
+        return torch.bfloat16
+
+    def init_padding(self, tokenizer):
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+
+    def get_pad_token_id(self, tokenizer) -> int:
+        return tokenizer.pad_token_id
+
+    def get_eos_token_id(self, tokenizer) -> int:
+        return tokenizer.eos_token_id
+
+    def trust_remote_code(self) -> bool:
+        return False
+
+    def format_prompt(self, prompt: str) -> str:
+        if "pycompss" in prompt.lower():
+            instruction = prompt.strip()
+        else:
+            function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+            instruction = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        return f"<|start|>user<|message|>{instruction}<|end|>\n<|start|>assistant<|message|>"
+
+    def clean_output(self, output: str, prompt: str) -> str:
+        return clean_instruct_output(output, prompt, "<|start|>assistant<|message|>")
+
 
 def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
     if model_name == "bigcode/starcoderbase":
@@ -584,8 +696,18 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return QwenConfig(**kwargs)
     elif model_name == 'deepseek-ai/deepseek-coder-6.7b-instruct':
         return InstructConfig(instruction_tag='### Instruction:', response_tag='### Response:', **kwargs)
-    elif 'Llama-3.1' in model_name and 'Instruct' in model_name:
+    elif ('Llama-3.1' in model_name or 'Llama-3.3' in model_name) and 'Instruct' in model_name:
         return Llama3InstructConfig(**kwargs)
+    elif 'DeepSeek-R1-Distill' in model_name:
+        return DeepSeekR1Config(**kwargs)
+    elif model_name == 'deepseek-ai/DeepSeek-Coder-V2-Instruct':
+        return InstructConfig(instruction_tag='User:', response_tag='Assistant:', **kwargs)
+    elif model_name == 'deepseek-ai/DeepSeek-Coder-V2':
+        return DeepSeekBaseConfig(**kwargs)
+    elif model_name.startswith('mistralai/Codestral') or ('Mistral-Small' in model_name and 'Instruct' in model_name):
+        return MistralInstructConfig(**kwargs)
+    elif model_name.startswith('openai/gpt-oss'):
+        return HarmonyConfig(**kwargs)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
