@@ -601,8 +601,11 @@ class PromptDataset(Dataset):
     def __len__(self):
         return len(self.prompts_)
     
-    def __getitem__(self, idx): 
+    def __getitem__(self, idx):
         return self.prompts_[idx]
+
+    def __iter__(self):
+        return iter(self.prompts_)
 
 
 def has_balanced_brackets(text : str, left_bracket : str = '{', right_bracket : str = '}') -> bool:
