@@ -31,6 +31,8 @@ parser.add_argument('--temperature', type=float, default=0.2, help='Temperature 
 parser.add_argument('--top_p', type=float, default=0.95, help='Top p value for nucleus sampling (default: 0.95)')
 parser.add_argument('--do_sample', action='store_true', help='Enable sampling (default: False)')
 parser.add_argument('--prompted', action='store_true', help='Use prompted generation. See StarCoder paper (default: False)')
+parser.add_argument('--enforce_eager', action='store_true', help='Disable CUDA graph capture (slower but uses less memory, default: False)')
+parser.add_argument('--gpu_memory_utilization', type=float, default=0.9, help='Fraction of GPU memory to use for model weights and KV cache (default: 0.9)')
 args = parser.parse_args()
 
 local_model_path = os.path.join("..", "models", args.model)
@@ -102,7 +104,9 @@ inference_config = get_inference_config(get_inference_model_path, prompted=args.
 prompts_repeated = [p for p in prompts for _ in range(args.num_samples_per_prompt)]
 
 """ Initialize vLLM engine """
-llm = LLM(model=args.model, tensor_parallel_size=torch.cuda.device_count())
+llm = LLM(model=args.model, tensor_parallel_size=torch.cuda.device_count(),
+          enforce_eager=args.enforce_eager,
+          gpu_memory_utilization=args.gpu_memory_utilization)
 
 # Configure sampling parameters
 sampling_params = SamplingParams(
