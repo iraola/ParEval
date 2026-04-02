@@ -33,6 +33,16 @@ parser.add_argument('--do_sample', action='store_true', help='Enable sampling (d
 parser.add_argument('--prompted', action='store_true', help='Use prompted generation. See StarCoder paper (default: False)')
 args = parser.parse_args()
 
+local_model_path = os.path.join("..", "models", args.model)
+
+get_inference_model_path = args.model
+if os.path.isdir(local_model_path):
+    print(f"Found local model: {local_model_path}")
+    args.model = local_model_path
+else:
+    print(f"ℹModel not found at {local_model_path}")
+    print(f"   Attempting to load '{args.model}' from Hugging Face cache or absolute path.")
+
 """ Load prompts """
 with open(args.prompts, 'r') as json_file:
     prompts = json.load(json_file)
@@ -87,7 +97,7 @@ if not args.restart and args.restore_from and os.path.exists(args.restore_from):
             print(f"[restore_from] Wrote {len(responses_to_keep)} restored responses to cache")
 
 """ Initialize inference config """
-inference_config = get_inference_config(args.model, prompted=args.prompted)
+inference_config = get_inference_config(get_inference_model_path, prompted=args.prompted)
 
 prompts_repeated = [p for p in prompts for _ in range(args.num_samples_per_prompt)]
 
