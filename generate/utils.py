@@ -667,6 +667,40 @@ class HarmonyConfig(InferenceConfig):
         return clean_instruct_output(output, prompt, "<|start|>assistant<|message|>")
 
 
+class GLM4Config(InferenceConfig):
+    """Configuration for ZhipuAI GLM-4 models (zai-org/GLM-*)."""
+
+    def __init__(self, prompted: bool = False):
+        super().__init__(prompted=prompted)
+
+    def get_dtype(self):
+        return torch.bfloat16
+
+    def init_padding(self, tokenizer):
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+
+    def get_pad_token_id(self, tokenizer) -> int:
+        return tokenizer.pad_token_id
+
+    def get_eos_token_id(self, tokenizer) -> int:
+        return tokenizer.eos_token_id
+
+    def trust_remote_code(self) -> bool:
+        return False
+
+    def format_prompt(self, prompt: str) -> str:
+        if "pycompss" in prompt.lower():
+            instruction = prompt.strip()
+        else:
+            function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
+            instruction = f"Complete the following c++ function.\n```c++{prompt.strip()}```\nWrite only the function {function_name} and no other code. Enclose your solution in ```c++ and ```."
+        return f"[gMASK]<sop><|user|>\n{instruction}\n<|assistant|>\n"
+
+    def clean_output(self, output: str, prompt: str) -> str:
+        return clean_instruct_output(output, prompt, "<|assistant|>\n")
+
+
 def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
     if model_name == "bigcode/starcoderbase":
         return StarCoderConfig(**kwargs)
@@ -698,16 +732,38 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return InstructConfig(instruction_tag='### Instruction:', response_tag='### Response:', **kwargs)
     elif ('Llama-3.1' in model_name or 'Llama-3.3' in model_name) and 'Instruct' in model_name:
         return Llama3InstructConfig(**kwargs)
-    elif 'DeepSeek-R1-Distill' in model_name:
+    elif 'DeepSeek-R1' in model_name:
+        # Covers DeepSeek-R1, DeepSeek-R1-0528, and all DeepSeek-R1-Distill-* variants
         return DeepSeekR1Config(**kwargs)
     elif model_name == 'deepseek-ai/DeepSeek-Coder-V2-Instruct':
         return InstructConfig(instruction_tag='User:', response_tag='Assistant:', **kwargs)
     elif model_name == 'deepseek-ai/DeepSeek-Coder-V2':
         return DeepSeekBaseConfig(**kwargs)
-    elif model_name.startswith('mistralai/Codestral') or ('Mistral-Small' in model_name and 'Instruct' in model_name):
+    elif model_name.startswith('mistralai/Codestral') \
+            or ('Mistral-Small' in model_name and 'Instruct' in model_name) \
+            or ('Mixtral' in model_name and 'Instruct' in model_name) \
+            or 'Magistral' in model_name:
         return MistralInstructConfig(**kwargs)
     elif model_name.startswith('openai/gpt-oss'):
         return HarmonyConfig(**kwargs)
+    # Qwen3 loaded from a 3-level local path (org prefix stripped by path parser)
+    elif model_name.startswith('Qwen3/'):
+        return ChatMLConfig(**kwargs)
+    # Qwen2.5 loaded from a 3-level local path (org prefix stripped by path parser)
+    elif model_name.startswith('Qwen2.5/') and 'Instruct' in model_name:
+        return ChatMLConfig(**kwargs)
+    elif model_name.startswith('Qwen2.5/'):
+        return QwenConfig(**kwargs)
+    elif model_name.startswith('microsoft/bitnet'):
+        # Base completion model — no chat template
+        return StarCoderConfig(**kwargs)
+    elif model_name.startswith('zai-org/GLM'):
+        return GLM4Config(**kwargs)
+    elif model_name.startswith('moonshotai/Kimi'):
+        return ChatMLConfig(**kwargs)
+    elif model_name.startswith('ByteDance-Seed/Seed-OSS'):
+        # NOTE: chat template not officially documented; ChatML assumed — verify if wrong
+        return ChatMLConfig(**kwargs)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
