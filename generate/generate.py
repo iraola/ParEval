@@ -42,8 +42,10 @@ get_inference_model_path = args.model
 if os.path.isdir(local_model_path):
     print(f"Found local model: {local_model_path}")
     args.model = local_model_path
+    # Parse for longer absolute paths (e.g. store just deepseek-ai/deepseek-coder-6.7b-instruct)
+    get_inference_model_path = "/".join(args.model.split("/")[-2:])
 else:
-    print(f"ℹModel not found at {local_model_path}")
+    print(f"Model not found at {local_model_path}")
     print(f"   Attempting to load '{args.model}' from Hugging Face cache or absolute path.")
 
 
