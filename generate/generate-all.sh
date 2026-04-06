@@ -30,6 +30,9 @@ module load sqlite3
 
 cd generate/
 
+# Add fix for Mistral-Small-3.2-24B error (shouldn't hurt GPU performance)
+export OMP_NUM_THREADS=1
+
 while IFS= read -r model || [ -n "$model" ]; do
     # Skip empty lines and comments
     [[ -z "$model" || "$model" == \#* ]] && continue
