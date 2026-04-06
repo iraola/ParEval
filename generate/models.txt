@@ -11,11 +11,9 @@
 /gpfs/projects/bsc19/models/meta-llama/Llama-3.1-8B-Instruct
 /gpfs/projects/bsc19/models/meta-llama/Llama-3.3-70B-Instruct
 /gpfs/projects/bsc19//models/mistralai/Codestral-22B-v0.1
-/gpfs/projects/bsc19//models/bigcode/starcoder2-15b
 
 # Common BSC repo
 /gpfs/scratch/shared/ai-hub/models/text-models/deepseek-ai/DeepSeek-R1-0528
-/gpfs/scratch/shared/ai-hub/models/text-models/microsoft/bitnet-b1.58-2B-4T
 /gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen3/Qwen3-32B
 /gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen2.5/Qwen2.5-Coder-32B-Instruct
 /gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen2.5/Qwen2.5-32B-Instruct
