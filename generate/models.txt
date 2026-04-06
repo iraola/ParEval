@@ -1,0 +1,26 @@
+# Projects
+/gpfs/projects/bsc19/models/Phind/Phind-CodeLlama-34B-v2
+/gpfs/projects/bsc19/models/bigcode/starcoder2-15b
+/gpfs/projects/bsc19/models/codellama/CodeLlama-13b-hf
+/gpfs/projects/bsc19/models/codellama/CodeLlama-70b-hf
+/gpfs/projects/bsc19/models/deepseek-ai/DeepSeek-Coder-V2-Lite-Base
+/gpfs/projects/bsc19/models/deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+/gpfs/projects/bsc19/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+/gpfs/projects/bsc19/models/deepseek-ai/deepseek-coder-6.7b-base
+/gpfs/projects/bsc19/models/deepseek-ai/deepseek-coder-6.7b-instruct
+/gpfs/projects/bsc19/models/meta-llama/Llama-3.1-8B-Instruct
+/gpfs/projects/bsc19/models/meta-llama/Llama-3.3-70B-Instruct
+/gpfs/projects/bsc19//models/mistralai/Codestral-22B-v0.1
+/gpfs/projects/bsc19//models/bigcode/starcoder2-15b
+
+# Common BSC repo
+/gpfs/scratch/shared/ai-hub/models/text-models/deepseek-ai/DeepSeek-R1-0528
+/gpfs/scratch/shared/ai-hub/models/text-models/microsoft/bitnet-b1.58-2B-4T
+/gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen3/Qwen3-32B
+/gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen2.5/Qwen2.5-Coder-32B-Instruct
+/gpfs/scratch/shared/ai-hub/models/text-models/Qwen/Qwen2.5/Qwen2.5-32B-Instruct
+/gpfs/scratch/shared/ai-hub/models/text-models/openai/gpt-oss-120b
+/gpfs/scratch/shared/ai-hub/models/text-models/openai/gpt-oss-20b
+/gpfs/scratch/shared/ai-hub/models/text-models/mistralai/Mixtral-8x7B-Instruct-v0.1
+/gpfs/scratch/shared/ai-hub/models/text-models/mistralai/Mistral-Small-3.2-24B-Instruct-2506
+/gpfs/scratch/shared/ai-hub/models/text-models/mistralai/Magistral-Small-2506
