@@ -119,6 +119,9 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     think_end = output.rfind('</think>')
     if think_end != -1:
         output = output[think_end + len('</think>'):].strip()
+    elif '<think>' in output:
+        # Thinking block was not closed (generation truncated mid-thought) — no usable output
+        return ''
 
     prompt_loc = output.find(response_tag)
     if prompt_loc != -1:
@@ -135,6 +138,14 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
         if raw_code.endswith("```"): raw_code = raw_code[:-3]
 
     if "pycompss" in prompt.lower():
+        # Prefer blocks that contain Python code markers
+        python_blocks = [b for b in code_blocks if re.search(r'(@task|^\s*import\s|^\s*from\s|^\s*def\s)', b, flags=re.MULTILINE)]
+        if python_blocks:
+            return extract_pycompss_solution(python_blocks[0])
+        # Fallback: look for an unclosed ```python fence (truncated generation)
+        unclosed = re.search(r"```(?:python)?\n(.*)", output, flags=re.DOTALL)
+        if unclosed:
+            return extract_pycompss_solution(unclosed.group(1))
         return extract_pycompss_solution(raw_code)
 
     try:
@@ -664,7 +675,16 @@ class HarmonyConfig(InferenceConfig):
         return f"<|start|>user<|message|>{instruction}<|end|>\n<|start|>assistant<|message|>"
 
     def clean_output(self, output: str, prompt: str) -> str:
-        return clean_instruct_output(output, prompt, "<|start|>assistant<|message|>")
+        # gpt-oss models interleave internal reasoning between the assistant tag and the final answer.
+        # The actual response starts after the literal token 'assistantfinal'.
+        assistant_tag = "<|start|>assistant<|message|>"
+        assistant_idx = output.find(assistant_tag)
+        if assistant_idx != -1:
+            assistant_content = output[assistant_idx + len(assistant_tag):]
+            final_idx = assistant_content.find('assistantfinal')
+            if final_idx != -1:
+                output = assistant_tag + assistant_content[final_idx + len('assistantfinal'):]
+        return clean_instruct_output(output, prompt, assistant_tag)
 
 
 class GLM4Config(InferenceConfig):
