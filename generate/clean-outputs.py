@@ -1,37 +1,58 @@
-from argparse import ArgumentParser
+"""
+Re-apply cleaning logic to already-generated output JSON files without
+re-running inference. Useful when utils.py cleaning logic changes.
+
+Usage:
+    python clean-outputs.py --model deepseek-ai/DeepSeek-R1-Distill-Llama-70B \
+        --input output-DeepSeek-R1-Distill-Llama-70B.json \
+        --output output-DeepSeek-R1-Distill-Llama-70B.json
+
+Pass the same path to --input and --output to update in-place.
+"""
+import argparse
 import json
+import os
 
-parser = ArgumentParser(description='clean model outputs')
-parser.add_argument('--input', required=True, help='Path to the input JSON file')
-parser.add_argument('--output', required=True, help='Path to the output JSON file')
-args = parser.parse_args()
+from utils import get_inference_config
 
-def has_balanced_brackets(s: str) -> bool:
-    stack = []
-    for c in s:
-        if c == '{':
-            stack.append(c)
-        elif c == '}':
-            if len(stack) == 0:
-                return False
-            stack.pop()
-    return len(stack) == 0
 
-def clean_output(prompt: str, output: str) -> str:
-    last_line_of_prompt = prompt.split('\n')[-1].strip()
-    if output.strip().startswith(last_line_of_prompt):
-        output = output.replace(last_line_of_prompt, '', 1)
+def main():
+    parser = argparse.ArgumentParser(description='Re-clean model outputs using utils.py InferenceConfig')
+    parser.add_argument('--model', required=True, help='Model name/path (same value passed to generate-vllm.py)')
+    parser.add_argument('--input', required=True, help='Input JSON file (output of generate-vllm.py)')
+    parser.add_argument('--output', required=True, help='Output JSON file (use same path as --input to update in-place)')
+    parser.add_argument('--prompted', action='store_true', help='Use prompted generation mode (must match how the file was generated)')
+    args = parser.parse_args()
 
-    if has_balanced_brackets("{" + output + "}"):
-        output = output + '}'
+    # Resolve model path the same way generate-vllm.py does
+    model_name = args.model
+    local_model_path = os.path.join('..', 'models', model_name)
+    if os.path.isdir(local_model_path):
+        get_inference_model_path = '/'.join(local_model_path.split('/')[-2:])
+    else:
+        get_inference_model_path = model_name
 
-    return output
+    inference_config = get_inference_config(get_inference_model_path, prompted=args.prompted)
 
-with open(args.input, 'r') as json_file:
-    responses = json.load(json_file)
+    with open(args.input, 'r') as f:
+        responses = json.load(f)
 
-for r in responses:
-    r["outputs"] = [clean_output(r["prompt"], o) for o in r["outputs"]]
+    changed = 0
+    for r in responses:
+        prompt = r['prompt']
+        new_outputs = []
+        for raw in r['raw_outputs']:
+            new_outputs.append(inference_config.clean_output(raw, prompt))
 
-with open(args.output, 'w') as json_file:
-    json.dump(responses, json_file, indent=2)
+        if new_outputs != r['outputs']:
+            changed += 1
+        r['outputs'] = new_outputs
+
+    with open(args.output, 'w') as f:
+        json.dump(responses, f, indent=4)
+
+    print(f"Processed {len(responses)} entries ({changed} changed). Written to {args.output}")
+
+
+if __name__ == '__main__':
+    main()
