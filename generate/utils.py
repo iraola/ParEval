@@ -716,7 +716,7 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return ReplitConfig(**kwargs)
     elif model_name.startswith('ise-uiuc/Magicoder'):
         return MagicoderConfig(**kwargs)
-    elif model_name in ['deepseek-ai/deepseek-coder-6.7b-base', 'deepseek-ai/deepseek-coder-7b-base-v1.5']:
+    elif model_name.startswith('deepseek-ai/') and 'Instruct' not in model_name and 'R1' not in model_name:
         return DeepSeekBaseConfig(**kwargs)
     elif model_name.startswith('hpcgroup/hpc-coder-v2'):
         return InstructConfig(instruction_tag='Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:', response_tag='### Response:', **kwargs)
@@ -737,8 +737,6 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return DeepSeekR1Config(**kwargs)
     elif model_name == 'deepseek-ai/DeepSeek-Coder-V2-Instruct':
         return InstructConfig(instruction_tag='User:', response_tag='Assistant:', **kwargs)
-    elif model_name == 'deepseek-ai/DeepSeek-Coder-V2':
-        return DeepSeekBaseConfig(**kwargs)
     elif model_name.startswith('mistralai/Codestral') \
             or ('Mistral-Small' in model_name and 'Instruct' in model_name) \
             or ('Mixtral' in model_name and 'Instruct' in model_name) \
