@@ -11,6 +11,7 @@
 #SBATCH --error=logs-generate-all-%j.err
 
 NUM_SAMPLES_PER_PROMPT="3"
+MAX_NEW_TOKENS="4096"
 MODEL_LIST="models.txt"
 
 if [ ! -f "$MODEL_LIST" ]; then
@@ -40,6 +41,13 @@ while IFS= read -r model || [ -n "$model" ]; do
     echo "Running: $model"
     echo "============================================"
 
+    # Reasoning models need more tokens for their think blocks
+    if [[ "$model" == *"R1"* || "$model" == *"Qwen3"* ]]; then
+        model_max_tokens="8192"
+    else
+        model_max_tokens="$MAX_NEW_TOKENS"
+    fi
+
     rm -f cache.json
     touch cache.json
 
@@ -54,6 +62,7 @@ while IFS= read -r model || [ -n "$model" ]; do
         --model "$model" \
         --output "$output_file" \
         --num_samples_per_prompt "$NUM_SAMPLES_PER_PROMPT" \
+        --max_new_tokens "$model_max_tokens" \
         --cache cache.json \
         --enforce_eager
 
