@@ -11,7 +11,7 @@ import torch
 from vllm import LLM, SamplingParams
 
 # local imports
-from utils import BalancedBracketsCriteria, PromptDataset, clean_output, get_inference_config
+from utils import BalancedBracketsCriteria, PromptDataset, clean_output, check_output_integrity, get_inference_config
 
 
 def main():
@@ -133,6 +133,7 @@ def main():
     cur_prompt = None
     start_time = time.time()
     total_tokens = 0
+    truncated_by_length = 0
 
     # Format all prompts
     formatted_prompts = [inference_config.format_prompt(p["prompt"]) for p in prompts_repeated]
@@ -157,6 +158,8 @@ def main():
 
         # Count tokens and clean output
         # FIXME: This is to keep the same behavior as generate.py
+        if output.outputs[0].finish_reason == 'length':
+            truncated_by_length += 1
         huggingface_style_output = output.prompt + output.outputs[0].text
         total_tokens += len(llm.get_tokenizer().encode(huggingface_style_output))
         cleaned_output = inference_config.clean_output(huggingface_style_output, prompt_str)
@@ -177,6 +180,8 @@ def main():
     """ Save responses to JSON file """
     with open(args.output, 'w') as output_file:
         json.dump(responses, output_file, indent=4)
+
+    check_output_integrity(responses, extra_counters={'truncated_by_length': truncated_by_length})
 
 
 if __name__ == "__main__":

@@ -14,6 +14,9 @@ from typing import Optional
 from tqdm import tqdm
 from openai import OpenAI
 
+# local imports
+from utils import check_output_integrity
+
 """ Prompt template: """
 SYSTEM_TEMPLATE = """You are a helpful coding assistant.
 You are helping a programmer write a C++ function. Write the body of the function and put it in a markdown code block.
@@ -235,7 +238,9 @@ def main():
     # write outputs
     with open(args.output, 'w') as output_json:
         json.dump(prompts, output_json, indent=2)
-    
+
+    check_output_integrity(prompts)
+
 
 if __name__ == "__main__":
     main()

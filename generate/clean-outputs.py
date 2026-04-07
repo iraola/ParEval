@@ -13,7 +13,7 @@ import argparse
 import json
 import os
 
-from utils import get_inference_config
+from utils import check_output_integrity, get_inference_config
 
 
 def main():
@@ -52,6 +52,7 @@ def main():
         json.dump(responses, f, indent=4)
 
     print(f"Processed {len(responses)} entries ({changed} changed). Written to {args.output}")
+    check_output_integrity(responses)
 
 
 if __name__ == '__main__':

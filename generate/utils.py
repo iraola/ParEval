@@ -1,6 +1,7 @@
 # std imports
 from abc import ABC, abstractmethod
 import re
+from typing import List
 
 # tpl imports
 import torch
@@ -719,6 +720,79 @@ class GLM4Config(InferenceConfig):
 
     def clean_output(self, output: str, prompt: str) -> str:
         return clean_instruct_output(output, prompt, "<|assistant|>\n")
+
+
+SHORT_OUTPUT_THRESHOLD = 30  # chars; cleaned outputs shorter than this are flagged
+
+
+def check_output_integrity(responses: List[dict], extra_counters: dict = None) -> dict:
+    """Check generated outputs for integrity issues and print a summary report.
+
+    Checks performed on raw_outputs / outputs:
+    - truncated_think   : <think> opened but never closed (generation ran out of tokens)
+    - unclosed_fence    : odd number of ``` markers (code block not closed)
+    - empty_output      : cleaned output is empty string
+    - short_output      : cleaned output shorter than SHORT_OUTPUT_THRESHOLD chars
+    - no_code_structure : pycompss output lacks @task/def; C++ output lacks {
+    - identical_samples : all N samples for a prompt are the same (degenerate generation)
+
+    extra_counters: optional dict of additional pre-computed counters to include
+    in the report (e.g. {'truncated_by_length': 12} from vLLM finish_reason).
+    """
+    stats = {
+        'truncated_think': 0,
+        'unclosed_fence': 0,
+        'empty_output': 0,
+        'short_output': 0,
+        'no_code_structure': 0,
+        'identical_samples': 0,
+    }
+
+    for r in responses:
+        outputs = r.get('outputs', [])
+        raw_outputs = r.get('raw_outputs', [])
+        is_pycompss = 'pycompss' in r.get('prompt', '').lower()
+
+        for raw, out in zip(raw_outputs, outputs):
+            if '<think>' in raw and '</think>' not in raw:
+                stats['truncated_think'] += 1
+            if raw.count('```') % 2 != 0:
+                stats['unclosed_fence'] += 1
+            stripped = out.strip()
+            if not stripped:
+                stats['empty_output'] += 1
+            elif len(stripped) < SHORT_OUTPUT_THRESHOLD:
+                stats['short_output'] += 1
+            if stripped:
+                if is_pycompss and '@task' not in out and 'def ' not in out:
+                    stats['no_code_structure'] += 1
+                elif not is_pycompss and '{' not in out:
+                    stats['no_code_structure'] += 1
+
+        if len(outputs) > 1 and len(set(outputs)) == 1:
+            stats['identical_samples'] += 1
+
+    total_entries = len(responses)
+    total_samples = sum(len(r.get('outputs', [])) for r in responses)
+
+    print(f"\n{'='*40}")
+    print(f"Output Integrity Report")
+    print(f"  Entries: {total_entries} | Samples: {total_samples}")
+    if extra_counters:
+        for key, val in extra_counters.items():
+            label = key.replace('_', ' ').capitalize()
+            flag = ' !!!' if val > 0 else ''
+            print(f"  {label}: {val}{flag}")
+    issues = {k: v for k, v in stats.items() if v > 0}
+    if not issues:
+        print("  No issues detected.")
+    else:
+        for key, val in issues.items():
+            label = key.replace('_', ' ').capitalize()
+            print(f"  {label}: {val} !!!")
+    print(f"{'='*40}\n")
+
+    return {**stats, **(extra_counters or {})}
 
 
 def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:

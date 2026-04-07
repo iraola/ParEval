@@ -11,7 +11,7 @@ import torch
 from transformers import pipeline
 
 # local imports
-from utils import BalancedBracketsCriteria, PromptDataset, clean_output, get_inference_config
+from utils import BalancedBracketsCriteria, PromptDataset, check_output_integrity, clean_output, get_inference_config
 
 
 """ Parse command line arguments """
@@ -153,3 +153,5 @@ print(f"Generated {len(responses)} code samples in {end_time - start_time:.2f} s
 """ Save responses to JSON file """
 with open(args.output, 'w') as output_file:
     json.dump(responses, output_file, indent=4)
+
+check_output_integrity(responses)
