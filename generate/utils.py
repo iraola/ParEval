@@ -16,11 +16,33 @@ def extract_pycompss_solution(code: str) -> str:
     """
     lines = code.splitlines()
 
-    # Find start (first import or function definition)
+    # Build the set of line indices that fall inside triple-quoted strings so
+    # that "from x import y" inside a docstring is not mistaken for a real import.
+    triple_lines: set = set()
+    in_triple = False
+    triple_seq = None
+    for i, line in enumerate(lines):
+        if in_triple:
+            triple_lines.add(i)
+            if triple_seq in line:
+                in_triple = False
+                triple_seq = None
+        else:
+            for tq in ('"""', "'''"):
+                if tq in line:
+                    if line.count(tq) % 2 == 1:  # opens but does not close on this line
+                        in_triple = True
+                        triple_seq = tq
+                        triple_lines.add(i)
+                    break
+
+    # Find start (first import or function definition) outside docstrings
     start_index = 0
     start_pattern = re.compile(r'^\s*(import|from|def)\s+|^\s*@task')
 
     for i, line in enumerate(lines):
+        if i in triple_lines:
+            continue
         if start_pattern.match(line):
             start_index = i
             break
@@ -34,6 +56,11 @@ def extract_pycompss_solution(code: str) -> str:
         stripped = line.strip()
 
         if not stripped:
+            continue
+
+        # Lines inside triple-quotes are kept but not used as a stopping criterion
+        if i in triple_lines:
+            last_valid_index = i
             continue
 
         current_indent = len(line) - len(line.lstrip())
