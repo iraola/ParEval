@@ -74,6 +74,12 @@ def extract_pycompss_solution(code: str) -> str:
             last_valid_index = i
             continue
 
+        # Module-level constant/variable assignment (e.g. NUM_BINS = 10).
+        # Bare function calls like init() don't match (no '=')
+        if re.match(r'^[A-Za-z_]\w*\s*=[^=]', stripped):
+            last_valid_index = i
+            continue
+
         # Non-indented, non-function code (e.g. if __name__ == '__main__'): stop
         break
 
