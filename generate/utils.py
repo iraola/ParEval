@@ -780,30 +780,37 @@ def check_output_integrity(responses: List[dict], extra_counters: dict = None) -
         'no_code_structure': 0,
         'identical_samples': 0,
     }
+    # Map issue_key -> {prompt_name -> [sample indices]}
+    details: dict = {k: {} for k in stats}
+
+    def _record(key, name, sample_idx):
+        stats[key] += 1
+        details[key].setdefault(name, []).append(sample_idx)
 
     for r in responses:
+        name = r.get('name', r.get('prompt', '')[:40])
         outputs = r.get('outputs', [])
         raw_outputs = r.get('raw_outputs', [])
         is_pycompss = 'pycompss' in r.get('prompt', '').lower()
 
-        for raw, out in zip(raw_outputs, outputs):
+        for idx, (raw, out) in enumerate(zip(raw_outputs, outputs)):
             if '<think>' in raw and '</think>' not in raw:
-                stats['truncated_think'] += 1
+                _record('truncated_think', name, idx)
             if raw.count('```') % 2 != 0:
-                stats['unclosed_fence'] += 1
+                _record('unclosed_fence', name, idx)
             stripped = out.strip()
             if not stripped:
-                stats['empty_output'] += 1
+                _record('empty_output', name, idx)
             elif len(stripped) < SHORT_OUTPUT_THRESHOLD:
-                stats['short_output'] += 1
+                _record('short_output', name, idx)
             if stripped:
                 if is_pycompss and '@task' not in out and 'def ' not in out:
-                    stats['no_code_structure'] += 1
+                    _record('no_code_structure', name, idx)
                 elif not is_pycompss and '{' not in out:
-                    stats['no_code_structure'] += 1
+                    _record('no_code_structure', name, idx)
 
         if len(outputs) > 1 and len(set(outputs)) == 1:
-            stats['identical_samples'] += 1
+            _record('identical_samples', name, -1)
 
     total_entries = len(responses)
     total_samples = sum(len(r.get('outputs', [])) for r in responses)
@@ -811,11 +818,24 @@ def check_output_integrity(responses: List[dict], extra_counters: dict = None) -
     print(f"\n{'='*40}")
     print(f"Output Integrity Report")
     print(f"  Entries: {total_entries} | Samples: {total_samples}")
+
+    def _fmt_detail(key):
+        """Return indented lines listing prompt -> sample indices for one issue."""
+        lines = []
+        for prompt_name, indices in details[key].items():
+            if indices == [-1]:
+                lines.append(f"      {prompt_name}")
+            else:
+                samples_str = ', '.join(str(i) for i in indices)
+                lines.append(f"      {prompt_name}  [samples: {samples_str}]")
+        return lines
+
     if extra_counters:
         for key, val in extra_counters.items():
             label = key.replace('_', ' ').capitalize()
             flag = ' !!!' if val > 0 else ''
             print(f"  {label}: {val}{flag}")
+
     issues = {k: v for k, v in stats.items() if v > 0}
     if not issues:
         print("  No issues detected.")
@@ -823,6 +843,8 @@ def check_output_integrity(responses: List[dict], extra_counters: dict = None) -
         for key, val in issues.items():
             label = key.replace('_', ' ').capitalize()
             print(f"  {label}: {val} !!!")
+            for line in _fmt_detail(key):
+                print(line)
     print(f"{'='*40}\n")
 
     return {**stats, **(extra_counters or {})}
