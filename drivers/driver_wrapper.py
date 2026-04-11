@@ -249,11 +249,12 @@ class DriverWrapper(ABC):
         driver_base = DRIVER_MAP[self.parallelism_model]
         test_driver_file = os.path.join(lang, "benchmarks", ptype, driver_dirname, driver_base + ext)
         problem_size = _find_problem_size(self.problem_sizes, name, self.parallelism_model, "(1<<18)")
-        logging.debug("Using problem size: %s", problem_size)
+        num_outputs = len(prompt["outputs"])
+        logging.info("══ PROMPT: %s  [%d outputs | size=%s]", name, num_outputs, problem_size)
 
         outputs = []
-        logging.info(f"Testing prompt {name} with {self}...")
         for i, generated_output in enumerate(prompt["outputs"]):
+            logging.debug("── output %d/%d %s", i + 1, num_outputs, "─" * 50)
             results = self.test_single_output(
                 prompt["prompt"],
                 generated_output,
@@ -286,19 +287,14 @@ class DriverWrapper(ABC):
             })
         prompt["outputs"] = outputs
 
-        # log some stats
-        num_outputs = len(outputs)
         num_successful_writes = sum(1 for o in outputs if o["source_write_success"])
         num_successful_builds = sum(1 for o in outputs if o["did_build"])
         num_successful_runs = sum(1 for o in outputs if o["did_all_run"])
         num_valid_outputs = sum(1 for o in outputs if o["are_all_valid"] if o["is_source_valid"])
-        #mean_runtime = mean(r["runtime"] for o in outputs if o["runs"] is not None for r in o["runs"] if r["runtime"] is not None)
-        logging.info(f"Results for prompt {prompt['name']}:")
-        logging.info(f"  {num_outputs} total outputs")
-        logging.info(f"  {num_successful_writes} successful writes")
-        logging.info(f"  {num_successful_builds} successful builds")
-        logging.info(f"  {num_successful_runs} successful runs (all tests)")
-        logging.info(f"  {num_valid_outputs} valid outputs (all tests)")
-        #logging.info(f"  {mean_runtime} mean runtime")
+        logging.info(
+            "── results: %s  valid=%d/%d  ran=%d/%d  built=%d/%d",
+            name, num_valid_outputs, num_outputs, num_successful_runs, num_outputs,
+            num_successful_builds, num_outputs,
+        )
 
         return prompt

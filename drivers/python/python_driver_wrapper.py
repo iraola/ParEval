@@ -17,6 +17,10 @@ sys.path.append("..")
 from drivers.driver_wrapper import DriverWrapper, BuildOutput, RunOutput, GeneratedTextResult
 from util import run_command
 
+def _indent(text: str, prefix: str = "    ") -> str:
+    return "\n".join(prefix + line for line in text.splitlines())
+
+
 """ Map parallelism models to driver files """
 DRIVER_MAP = {
     "pycompss": "pycompss_driver.py",
@@ -125,7 +129,7 @@ class PythonDriverWrapper(DriverWrapper):
                         out_fp.write(f"# ===== {src_path.name} =====\n")
                         out_fp.write(content + "\n\n")
 
-            logging.info(f"Merged {len(binaries)} files into {output_path}")
+            logging.debug(f"Merged {len(binaries)} files into {output_path}")
             return BuildOutput(0, f"Merged files into {output_path}", "")
 
         except Exception as e:
@@ -155,7 +159,8 @@ class PythonDriverWrapper(DriverWrapper):
             Writes generated_code.py, stages a harness (existing cpu_harness.py/cpu.py or a tiny adapter),
             and launches the shared model driver under runcompss via a small runner.py.
         """
-        logging.debug(f"Testing output (python/pycompss):\n  --- code ---\n{output[:500]}{'...' if len(output)>500 else ''}\n  --- end code ---")
+        preview = output[:500] + ("..." if len(output) > 500 else "")
+        logging.debug("code preview:\n%s", _indent(preview))
 
         if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
             PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt] = len(PythonDriverWrapper._GLOBAL_PROMPT_TO_ID)
@@ -211,72 +216,105 @@ class PythonDriverWrapper(DriverWrapper):
             
             build_result = self.compile(*sources, output_path=exec_path)
 
-            # Save Merged Code immediately after build, so it's available for inspection
+            merged_path = None
             if dst_dir and build_result.did_build:
                 merged_fname = f"{self.parallelism_model}_{output_index}_merged_a_out.py"
                 merged_path = os.path.join(dst_dir, merged_fname)
                 shutil.copyfile(exec_path, merged_path)
-                logging.info(f"Saved merged executable to {merged_path}")
+
+            if build_result.did_build:
+                save_note = f"  saved: {merged_path}" if merged_path else ""
+                logging.info("[build] OK%s", save_note)
+            else:
+                logging.info("[build] FAILED")
+                logging.debug("[build] stderr:\n%s", _indent(build_result.stderr[:300]))
 
             # run the code
             configs = self.launch_configs["params"]
+            n_configs = len(configs)
             if build_result.did_build:
                 run_results = []
-                for c in configs:
+                for j, c in enumerate(configs):
+                    logging.debug("[run %d/%d]", j + 1, n_configs)
                     run_result = self.run(exec_path, **c)
                     run_results.append(run_result)
+                    time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
+                    logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
+                                 j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
+                    if self.display_runs:
+                        logging.debug(
+                            "[run %d/%d output]\n%s",
+                            j + 1, n_configs,
+                            _indent(f"--- stdout ---\n{run_result.stdout}\n--- stderr ---\n{run_result.stderr}"),
+                        )
                     if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
                         break
             else:
                 run_results = None
-
-            logging.debug(f"Run results: {run_results}")
-            if self.display_runs and run_results:
-                for rr in run_results:
-                    logging.debug(
-                        f"Run output:\n  --- stdout ---\n{rr.stdout}\n  --- end stdout ---\n"
-                        f"  --- stderr ---\n{rr.stderr}\n  --- end stderr ---"
-                    )
 
             # Relaxation retry: if the run failed (or didn't happen) and relaxations
             # are configured, try each one by modifying generated_code.py, rebuilding,
             # and rerunning. Stop at the first relaxation that produces a passing run.
             applied_relaxations = []
             if self.relaxations and not _runs_succeeded(run_results):
-                for relaxation in self.relaxations:
+                n_relaxations = len(self.relaxations)
+                logging.debug("[relaxations] initial run failed — trying %d relaxation(s)", n_relaxations)
+                for k, relaxation in enumerate(self.relaxations):
+                    logging.debug("── relaxation %d/%d: %s ──────────────────────────",
+                                  k + 1, n_relaxations, relaxation.name)
                     modified_output = relaxation.apply(output)
                     if modified_output is None:
-                        logging.debug(f"Relaxation '{relaxation.name}' does not apply, skipping.")
+                        logging.debug("does not apply, skipping")
                         continue
 
-                    logging.info(f"Applying relaxation '{relaxation.name}' for {prompt_name}[{output_index}].")
                     self.write_source(prompt + "\n" + modified_output, src_path)
                     new_build = self.compile(*sources, output_path=exec_path)
 
                     if not new_build.did_build:
-                        logging.debug(f"Relaxation '{relaxation.name}': build failed after transform.")
+                        logging.debug("[build] FAILED after transform")
                         continue
+                    logging.debug("[build] OK")
 
                     new_runs = []
-                    for c in configs:
+                    for j, c in enumerate(configs):
+                        logging.debug("[run %d/%d]", j + 1, n_configs)
                         run_result = self.run(exec_path, **c)
                         new_runs.append(run_result)
+                        time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
+                        logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
+                                     j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
+                        if self.display_runs:
+                            logging.debug(
+                                "[run %d/%d output]\n  --- stdout ---\n%s\n  --- end stdout ---\n"
+                                "  --- stderr ---\n%s\n  --- end stderr ---",
+                                j + 1, n_configs, run_result.stdout, run_result.stderr,
+                            )
                         if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
                             break
-                    if self.display_runs:
-                        for rr in new_runs:
-                            logging.debug(
-                                f"\n  --- stdout ---\n{rr.stdout}\n  --- end stdout ---\n"
-                                f"  --- stderr ---\n{rr.stderr}\n  --- end stderr ---"
-                            )
 
                     if _runs_succeeded(new_runs):
-                        logging.info(f"Relaxation '{relaxation.name}' succeeded for {prompt_name}[{output_index}].")
+                        logging.debug("succeeded")
                         build_result = new_build
                         run_results = new_runs
                         applied_relaxations.append(relaxation.name)
                         break
                     else:
-                        logging.debug(f"Relaxation '{relaxation.name}': run still failed after transform.")
+                        logging.debug("still failed")
+
+            # Per-output outcome summary
+            if _runs_succeeded(run_results):
+                best = next((r for r in run_results if r.exit_code == 0 and r.is_valid), None)
+                time_str = f"{best.runtime:.3f}s" if best and best.runtime is not None else "–"
+                relax_note = f"  [via relaxation: {applied_relaxations[0]}]" if applied_relaxations else ""
+                logging.info("output %d: PASS  time=%s%s", output_index, time_str, relax_note)
+            elif not build_result.did_build:
+                logging.info("output %d: FAIL  build error", output_index)
+            elif run_results is not None and all(r.exit_code != 0 for r in run_results):
+                logging.info("output %d: FAIL  runtime error", output_index)
+            elif run_results is not None and not any(r.is_valid for r in run_results if r.exit_code == 0):
+                logging.info("output %d: FAIL  validation error", output_index)
+            else:
+                relax_note = " — all relaxations exhausted" if self.relaxations else ""
+                logging.info("output %d: FAIL%s", output_index, relax_note)
 
             return GeneratedTextResult(write_success, build_result, run_results, relaxations_applied=applied_relaxations)
