@@ -1,0 +1,22 @@
+"""
+Generate a Python module to compute a sparse-to-dense AXPY operation 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Compute the operation z = alpha * x + y and store the result in a dense vector 'z' of size 'N'. 
+  Both 'x' and 'y' are sparse vectors represented as lists of dictionaries with 'index' and 'value' keys. 
+  The resulting dense vector 'z' should be initialized to zero and then updated with the sparse contributions.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(alpha, x, y, N) function that distributes the work and manages task dependencies.
+- Synchronization: The main function must explicitly wait for all tasks to complete before returning the final dense list.
+- Return Type: Return a standard Python list of 'N' floats representing the dense vector 'z' (ensure it is the final synchronized result).
+
+Example:
+- Input: 
+    alpha = 2
+    N = 13
+    x = [{'index': 5, 'value': 12}, {'index': 8, 'value': 3}, {'index': 12, 'value': -1}]
+    y = [{'index': 3, 'value': 1}, {'index': 5, 'value': -2}, {'index': 7, 'value': 1}, {'index': 8, 'value': -3}]
+- Output: [0.0, 0.0, 0.0, 1.0, 0.0, 22.0, 0.0, 1.0, 3.0, 0.0, 0.0, 0.0, -2.0]
+"""

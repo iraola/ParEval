@@ -1,0 +1,16 @@
+"""
+Generate a Python module to compute the reverse prefix sum of a list 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Compute the prefix sum of the reversed input list 'x' (i.e., reverse the elements of the list first, then compute their cumulative sum).
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of integers representing the resulting prefix sum array (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: x=[1, 7, 4, 6, 6, 2]
+- Output: [2, 8, 14, 18, 25, 26]
+"""

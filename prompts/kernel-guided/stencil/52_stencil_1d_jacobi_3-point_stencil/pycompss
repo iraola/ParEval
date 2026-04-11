@@ -1,0 +1,17 @@
+"""
+Generate a Python module to compute one iteration of a 3-point 1D Jacobi stencil 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: For each element in the input list 'input', compute the average of itself and its two immediate neighbors: output[i] = (input[i-1] + input[i] + input[i+1]) / 3.0.
+- Boundary Conditions: Use a value of 0.0 for any access that falls outside the list boundaries (zero-padding).
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the stencil operation.
+- Orchestration: Provide a main(input) function that manages the distribution of chunks and handles the dependencies.
+- Synchronization: The main function must explicitly wait for all tasks to complete before returning the final synchronized list.
+- Return Type: Return a standard Python list of floats representing the transformed array.
+
+Example:
+- Input: [9.0, -6.0, -1.0, 2.0, 3.0]
+- Output: [1.0, 0.6666666666666666, -1.6666666666666667, 1.3333333333333333, 1.6666666666666667]
+"""

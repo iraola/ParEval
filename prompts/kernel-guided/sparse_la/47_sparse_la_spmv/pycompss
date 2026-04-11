@@ -1,0 +1,19 @@
+"""
+Generate a Python module to compute a sparse matrix-vector multiplication (SpMV) 
+with scalars in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Compute the operation y = alpha * A * x + beta * y. 'A' is a sparse matrix in COO format (list of dictionaries with 'row', 'column', and 'value'). 'x' and 'y' are dense vectors (lists of floats). 'alpha' and 'beta' are scalars.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(alpha, beta, A, x, y) function that distributes the work and manages task dependencies.
+- Synchronization: The main function must explicitly wait for all tasks to complete before returning the result.
+- Return Type: Return a standard Python list of floats representing the updated vector 'y' (ensure it is the final synchronized result).
+
+Example:
+- Input: 
+    alpha = 0.5, beta = 1.0
+    A = [{'row': 0, 'column': 1, 'value': 3.0}, {'row': 1, 'column': 0, 'value': -1.0}]
+    x = [-4.0, 2.0], y = [-1.0, 1.0]
+- Output: [2.0, 3.0]
+"""

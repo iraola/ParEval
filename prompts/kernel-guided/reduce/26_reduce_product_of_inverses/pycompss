@@ -1,0 +1,16 @@
+"""
+Generate a Python module to compute the product of a list with alternating inverses 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Compute the product of all elements in the input list 'x', but invert (take the reciprocal of) every element at an odd index before multiplying. i.e., x[0] * (1/x[1]) * x[2] * (1/x[3]) * x[4] ...
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python float representing the final product (ensure it is the final synchronized result, not a future).
+
+Example:
+- Input: x=[4.0, 2.0, 10.0, 4.0, 5.0]
+- Output: 25.0
+"""

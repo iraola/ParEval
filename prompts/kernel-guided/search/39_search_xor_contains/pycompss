@@ -1,0 +1,16 @@
+"""
+Generate a Python module to check if a value is exclusively in one of two lists 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Return True if the value 'val' is present in exactly one of the input lists 'x' or 'y' (an exclusive OR containment). Return False if 'val' is present in both lists or in neither.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x, y, val) function that distributes the work and manages task dependencies.
+- Synchronization: The main(x, y, val) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python boolean (True or False) representing the XOR containment result (ensure it is the final synchronized result, not a future).
+
+Example:
+- Input: x=[1, 8, 4, 3, 2], y=[3, 4, 4, 1, 1, 7], val=7
+- Output: True
+"""

@@ -1,0 +1,22 @@
+"""
+Generate a Python module to compute the LU factorization of a sparse matrix 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Factorize a sparse NxN matrix 'A' into a lower triangular matrix 'L' and an upper triangular matrix 'U' such that A = LU. Matrix 'A' is provided in COO format (list of dictionaries with 'row', 'column', and 'value'). 
+- Constraints: Follow the Doolittle algorithm (or a similar decomposition) where the diagonal elements of 'L' are 1.0.
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(A, N) function that manages the task graph and iterative dependencies required for the factorization.
+- Synchronization: The main function must explicitly wait for all tasks to complete before returning the results.
+- Return Type: Return a tuple (L, U) where 'L' and 'U' are lists of dictionaries in COO format representing the resulting sparse matrices (ensure they are synchronized results).
+
+Example:
+- Input: 
+    N = 2
+    A = [{'row': 0, 'column': 0, 'value': 4.0}, {'row': 0, 'column': 1, 'value': 3.0}, 
+         {'row': 1, 'column': 0, 'value': 6.0}, {'row': 1, 'column': 1, 'value': 3.0}]
+- Output: 
+    L = [{'row': 0, 'column': 0, 'value': 1.0}, {'row': 1, 'column': 0, 'value': 1.5}, {'row': 1, 'column': 1, 'value': 1.0}]
+    U = [{'row': 0, 'column': 0, 'value': 4.0}, {'row': 0, 'column': 1, 'value': 3.0}, {'row': 1, 'column': 1, 'value': -1.5}]
+"""

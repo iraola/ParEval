@@ -1,0 +1,16 @@
+"""
+Generate a Python module to sort a list of tuples by their first element 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: Sort the input list 'x', which contains tuples in the format (start_time, duration, value), in ascending order based on the 'start_time' (the first element of each tuple).
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the computation.
+- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of tuples representing the sorted results (ensure it is the final synchronized result, not a list of futures).
+
+Example:
+- Input: x=[(8, 4, -1.22), (2, 10, 1.0), (10, 3, 0.0)]
+- Output: [(2, 10, 1.0), (8, 4, -1.22), (10, 3, 0.0)]
+"""

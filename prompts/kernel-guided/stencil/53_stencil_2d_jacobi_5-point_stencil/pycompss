@@ -1,0 +1,18 @@
+"""
+Generate a Python module to compute one iteration of a 5-point 2D Jacobi stencil 
+in parallel using the PyCOMPSs framework.
+
+Task Specifications:
+- Functionality: For each element in an N x N grid (provided as a 1D list in row-major order), compute the average of the element and its four immediate cardinal neighbors (North, South, East, West). Formula: output[i,j] = (input[i,j-1] + inpu [i,j+1] + input[i-1,j] + input[i+1,j] + input[i,j]) / 5.0.
+- Boundary Conditions: Use a value of 0.0 for any access that falls outside the grid boundaries (zero-padding).
+- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+- Parallelization: Use one or more @task decorated functions to handle the stencil operation.
+- Orchestration: Provide a main(input) function that determines N (from the square root of the input length), distributes the data, and manages task dependencies.
+- Synchronization: The main function must explicitly wait for all tasks to complete.
+- Return Type: Return a standard Python list of floats (row-major) representing the 
+  resulting grid (ensure it is the final synchronized result).
+
+Example:
+- Input: [3.0, 4.0, 1.0, 0.0, 1.0, 7.0, 5.0, 3.0, 2.0] (Representing a 3x3 grid)
+- Output: [1.4, 1.8, 2.4, 1.8, 3.0, 2.2, 1.6, 2.2, 2.4]
+"""
