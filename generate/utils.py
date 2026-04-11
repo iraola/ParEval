@@ -10,80 +10,29 @@ from transformers import StoppingCriteria
 
 def extract_pycompss_solution(code: str) -> str:
     """
-    Extracts Python code starting from imports/defs and ending before any
-    non-indented statement that is not an import, decorator, or function
-    definition (e.g. `if __name__ == '__main__'` blocks).
+    Extracts Python module code from a model-generated string.
+
+    Includes everything from the start, with two exceptions:
+    - Stops at the first top-level `if __name__` line.
+    - Skips module-level bare function calls (e.g. init(), compss_stop())
+      that models sometimes emit between imports and task definitions.
+
+    Returns '' if the result contains no real code (no imports, defs, or @task).
     """
-    lines = code.splitlines()
-
-    # Build the set of line indices that fall inside triple-quoted strings so
-    # that "from x import y" inside a docstring is not mistaken for a real import.
-    triple_lines: set = set()
-    in_triple = False
-    triple_seq = None
-    for i, line in enumerate(lines):
-        if in_triple:
-            triple_lines.add(i)
-            if triple_seq in line:
-                in_triple = False
-                triple_seq = None
-        else:
-            for tq in ('"""', "'''"):
-                if tq in line:
-                    if line.count(tq) % 2 == 1:  # opens but does not close on this line
-                        in_triple = True
-                        triple_seq = tq
-                        triple_lines.add(i)
-                    break
-
-    # Find start (first import or function definition) outside docstrings
-    start_index = 0
-    start_pattern = re.compile(r'^\s*(import|from|def)\s+|^\s*@task')
-
-    for i, line in enumerate(lines):
-        if i in triple_lines:
-            continue
-        if start_pattern.match(line):
-            start_index = i
-            break
-
-    # Walk lines and include imports, decorators and functions
-    top_level_ok = re.compile(r'^\s*(import|from|@|def)\s*')
-    last_valid_index = start_index
-
-    for i in range(start_index, len(lines)):
-        line = lines[i]
+    bare_call = re.compile(r'^[A-Za-z_][\w.]*\s*\(')
+    result_lines = []
+    for line in code.splitlines():
         stripped = line.strip()
-
-        if not stripped:
-            continue
-
-        # Lines inside triple-quotes are kept but not used as a stopping criterion
-        if i in triple_lines:
-            last_valid_index = i
-            continue
-
-        current_indent = len(line) - len(line.lstrip())
-        if current_indent > 0:
-            # Inside a function body: always include
-            last_valid_index = i
-            continue
-
-        # Top-level line
-        if stripped.startswith('#') or top_level_ok.match(line):
-            last_valid_index = i
-            continue
-
-        # Module-level constant/variable assignment (e.g. NUM_BINS = 10).
-        # Bare function calls like init() don't match (no '=')
-        if re.match(r'^[A-Za-z_]\w*\s*=[^=]', stripped):
-            last_valid_index = i
-            continue
-
-        # Non-indented, non-function code (e.g. if __name__ == '__main__'): stop
-        break
-
-    return "\n".join(lines[start_index:last_valid_index + 1]).strip()
+        if not line.startswith((' ', '\t')):
+            if stripped.startswith('if __name__'):
+                break
+            if stripped and bare_call.match(stripped) and '=' not in stripped.split('(')[0]:
+                continue
+        result_lines.append(line)
+    result = "\n".join(result_lines).strip()
+    if not re.search(r'^\s*(import|from|def)\s+|^\s*@', result, re.MULTILINE):
+        return ''
+    return result
 
 
 def clean_output(output: str, prompt: str) -> str:
@@ -638,6 +587,14 @@ class MistralInstructConfig(InferenceConfig):
         return f"<s>[INST] {instruction} [/INST]"
 
     def clean_output(self, output: str, prompt: str) -> str:
+        # Some Mistral variants (e.g. Mistral-Small-3.2) prefix the actual answer
+        # with a `[OUT]` format token after [/INST]. Strip it if present.
+        inst_idx = output.find("[/INST]")
+        if inst_idx != -1:
+            after = output[inst_idx + len("[/INST]"):]
+            out_idx = after.find("[OUT]")
+            if out_idx != -1:
+                output = output[:inst_idx + len("[/INST]")] + after[out_idx + len("[OUT]"):]
         return clean_instruct_output(output, prompt, "[/INST]")
 
 
