@@ -44,7 +44,7 @@ def get_args():
     parser.add_argument("input_json", type=str, help="Input JSON file containing the test cases.")
     parser.add_argument("-o", "--output", type=str, help="Output JSON file containing the results.")
     parser.add_argument("--scratch-dir", type=str, help="If provided, put scratch files here.")
-    parser.add_argument("--save-generated", type=str, metavar="DIR", help="If provided, save each generated source code file to this directory.")
+    parser.add_argument("--artifacts-dir", type=str, metavar="DIR", help="Directory to save per-output evaluation artifacts (raw generated code and merged executable). Defaults to 'artifacts/' under the driver root.")
     parser.add_argument("--driver-root", type=str, help="Where to look for the driver files, if not in cwd.")
     parser.add_argument("--launch-configs", type=str, default="launch-configs.json", 
         help="config for how to run samples.")
@@ -170,6 +170,8 @@ def main():
         DRIVER_ROOT = os.path.dirname(os.path.abspath(__file__))
     logging.info(f"Using driver root: {DRIVER_ROOT}")
 
+    artifacts_dir = args.artifacts_dir if args.artifacts_dir else os.path.join(DRIVER_ROOT, "artifacts")
+
     # gather the list of parallelism models to test
     models_to_test = args.include_models if args.include_models else ["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"]
     if args.exclude_models:
@@ -216,7 +218,7 @@ def main():
             early_exit_runs=args.early_exit_runs,
             build_timeout=args.build_timeout,
             run_timeout=args.run_timeout,
-            save_generated_dir=args.save_generated,
+            save_generated_dir=artifacts_dir,
             relaxations=relaxations,
         )
 

@@ -18,11 +18,11 @@ a.out
 # editor buffers
 *~
 
-generate/*.json
-drivers/*.json
-prompts/*.json
+generate/**/*.json
+drivers/**/*.json
+prompts/**/*.json
 
 # local data
 /models
 scratch/
-saved/
+**/artifacts/
