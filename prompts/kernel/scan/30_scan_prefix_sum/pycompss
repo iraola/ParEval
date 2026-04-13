@@ -1,16 +1,7 @@
-"""
-Generate a Python module to compute the prefix sum of a list of numbers 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Compute the prefix sum (cumulative sum) of the input list 'x'.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation
-- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of floats representing the prefix sum array (ensure it is the final synchronized result, not a list of futures).
-
-Example:
-- Input: [1.0, 7.0, 4.0, 6.0, 6.0, 2.0]
-- Output: [1.0, 8.0, 12.0, 18.0, 24.0, 26.0]
+"""Compute the prefix sum of the vector x into output.
+   Use PyCOMPSs to compute in parallel.
+   Example:
+   
+   input: [1, 7, 4, 6, 6, 2]
+   output: [1, 8, 12, 18, 24, 26]
 """

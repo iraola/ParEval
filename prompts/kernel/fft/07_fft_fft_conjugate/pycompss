@@ -1,16 +1,7 @@
-"""
-Generate a Python module to compute the Fast Fourier Transform (FFT) and its conjugate 
-in parallel using the PyCOMPSs framework.
+"""Compute the fourier transform of x in-place. Return the imaginary conjugate of each value.
+   Use PyCOMPSs to compute in parallel.
+   Example:
 
-Task Specifications:
-- Functionality: Compute the fast Fourier transform of a list of complex numbers 'x' and return the imaginary conjugate of each resulting value.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on, and any parameter directions like INOUT if modifying state in-place).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of complex numbers (ensure it is the final synchronized result, not a list of futures).
-
-Example:
-- Input: [1.0+0j, 1.0+0j, 1.0+0j, 1.0+0j, 0.0+0j, 0.0+0j, 0.0+0j, 0.0+0j]
-- Output: [4.0+0j, 1.0-2.41421j, 0.0+0j, 1.0-0.414214j, 0.0+0j, 1.0+0.414214j, 0.0+0j, 1.0+2.41421j]
+   input: [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+   output: [{4,0}, {1,-2.41421}, {0,0}, {1,-0.414214}, {0,0}, {1,0.414214}, {0,0}, {1,2.41421}]
 """

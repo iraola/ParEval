@@ -1,16 +1,8 @@
-"""
-Generate a Python module to solve a sparse linear system of equations 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Solve the sparse linear system Ax = b for the vector x. Matrix 'A' is provided in Coordinate (COO) format as a list of dictionaries, where each dictionary contains 'row', 'column', and 'value' keys. Vector 'b' is a dense list of floats. The size of the system (N) can be inferred from the length of 'b'.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(A, b) function that distributes the work and manages task dependencies across iterations until convergence or a set number of steps is reached.
-- Synchronization: The main(A, b) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of floats representing the final solution vector x (ensure it is the final synchronized result, not a list of futures).
-
-Example:
-- Input: A=[{'row': 0, 'column': 0, 'value': 1.0}, {'row': 0, 'column': 1, 'value': 1.0}, {'row': 1, 'column': 1, 'value': -2.0}], b=[1.0, 4.0]
-- Output: [3.0, -2.0]
+"""Solve the sparse linear system Ax=b for x.
+   A is a sparse NxN matrix in COO format. x and b are dense vectors with N elements.
+   Use PyCOMPSs to compute in parallel.
+   Example:
+   
+   input: A=[{0,0,1}, {0,1,1}, {1,1,-2}] b=[1,4]
+   output: x=[3,-2]
 """

@@ -1,8 +1,13 @@
+import argparse
 import os
 import re
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--output-dir", default="kernel", help="Directory to store generated pycompss files (default: kernel)")
+args = parser.parse_args()
+
 # Root directory containing your 12 folders
-root_dir = "./raw"
+root_dir = args.output_dir
 
 for subdir, _, files in os.walk(root_dir):
     if "omp" in files:

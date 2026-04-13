@@ -1,16 +1,10 @@
-"""
-Generate a Python module to check if a list contains a specific value 
-in parallel using the PyCOMPSs framework.
+"""Return true if the vector x contains the value `target`. Return false otherwise.
+   Use PyCOMPSs to search in parallel.
+   Examples:
 
-Task Specifications:
-- Functionality: Return True if the input list 'x' contains the value 'target', otherwise return False.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(x, target) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x, target) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python boolean (True or False) representing whether the target was found (ensure it is the final synchronized result, not a future).
-
-Example:
-- Input: x=[1, 8, 2, 6, 4, 6], target=3
-- Output: False
+   input: x=[1, 8, 2, 6, 4, 6], target=3
+   output: false
+   
+   input: x=[1, 8, 2, 6, 4, 6], target=8
+   output: true
 """

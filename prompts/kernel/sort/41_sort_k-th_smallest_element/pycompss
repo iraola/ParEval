@@ -1,16 +1,7 @@
-"""
-Generate a Python module to find the k-th smallest element in a list 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Find the element in the input list 'x' that would reside at index 'k' if the list were sorted in ascending order.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(x, k) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x, k) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python integer representing the target element (ensure it is the final synchronized result, not a future).
-
-Example:
-- Input: x=[1, 7, 6, 0, 2, 2, 10, 6], k=4
-- Output: 6
+"""Find the k-th smallest element of the vector x.
+   Use PyCOMPSs to compute in parallel.
+   Example:
+   
+   input: x=[1, 7, 6, 0, 2, 2, 10, 6], k=4
+   output: 6
 """
