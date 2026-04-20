@@ -1,6 +1,7 @@
 """For each value in the vector x compute its index in the sorted vector.
    Store the results in `ranks`.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
    Examples:
 
    input: [3.1, 2.8, 9.1, 0.4, 3.14]

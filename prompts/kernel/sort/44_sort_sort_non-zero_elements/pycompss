@@ -1,6 +1,7 @@
 """Sort the vector x in ascending order ignoring elements with value 0.
    Leave zero valued elements in-place. 
-	 Use PyCOMPSs to sort x in parallel. 
+	 Use PyCOMPSs to sort x in parallel.
+	 Provide a main(x) entrypoint that takes the input data and returns the result. 
    Example:
 
    input: [8, 4, 0, 9, 8, 0, 1, -1, 7]

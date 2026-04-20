@@ -1,5 +1,6 @@
 """Compute the reverse prefix sum of the vector x into output.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
    Examples:
    
    input: [1, 7, 4, 6, 6, 2]

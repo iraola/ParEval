@@ -4,6 +4,7 @@
    Replace with 0 when reading past the boundaries of `input`.
    `input` and `output` are NxN grids stored in row-major.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(input) entrypoint that takes the input data and returns the result.
    Example:
 
    input: [[3, 4, 1], [0, 1, 7], [5, 3, 2]]

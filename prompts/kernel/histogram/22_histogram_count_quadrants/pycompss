@@ -1,6 +1,7 @@
 """Count the number of cartesian points in each quadrant. The vector points contains a list of `Point` objects.
    Store the counts in `bins`.
    Use PyCOMPSs to count in parallel.
+   Provide a main(points) entrypoint that takes the input data and returns the result.
    Example:
 
    input: [{x=1.5, y=0.1}, {x=-3, y=1.1}, {x=5, y=9}, {x=1.5, y=-1}, {x=3, y=-7}, {x=0.1, y=2}]

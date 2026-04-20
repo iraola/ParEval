@@ -1,6 +1,7 @@
 """Solve the sparse linear system Ax=b for x.
    A is a sparse NxN matrix in COO format. x and b are dense vectors with N elements.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(A_coo, b) entrypoint that takes the input data and returns the result.
    Example:
    
    input: A=[{0,0,1}, {0,1,1}, {1,1,-2}] b=[1,4]

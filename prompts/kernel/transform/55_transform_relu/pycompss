@@ -1,6 +1,7 @@
 """Compute the ReLU function on every element of x. Elements less than zero become zero,
    while elements greater than zero stay the same.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
    Example:
 
    input: [-1.8, 24.0, 1.2, 0.0, -5.1, -0.2, 4.5]

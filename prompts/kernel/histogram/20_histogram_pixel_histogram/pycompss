@@ -2,6 +2,7 @@
    The vector `image` is a grayscale image with values 0-255.
    Store the results in `bins`.
    Use PyCOMPSs to count in parallel.
+   Provide a main(image) entrypoint that takes the input data and returns the result.
    Example:
    
    input: image=[2, 116, 201, 11, 92, 92, 201, 4, 2]

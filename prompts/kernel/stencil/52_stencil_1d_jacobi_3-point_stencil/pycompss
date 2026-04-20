@@ -3,6 +3,7 @@
    i.e. output[i] = (input[i-1]+input[i]+input[i+1])/3
    Replace with 0 when reading past the boundaries of `input`.
    Use PyCOMPSs to compute in parallel.
+   Provide a main(input) entrypoint that takes the input data and returns the result.
    Example:
 
    input: [9, -6, -1, 2, 3]

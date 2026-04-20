@@ -1,5 +1,6 @@
 """Return the index of the first even number in the vector x.
    Use PyCOMPSs to parallelize the search.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
    Examples:
 
    input: [7, 3, 9, 5, 5, 7, 2, 9, 12, 11]
