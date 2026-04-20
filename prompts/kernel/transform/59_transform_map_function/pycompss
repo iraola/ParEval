@@ -4,5 +4,5 @@
    Example:
 
    input: [8, 0, 9, 7, 15, 64, 3]
-   output: [true, false, false, false, false, true, false]
+   output: [True, False, False, False, False, True, False]
 """

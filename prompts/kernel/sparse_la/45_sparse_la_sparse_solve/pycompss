@@ -4,6 +4,6 @@
    Provide a main(A_coo, b) entrypoint that takes the input data and returns the result.
    Example:
    
-   input: A=[{0,0,1}, {0,1,1}, {1,1,-2}] b=[1,4]
+   input: A=[(0, 0, 1), (0, 1, 1), (1, 1, -2)] b=[1,4]
    output: x=[3,-2]
 """

@@ -4,6 +4,6 @@
    Provide a main(A, X, M, N) entrypoint that takes the input data and returns the result.
    Example:
 
-   input: A=[{0,0,-2}, {0,1,1}, {1,1,-1}] X=[{0,1,2}, {1,0,-1}]
-   output: Y=[{-1,-4}, {1,0}]
+   input: A=[(0, 0, -2), (0, 1, 1), (1, 1, -1)] X=[(0, 1, 2), (1, 0, -1)]
+   output: Y=[(-1, -4), (1, 0)]
 """

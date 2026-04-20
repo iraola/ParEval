@@ -3,6 +3,6 @@
    Provide a main(books) entrypoint that takes the input data and returns the result.
 	 Example:
 
-   input: [{title="Green Eggs and Ham", pages=72}, {title="gulliver's travels", pages=362}, {title="Stories of Your Life", pages=54}, {title="Hamilton", pages=818}]
+   input: [{"title": "Green Eggs and Ham", "pages": 72}, {"title": "gulliver's travels", "pages": 362}, {"title": "Stories of Your Life", "pages": 54}, {"title": "Hamilton", "pages": 818}]
    output: 2
 """

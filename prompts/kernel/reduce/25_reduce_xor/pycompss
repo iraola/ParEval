@@ -3,6 +3,6 @@
    Provide a main(x) entrypoint that takes the input data and returns the result.
    Example:
 
-   input: [false, false, false, true]
-   output: true
+   input: [False, False, False, True]
+   output: True
 """

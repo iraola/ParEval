@@ -3,6 +3,6 @@
    Provide a main(points) entrypoint that takes the input data and returns the result.
    Example: 
 
-   input: [{2, 3}, {12, 30}, {40, 50}, {5, 1}, {12, 10}, {3, 4}]
+   input: [(2, 3), (12, 30), (40, 50), (5, 1), (12, 10), (3, 4)]
    output: 1.41421
 """
