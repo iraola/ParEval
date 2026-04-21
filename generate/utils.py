@@ -12,23 +12,36 @@ def extract_pycompss_solution(code: str) -> str:
     """
     Extracts Python module code from a model-generated string.
 
-    Includes everything from the start, with two exceptions:
-    - Stops at the first top-level `if __name__` line.
-    - Skips module-level bare function calls (e.g. init(), compss_stop())
-      that models sometimes emit between imports and task definitions.
+    Hard stops (break): `if __name__` lines, and lines starting with `<`
+    (EOS/turn tokens from any model family: </s>, <s>[INST], <|im_end|>, etc.).
+    Bare module-level function calls (print(), init()) are skipped as before.
+
+    After collecting, trims back to the last indented line (function/class body).
+    This strips test assignments, prose, and comments that models append after the
+    solution while preserving module-level constants (CHUNK_SIZE = 10) that appear
+    before or between functions, since real code follows them.
 
     Returns '' if the result contains no real code (no imports, defs, or @task).
     """
     bare_call = re.compile(r'^[A-Za-z_][\w.]*\s*\(')
     result_lines = []
+    last_code_idx = -1
     for line in code.splitlines():
         stripped = line.strip()
         if not line.startswith((' ', '\t')):
             if stripped.startswith('if __name__'):
                 break
+            if stripped.startswith('<'):  # EOS/turn tokens from any model family
+                break
             if stripped and bare_call.match(stripped) and '=' not in stripped.split('(')[0]:
                 continue
+        else:
+            last_code_idx = len(result_lines)  # indented lines anchor the trim point
         result_lines.append(line)
+
+    if last_code_idx >= 0:
+        result_lines = result_lines[:last_code_idx + 1]
+
     result = "\n".join(result_lines).strip()
     if not re.search(r'^\s*(import|from|def)\s+|^\s*@', result, re.MULTILINE):
         return ''
