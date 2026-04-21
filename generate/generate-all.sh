@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=pareval
 #SBATCH --qos=acc_ehpc
-#SBATCH --account=bsc19
+#SBATCH --exclusive
+#SBATCH --account=ehpc721
 #SBATCH -t 24:00:00
 #SBATCH --gres=gpu:4
 #SBATCH -N 1
