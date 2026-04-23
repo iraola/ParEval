@@ -21,6 +21,7 @@ a.out
 generate/**/*.json
 drivers/**/*.json
 prompts/**/*.json
+**/logs/
 
 # local data
 /models
