@@ -182,10 +182,11 @@ class DriverWrapper(ABC):
     early_exit_runs: bool
     dry: bool
     save_generated_dir: Optional[PathLike]
+    model_name: str
 
     def __init__(
-        self, 
-        parallelism_model: str = "serial", 
+        self,
+        parallelism_model: str = "serial",
         launch_configs: dict = {"format": "{exec_path} {args}", "params": [{}]},
         build_configs: Optional[dict] = None,
         problem_sizes: dict = {},
@@ -198,6 +199,7 @@ class DriverWrapper(ABC):
         dry: bool = False,
         save_generated_dir: Optional[PathLike] = None,
         relaxations: Optional[list] = None,
+        model_name: str = "",
     ):
         self.parallelism_model = parallelism_model
         self.validator = VALIDATORS[parallelism_model]
@@ -213,6 +215,7 @@ class DriverWrapper(ABC):
         self.dry = dry
         self.save_generated_dir = save_generated_dir
         self.relaxations = relaxations or []
+        self.model_name = model_name
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(parallelism_model={self.parallelism_model}, scratch_dir={self.scratch_dir})"

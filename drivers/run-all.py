@@ -147,6 +147,10 @@ def main():
     data = load_json(args.input_json)
     logging.info(f"Loaded {len(data)} prompts from {args.input_json}.")
 
+    # derive model name from the input filename (e.g. "output-gpt-oss-20b.json" → "gpt-oss-20b")
+    input_stem = os.path.splitext(os.path.basename(args.input_json))[0]
+    model_name = input_stem[len("output-"):] if input_stem.startswith("output-") else input_stem
+
     # load launch configs
     launch_configs = load_json(args.launch_configs)
     logging.info(f"Loaded launch configs from {args.launch_configs}.")
@@ -220,6 +224,7 @@ def main():
             run_timeout=args.run_timeout,
             save_generated_dir=artifacts_dir,
             relaxations=relaxations,
+            model_name=model_name,
         )
 
         with contextlib.chdir(DRIVER_ROOT):
