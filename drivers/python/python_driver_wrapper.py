@@ -4,9 +4,11 @@
 """
 # std imports
 import copy
+import glob
 import logging
 import os
 from os import PathLike
+import re
 import subprocess
 import sys
 import tempfile
@@ -141,6 +143,78 @@ class PythonDriverWrapper(DriverWrapper):
             logging.error(f"Failed to merge files: {e}")
             return BuildOutput(1, "", str(e))
 
+    @staticmethod
+    def _enrich_stderr_with_compss_job_logs(stderr: str, head_lines: int = 40) -> str:
+        """If stderr references .COMPSs job files, read them and append a snippet.
+
+        COMPSs error messages look like:
+            Check files '/home/.../.COMPSs/a_out.py_40/jobs/job[1|2]' to find out the error.
+
+        The bracket notation job[1|2] names the specific job IDs to inspect —
+        there can be hundreds of other job files in the same directory, so we
+        only open the ones explicitly named.  For each ID we glob
+        job<id>*.out / job<id>*.err in the jobs directory.
+
+        When no bracket notation is present (e.g. a plain directory path) we
+        fall back to the first few *.out/*.err files in that directory.
+        """
+        pattern = re.compile(r'((?:~|/\S+)?\.COMPSs/\S+)', re.IGNORECASE)
+        appended: list[str] = []
+        seen_dirs: set[str] = set()
+
+        for m in pattern.finditer(stderr):
+            raw = m.group(1).rstrip(".,;'\"")
+
+            # ── Case 1: bracket notation  e.g. .../jobs/job[1|2|3] ──────────
+            bracket_m = re.search(r'\[([^\]]+)\]', raw)
+            if bracket_m:
+                bracket_pos = raw.index('[')
+                path_prefix = raw[:bracket_pos]           # e.g. .../jobs/job
+                parent_dir  = os.path.expanduser(os.path.dirname(path_prefix))
+                file_prefix = os.path.basename(path_prefix)  # e.g. "job"
+                job_ids     = [i.strip() for i in bracket_m.group(1).split('|')]
+
+                if not os.path.isdir(parent_dir) or parent_dir in seen_dirs:
+                    continue
+                seen_dirs.add(parent_dir)
+
+                candidates: list[str] = []
+                for job_id in job_ids:
+                    # Match exact name (job1.err) and underscore-suffixed variants
+                    # (job1_NEW.err).  Avoid job1*.err which would also match
+                    # job10.err, job11.err, etc.
+                    for ext in ("out", "err"):
+                        candidates += sorted(glob.glob(
+                            os.path.join(parent_dir, f"{file_prefix}{job_id}.{ext}")))
+                        candidates += sorted(glob.glob(
+                            os.path.join(parent_dir, f"{file_prefix}{job_id}_*.{ext}")))
+
+            # ── Case 2: plain path ────────────────────────────────────────────
+            else:
+                path = os.path.expanduser(raw)
+                if os.path.isfile(path):
+                    candidates = [path]
+                elif os.path.isdir(path):
+                    if path in seen_dirs:
+                        continue
+                    seen_dirs.add(path)
+                    candidates = (sorted(glob.glob(os.path.join(path, "*.out")))
+                                + sorted(glob.glob(os.path.join(path, "*.err"))))[:4]
+                else:
+                    continue
+
+            for job_file in candidates:
+                try:
+                    with open(job_file, errors="replace") as f:
+                        lines = f.readlines()
+                    snippet = "".join(lines[:head_lines])
+                    if snippet.strip():
+                        appended.append(f"\n[job log: {job_file}]\n{snippet}")
+                except OSError:
+                    pass
+
+        return stderr + "".join(appended)
+
     def run(self, executable: PathLike, **run_config) -> RunOutput:
         """ Run the given executable. """
         launch_format = self.launch_configs["format"]
@@ -157,7 +231,8 @@ class PythonDriverWrapper(DriverWrapper):
         except UnicodeDecodeError as e:
             logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
             return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
-        return RunOutput(run_process.returncode, run_process.stdout, run_process.stderr, config=run_config)
+        stderr = self._enrich_stderr_with_compss_job_logs(run_process.stderr)
+        return RunOutput(run_process.returncode, run_process.stdout, stderr, config=run_config)
 
     def test_single_output(self, prompt: str, output: str, test_driver_file: PathLike, problem_size: str, prompt_name: str = "prompt", problem_type: str = "problem", output_index: int = 0) -> GeneratedTextResult:
         """ Test a single generated output for PyCOMPSs.

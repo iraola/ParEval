@@ -268,6 +268,7 @@ class DriverWrapper(ABC):
                 output_index=i,
             )
 
+            build_stderr = results.build_output.stderr.strip()
             outputs.append({
                 "generated_output": generated_output,
                 "source_write_success": results.source_write_success,
@@ -279,12 +280,14 @@ class DriverWrapper(ABC):
                 "are_all_valid": results.are_all_valid(),
                 "best_sequential_runtime": results.best_sequential_runtime(),
                 "relaxations_applied": results.relaxations_applied,
+                **( {"build_stderr": build_stderr[:2000]} if build_stderr else {} ),
                 "runs": [
                     {
                         "did_run": r.exit_code == 0,
                         "is_valid": r.is_valid,
                         "runtime": r.runtime,
-                        **r.config
+                        **r.config,
+                        **( {"stderr": r.stderr.strip()[:2000]} if r.stderr and r.stderr.strip() else {} ),
                     } for r in results.run_outputs
                 ] if results.run_outputs is not None else None
             })
