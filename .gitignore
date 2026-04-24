@@ -1,7 +1,8 @@
 # IDE management
 .idea/
 *.code-workspace
-.venv
+.venv*
+venv*
 
 # python
 *.pyc
