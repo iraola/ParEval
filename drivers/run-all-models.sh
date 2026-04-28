@@ -52,11 +52,6 @@ for INPUT_FILE in "$GENERATE_OUTPUTS_DIR"/output-*.json; do
     LOG_FILE="${LOGS_DIR}/log_drivers_${MODEL_NAME}.txt"
     ARTIFACTS_DIR="artifacts/${DIR}/${MODEL_NAME}"
 
-    if [ -f "$OUTPUT_FILE" ]; then
-        echo "Skipping $MODEL_NAME (output already exists: $OUTPUT_FILE)"
-        continue
-    fi
-
     mkdir -p "$ARTIFACTS_DIR"
 
     echo "Running: $MODEL_NAME"
@@ -73,7 +68,8 @@ for INPUT_FILE in "$GENERATE_OUTPUTS_DIR"/output-*.json; do
         --log DEBUG \
         --run-timeout "$TIMEOUT" \
         --relaxation "$RELAXATION" \
-        --yes-to-all 2>&1 | tee "$LOG_FILE"
+        --resume \
+        --yes-to-all 2>&1 | tee -a "$LOG_FILE"
 
     echo "Done: $MODEL_NAME"
     echo "---"

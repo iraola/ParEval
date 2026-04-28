@@ -54,6 +54,7 @@ def get_args():
         help="config for how to run samples.")
     parser.add_argument("--yes-to-all", action="store_true", help="If provided, automatically answer yes to all prompts.")
     parser.add_argument("--dry", action="store_true", help="Dry run. Do not actually run the code snippets.")
+    parser.add_argument("--resume", action="store_true", help="If the output file already exists, load it as starting data instead of input_json, skipping already-evaluated entries.")
     parser.add_argument("--overwrite", action="store_true", help="If ouputs are already in DB for a given prompt, \
         then overwrite them. Default behavior is to skip existing results.")
     parser.add_argument("--hide-progress", action="store_true", help="If provided, do not show progress bar.")
@@ -143,9 +144,22 @@ def main():
             logging.info("Exiting.")
             return
 
-    # load in the generated text
-    data = load_json(args.input_json)
-    logging.info(f"Loaded {len(data)} prompts from {args.input_json}.")
+    # load in the generated text, resuming from a partial output file if requested
+    if args.resume:
+        if not args.output or args.output == '-':
+            logging.warning("--resume was set but no output file was specified (-o); ignoring --resume and loading from input_json.")
+            data = load_json(args.input_json)
+            logging.info(f"Loaded {len(data)} prompts from {args.input_json}.")
+        elif not os.path.isfile(args.output):
+            logging.warning(f"--resume was set but output file {args.output} does not exist yet; loading from input_json.")
+            data = load_json(args.input_json)
+            logging.info(f"Loaded {len(data)} prompts from {args.input_json}.")
+        else:
+            data = load_json(args.output)
+            logging.info(f"Resuming from existing output file {args.output} ({len(data)} prompts).")
+    else:
+        data = load_json(args.input_json)
+        logging.info(f"Loaded {len(data)} prompts from {args.input_json}.")
 
     # derive model name from the input filename (e.g. "output-gpt-oss-20b.json" → "gpt-oss-20b")
     input_stem = os.path.splitext(os.path.basename(args.input_json))[0]

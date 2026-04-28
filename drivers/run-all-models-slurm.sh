@@ -3,37 +3,42 @@
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
 #SBATCH --account=ehpc721
-#SBATCH -t 24:00:00
+#SBATCH -t 3-00:00:00
 #SBATCH -N 1
-#SBATCH --output=logs-run-all-models-%j.out
-#SBATCH --error=logs-run-all-models-%j.err
+#SBATCH --array=0-19
+#SBATCH --output=logs/slurm-%A_%a.out
+#SBATCH --error=logs/slurm-%A_%a.err
 
-# Run the driver evaluation for all models in "generate/outputs" directories.
-# Skips models whose output already exists under drivers/outputs/<dir>/.
+# Run driver evaluation as a SLURM job array — one task per model.
+# Each task picks its model by index from the sorted list of generate output files.
 #
-# Usage: sbatch run-all-models-slurm.sh [dir] [--timeout N] [--relaxation MODE]
-#   dir              Name of the subfolder under generate/outputs/ to process (default: kernel)
-#   --timeout N      Run timeout in seconds (default: 150)
-#   --relaxation MODE  Relaxation mode passed to run-all.py (default: all)
+# Usage:
+#   sbatch run-array-slurm.sh [dir] [--timeout N] [--relaxations MODE]
+#
+# The --array bound must match the number of models. Use:
+#   N=$(ls ../generate/outputs/<dir>/output-*.json | wc -l)
+#   sbatch --array=0-$((N-1)) run-array-slurm.sh <dir>
+#
+# To rerun specific failed tasks (e.g. tasks 3 and 7):
+#   sbatch --array=3,7 run-array-slurm.sh <dir>
 #
 # Examples:
-#   sbatch run-all-models-slurm.sh
-#   sbatch run-all-models-slurm.sh kernel
-#   sbatch run-all-models-slurm.sh workflow --timeout 300
-#   sbatch run-all-models-slurm.sh kernel --relaxation none --timeout 60
+#   sbatch --array=0-19 run-array-slurm.sh kernel-20
+#   sbatch --array=0-19 run-array-slurm.sh kernel-20 --timeout 300
+#   sbatch --array=3,7  run-array-slurm.sh kernel-20
 
 DIR="${1:-kernel}"
 shift 2>/dev/null
 
 TIMEOUT=150
-RELAXATION=all
+RELAXATIONS=all
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --timeout)
             TIMEOUT="$2"; shift 2 ;;
-        --relaxation)
-            RELAXATION="$2"; shift 2 ;;
+        --relaxations)
+            RELAXATIONS="$2"; shift 2 ;;
         *)
             echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -58,48 +63,44 @@ if [ ! -d "$GENERATE_OUTPUTS_DIR" ]; then
     exit 1
 fi
 
+# Build sorted model list and pick this task's model by array task ID
+mapfile -t MODELS < <(ls "${GENERATE_OUTPUTS_DIR}"/output-*.json | sort | sed 's|.*/output-||;s|\.json$||')
+
+if [[ $SLURM_ARRAY_TASK_ID -ge ${#MODELS[@]} ]]; then
+    echo "Array task ID $SLURM_ARRAY_TASK_ID >= number of models (${#MODELS[@]}); nothing to do."
+    exit 0
+fi
+
+MODEL_NAME="${MODELS[$SLURM_ARRAY_TASK_ID]}"
+
+INPUT_FILE="${GENERATE_OUTPUTS_DIR}/output-${MODEL_NAME}.json"
+OUTPUT_FILE="${DRIVER_OUTPUTS_DIR}/output_drivers_${MODEL_NAME}.json"
+LOG_FILE="${LOGS_DIR}/log_drivers_${MODEL_NAME}.txt"
+ARTIFACTS_DIR="artifacts/${DIR}/${MODEL_NAME}"
+SCRATCH_DIR="../scratch/${DIR}/${MODEL_NAME}"
+
 mkdir -p "$DRIVER_OUTPUTS_DIR"
 mkdir -p "$LOGS_DIR"
+mkdir -p "$ARTIFACTS_DIR"
+mkdir -p "$SCRATCH_DIR"
 
-for INPUT_FILE in "$GENERATE_OUTPUTS_DIR"/output-*.json; do
-    [ -f "$INPUT_FILE" ] || continue
+echo "Array task: ${SLURM_ARRAY_TASK_ID} (job ${SLURM_ARRAY_JOB_ID})"
+echo "Model:      $MODEL_NAME"
+echo "Input:      $INPUT_FILE"
+echo "Output:     $OUTPUT_FILE"
+echo "Log:        $LOG_FILE"
+echo "Artifacts:  $ARTIFACTS_DIR"
 
-    BASENAME=$(basename "$INPUT_FILE")                  # output-Qwen3-32B.json
-    MODEL_NAME="${BASENAME#output-}"                    # Qwen3-32B.json
-    MODEL_NAME="${MODEL_NAME%.json}"                    # Qwen3-32B
+python3 run-all.py "$INPUT_FILE" \
+    -o "$OUTPUT_FILE" \
+    --artifacts-dir "$ARTIFACTS_DIR" \
+    --scratch-dir "$SCRATCH_DIR" \
+    --log-build-errors \
+    --log-runs \
+    --log DEBUG \
+    --run-timeout "$TIMEOUT" \
+    --relaxations "$RELAXATIONS" \
+    --resume \
+    --yes-to-all 2>&1 | tee -a "$LOG_FILE"
 
-    OUTPUT_FILE="${DRIVER_OUTPUTS_DIR}/output_drivers_${MODEL_NAME}.json"
-    LOG_FILE="${LOGS_DIR}/log_drivers_${MODEL_NAME}.txt"
-    ARTIFACTS_DIR="artifacts/${DIR}/${MODEL_NAME}"
-    SCRATCH_DIR="../scratch/${DIR}/${MODEL_NAME}"
-
-    if [ -f "$OUTPUT_FILE" ]; then
-        echo "Skipping $MODEL_NAME (output already exists: $OUTPUT_FILE)"
-        continue
-    fi
-
-    mkdir -p "$ARTIFACTS_DIR"
-    mkdir -p "$SCRATCH_DIR"
-
-    echo "Running: $MODEL_NAME"
-    echo "  Input:     $INPUT_FILE"
-    echo "  Output:    $OUTPUT_FILE"
-    echo "  Log:       $LOG_FILE"
-    echo "  Artifacts: $ARTIFACTS_DIR"
-
-    python3 run-all.py "$INPUT_FILE" \
-        -o "$OUTPUT_FILE" \
-        --artifacts-dir "$ARTIFACTS_DIR" \
-        --scratch-dir "$SCRATCH_DIR" \
-        --log-build-errors \
-        --log-runs \
-        --log DEBUG \
-        --run-timeout "$TIMEOUT" \
-        --relaxation "$RELAXATION" \
-        --yes-to-all 2>&1 | tee "$LOG_FILE"
-
-    echo "Done: $MODEL_NAME"
-    echo "---"
-done
-
-echo "All models processed."
+echo "Done: $MODEL_NAME"
