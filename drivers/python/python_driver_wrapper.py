@@ -227,7 +227,8 @@ class PythonDriverWrapper(DriverWrapper):
                 if b is None:
                     return ""
                 return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b)
-            return RunOutput(-1, _decode(e.stdout), f"[Timeout] {_decode(e.stderr)}", config=run_config)
+            stderr = self._enrich_stderr_with_compss_job_logs(f"[Timeout] {_decode(e.stderr)}")
+            return RunOutput(-1, _decode(e.stdout), stderr, config=run_config)
         except UnicodeDecodeError as e:
             logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
             return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)

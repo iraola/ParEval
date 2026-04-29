@@ -287,7 +287,7 @@ class DriverWrapper(ABC):
                         "is_valid": r.is_valid,
                         "runtime": r.runtime,
                         **r.config,
-                        **( {"stderr": r.stderr.strip()[:2000]} if r.stderr and r.stderr.strip() else {} ),
+                        **( {"stderr": r.stderr.strip()[:6000]} if r.stderr and r.stderr.strip() else {} ),
                     } for r in results.run_outputs
                 ] if results.run_outputs is not None else None
             })
