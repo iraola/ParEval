@@ -71,6 +71,12 @@ def _compress_model_name(model_name: str) -> str:
     return "".join(p[:2] for p in re.split(r"[-_]", name) if p)
 
 
+def _prompt_id(prompt_name: str) -> str:
+    """Return the numeric prefix of a prompt name (e.g. '22' from '22_histogram_count_quadrants')."""
+    m = re.match(r"(\d+)", prompt_name)
+    return m.group(1) if m else prompt_name
+
+
 def _runs_succeeded(run_results) -> bool:
     """Return True if at least one run completed and validated successfully."""
     if not run_results:
@@ -248,7 +254,7 @@ class PythonDriverWrapper(DriverWrapper):
         
         p_idx = PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt]
 
-        artifact_stem = f"py{output_index}_{_compress_model_name(self.model_name)}"
+        artifact_stem = f"py{output_index}_{_compress_model_name(self.model_name)}_{_prompt_id(prompt_name)}"
 
         with tempfile.TemporaryDirectory(dir=self.scratch_dir) as tmpdir:
             src_path = os.path.join(tmpdir, f"{artifact_stem}.py")
@@ -277,7 +283,7 @@ class PythonDriverWrapper(DriverWrapper):
                 f.write(f"MAX_VALIDATION_ATTEMPTS = 5\n")
 
             # Build
-            exec_path = os.path.join(tmpdir, f"{artifact_stem}merged.py")
+            exec_path = os.path.join(tmpdir, f"{artifact_stem}_merged.py")
             if not Path(test_driver_file).exists():
                 resolved = try_to_find_path(Path(test_driver_file))
                 if resolved is not None:
@@ -299,7 +305,7 @@ class PythonDriverWrapper(DriverWrapper):
 
             merged_path = None
             if dst_dir and build_result.did_build:
-                merged_path = os.path.join(dst_dir, f"{artifact_stem}merged.py")
+                merged_path = os.path.join(dst_dir, f"{artifact_stem}_merged.py")
                 shutil.copyfile(exec_path, merged_path)
 
             if build_result.did_build:
