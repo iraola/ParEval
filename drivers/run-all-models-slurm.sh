@@ -50,7 +50,7 @@ module load intel mkl python/3.12.1
 unset PYTHONPATH
 source .venv/bin/activate
 module load sqlite3
-module load COMPSs/3.4.rc1
+module load COMPSs/3.4
 
 cd drivers/
 
