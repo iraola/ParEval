@@ -144,7 +144,7 @@ class PythonDriverWrapper(DriverWrapper):
             return BuildOutput(1, "", str(e))
 
     @staticmethod
-    def _enrich_stderr_with_compss_job_logs(stderr: str, head_lines: int = 40) -> str:
+    def _enrich_stderr_with_compss_job_logs(stderr: str, tail_lines: int = 40) -> str:
         """If stderr references .COMPSs job files, read them and append a snippet.
 
         COMPSs error messages look like:
@@ -207,7 +207,7 @@ class PythonDriverWrapper(DriverWrapper):
                 try:
                     with open(job_file, errors="replace") as f:
                         lines = f.readlines()
-                    snippet = "".join(lines[:head_lines])
+                    snippet = "".join(lines[-tail_lines:])
                     if snippet.strip():
                         appended.append(f"\n[job log: {job_file}]\n{snippet}")
                 except OSError:
