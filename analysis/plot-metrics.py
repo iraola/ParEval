@@ -154,6 +154,25 @@ def _save_or_show(fig, output_dir, fname):
         plt.show()
     plt.close(fig)
 
+def _save_both(fig, output_dir, base_fname):
+    """Save twice: with titles (_with_title suffix) and without titles (no suffix)."""
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, base_fname + "_with_title.png")
+        fig.savefig(path, bbox_inches="tight", dpi=150)
+        print(f"Saved: {path}")
+        for ax in fig.axes:
+            ax.set_title("")
+        if fig._suptitle is not None:
+            fig._suptitle.set_visible(False)
+        fig.tight_layout()
+        path = os.path.join(output_dir, base_fname + ".png")
+        fig.savefig(path, bbox_inches="tight", dpi=150)
+        print(f"Saved: {path}")
+    else:
+        plt.show()
+    plt.close(fig)
+
 def _short_name(name: str) -> str:
     name = re.sub(r'-Instruct$', '', name)       # Llama-3.3-70B-Instruct → Llama-3.3-70B
     name = re.sub(r'-v\d+\.\d+$', '', name)      # Codestral-22B-v0.1 → Codestral-22B
@@ -198,7 +217,7 @@ def plot_k_vs_passk(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
     _style(ax)
     ax.legend(bbox_to_anchor=(1.01, 1), loc="upper left", frameon=False)
     fig.tight_layout()
-    _save_or_show(fig, output_dir, f"k_vs_passk{suffix}.png")
+    _save_both(fig, output_dir, f"k_vs_passk{suffix}")
 
 # ── Plot 2: pass@1 per problem type, grouped by model ────────────────────────
 
@@ -243,7 +262,7 @@ def plot_passk1_by_problem_type(df: pd.DataFrame, output_dir, suffix=""):
     ax.legend(title="problem type", bbox_to_anchor=(1.01, 1), loc="upper left", frameon=False)
     _style(ax)
     fig.tight_layout()
-    _save_or_show(fig, output_dir, f"pass1_by_problem_type{suffix}.png")
+    _save_both(fig, output_dir, f"pass1_by_problem_type{suffix}")
 
 # ── Plot 3: speedup@1 and efficiency@1 per model ─────────────────────────────
 
@@ -275,7 +294,7 @@ def plot_speedup_efficiency(df: pd.DataFrame, output_dir, suffix=""):
     axes[1].tick_params(axis="y", labelleft=False)
     fig.suptitle("Speedup and efficiency @ k=1  (mean across problem types)", fontsize=12)
     fig.tight_layout()
-    _save_or_show(fig, output_dir, f"speedup_efficiency_1{suffix}.png")
+    _save_both(fig, output_dir, f"speedup_efficiency_1{suffix}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

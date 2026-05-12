@@ -19,6 +19,9 @@ def get_args():
     parser.add_argument("-o", "--output", type=str, help="Output csv file containing the results.")
     parser.add_argument("--problem-sizes", type=str, default='../drivers/problem-sizes.json', help="Json with problem sizes. Used for calculating GPU efficiency.")
     parser.add_argument("--model-name", type=str, help="Add model name column with this value")
+    parser.add_argument("--relaxations", action="store_true",
+        help="Count outputs that passed only after a relaxation as correct. "
+             "Default: treat relaxed passes as failures.")
     return parser.parse_args()
 
 def get_correctness_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -108,9 +111,13 @@ def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     df["best_sequential_runtime"] = df.groupby(["name", "parallelism_model", "output_idx"])["best_sequential_runtime"].transform("min")
 
     # group by name, parallelism_model, and output_idx and call _speedupk
-    df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
+    df = df.groupby(["name", "parallelism_model", "problem_type"])[["runtime", "best_sequential_runtime"]].apply(
             lambda row: _speedupk(row["runtime"], np.min(row["best_sequential_runtime"]), k)
         ).reset_index()
+
+    if df.empty or f"speedup@{k}" not in df.columns:
+        idx = pd.MultiIndex.from_tuples([], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame(columns=[f"speedup@{k}"], index=idx)
 
     # compute the mean speedup@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"speedup@{k}": "mean"})
@@ -140,9 +147,13 @@ def speedupk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
     df = df[df["run_idx"] == 0]
 
     # group by name, parallelism_model, and output_idx and call _speedupk
-    df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
+    df = df.groupby(["name", "parallelism_model", "problem_type"])[["runtime", "best_sequential_runtime"]].apply(
             lambda row: _speedupk(row["runtime"], np.min(row["best_sequential_runtime"]), k, col_name="speedup_max@{}")
         ).reset_index()
+
+    if df.empty or f"speedup_max@{k}" not in df.columns:
+        idx = pd.MultiIndex.from_tuples([], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame(columns=[f"speedup_max@{k}"], index=idx)
 
     # compute the mean speedup_max@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"speedup_max@{k}": "mean"})
@@ -210,10 +221,14 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     df["best_sequential_runtime"] = df.groupby(["name", "parallelism_model", "output_idx"])["best_sequential_runtime"].transform("min")
 
     # group by name, parallelism_model, and output_idx and call _efficiencyk
-    df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
+    df = df.groupby(["name", "parallelism_model", "problem_type"])[["runtime", "best_sequential_runtime", "n_resources"]].apply(
             lambda row: _efficiencyk(row["runtime"], np.min(row["best_sequential_runtime"]), k, row["n_resources"])
         ).reset_index()
-    
+
+    if df.empty or f"efficiency@{k}" not in df.columns:
+        idx = pd.MultiIndex.from_tuples([], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame(columns=[f"efficiency@{k}"], index=idx)
+
     # compute the mean efficiency@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"efficiency@{k}": "mean"})
 
@@ -246,9 +261,13 @@ def efficiencyk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
     df["best_sequential_runtime"] = df.groupby(["name", "parallelism_model", "output_idx"])["best_sequential_runtime"].transform("min")
 
     # group by name, parallelism_model, and output_idx and call _efficiencyk
-    df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
+    df = df.groupby(["name", "parallelism_model", "problem_type"])[["runtime", "best_sequential_runtime", "n_resources"]].apply(
             lambda row: _efficiencyk(row["runtime"], np.min(row["best_sequential_runtime"]), k, row["n_resources"], col_name='efficiency_max@{}')
         ).reset_index()
+
+    if df.empty or f"efficiency_max@{k}" not in df.columns:
+        idx = pd.MultiIndex.from_tuples([], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame(columns=[f"efficiency_max@{k}"], index=idx)
 
     # compute the mean efficiency_max@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"efficiency_max@{k}": "mean"})
@@ -283,6 +302,10 @@ def main():
     # filter/aggregate
     df["did_run"] = df["did_run"].fillna(False)     # if it didn't build, then this will be nan; overwrite
     df["is_valid"] = df["is_valid"].fillna(False)   # if it didn't build, then this will be nan; overwrite
+
+    # without --relaxations, relaxed passes are treated as failures
+    if not args.relaxations and "relaxation_used" in df.columns:
+        df.loc[df["relaxation_used"] == True, "is_valid"] = False
 
     # get only valid runs
     valid_runs = get_correctness_df(df)
