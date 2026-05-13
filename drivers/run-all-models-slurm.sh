@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=pareval-drivers
+#SBATCH --job-name=pareval
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
 #SBATCH --account=ehpc721
@@ -46,9 +46,9 @@ done
 
 # Move to the project directory and activate environment
 cd ..
-module load intel mkl python/3.12.1
+module load hdf5 python/3.12.1
 unset PYTHONPATH
-source .venv/bin/activate
+source .venv_gpp/bin/activate
 module load sqlite3
 module load COMPSs/3.4.post2603
 

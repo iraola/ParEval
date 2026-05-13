@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=pareval-parallel
+#SBATCH --job-name=pareval
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
 #SBATCH --account=ehpc721
 #SBATCH -t 3-00:00:00
-#SBATCH -N 1
+#SBATCH -N 20
 #SBATCH --array=0-19
-#SBATCH --output=logs/slurm-parallel-%A_%a.out
-#SBATCH --error=logs/slurm-parallel-%A_%a.err
+#SBATCH --output=logs/slurm-%A_%a.out
+#SBATCH --error=logs/slurm-%A_%a.err
 
 # Run driver evaluation with parallel runcompss instances.
 # Each SLURM array task handles one model; within the task, all prompts for
@@ -17,7 +17,7 @@
 #   sbatch [--array=0-$((N-1))] [-N <nodes>] run-all-models-slurm-parallel.sh <dir> [options]
 #
 # Options:
-#   --timeout N         Run timeout per runcompss call in seconds (default: 150)
+#   --timeout N         Run timeout per runcompss call in seconds (default: 60)
 #   --relaxations MODE  Relaxation mode (default: all)
 #   --cpus-per-slot N   CPUs per runcompss instance (default: 5)
 #
@@ -33,7 +33,7 @@
 DIR="${1:-kernel}"
 shift 2>/dev/null
 
-TIMEOUT=150
+TIMEOUT=60
 RELAXATIONS=all
 CPUS_PER_SLOT=5
 
@@ -52,9 +52,9 @@ done
 
 # Move to the project directory and activate environment
 cd ..
-module load intel mkl python/3.12.1
+module load hdf5 python/3.12.1
 unset PYTHONPATH
-source .venv/bin/activate
+source .venv_gpp/bin/activate
 module load sqlite3
 module load COMPSs/3.4.post2603
 
