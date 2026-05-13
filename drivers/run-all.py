@@ -5,10 +5,12 @@
 """
 # std imports
 from argparse import ArgumentParser
-import contextlib
 import json
 import logging
 import os
+import queue
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 # tpl imports
@@ -20,18 +22,6 @@ from cpp.cpp_driver_wrapper import CppDriverWrapper
 from python.python_driver_wrapper import PythonDriverWrapper
 from python.relaxations import ALL_RELAXATIONS, RELAXATION_MAP
 from util import await_input, load_json
-
-# Fix for python versions older than 3.11 that don't have contextlib.chdir
-if not hasattr(contextlib, 'chdir'):
-    @contextlib.contextmanager
-    def chdir(path):
-        prev_cwd = os.getcwd()
-        os.chdir(path)
-        try:
-            yield
-        finally:
-            os.chdir(prev_cwd)
-    contextlib.chdir = chdir
 
 """ Map language names to driver wrappers """
 LANGUAGE_DRIVERS = {
@@ -46,11 +36,11 @@ def get_args():
     parser.add_argument("--scratch-dir", type=str, help="If provided, put scratch files here.")
     parser.add_argument("--artifacts-dir", type=str, metavar="DIR", help="Directory to save per-output evaluation artifacts (raw generated code and merged executable). Defaults to 'artifacts/' under the driver root.")
     parser.add_argument("--driver-root", type=str, help="Where to look for the driver files, if not in cwd.")
-    parser.add_argument("--launch-configs", type=str, default="launch-configs.json", 
+    parser.add_argument("--launch-configs", type=str, default="launch-configs.json",
         help="config for how to run samples.")
     parser.add_argument("--build-configs", type=str, default="build-configs.json",
         help="config for how to build samples. If not provided, will use the default build settings for each model.")
-    parser.add_argument("--problem-sizes", type=str, default="problem-sizes.json", 
+    parser.add_argument("--problem-sizes", type=str, default="problem-sizes.json",
         help="config for how to run samples.")
     parser.add_argument("--yes-to-all", action="store_true", help="If provided, automatically answer yes to all prompts.")
     parser.add_argument("--dry", action="store_true", help="Dry run. Do not actually run the code snippets.")
@@ -59,7 +49,7 @@ def get_args():
         then overwrite them. Default behavior is to skip existing results.")
     parser.add_argument("--hide-progress", action="store_true", help="If provided, do not show progress bar.")
     model_group = parser.add_mutually_exclusive_group()
-    model_group.add_argument("--exclude-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"], 
+    model_group.add_argument("--exclude-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"],
         help="Exclude the given parallelism models from testing.")
     model_group.add_argument("--include-models", nargs="+", type=str, choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"],
         help="Only test the given parallelism models.")
@@ -87,6 +77,8 @@ def get_args():
             "Disabled by default."
         ),
     )
+    parser.add_argument("--resource-slots", type=str, metavar="FILE",
+        help="JSON file listing resource slots for parallel execution (keys: cpu_affinity, resources_xml). One thread per slot.")
     return parser.parse_args()
 
 def resolve_relaxations(relaxations_arg):
@@ -188,6 +180,9 @@ def main():
         DRIVER_ROOT = os.path.dirname(os.path.abspath(__file__))
     logging.info(f"Using driver root: {DRIVER_ROOT}")
 
+    # change to driver root once, before spawning any threads; all relative paths depend on this
+    os.chdir(DRIVER_ROOT)
+
     artifacts_dir = args.artifacts_dir if args.artifacts_dir else os.path.join(DRIVER_ROOT, "artifacts")
 
     # gather the list of parallelism models to test
@@ -200,9 +195,15 @@ def main():
     if relaxations:
         logging.info(f"Relaxations enabled: {[r.name for r in relaxations]}")
 
-    # run each prompt
-    all_prompts = data if args.hide_progress else tqdm(data, desc="Testing prompts")
-    for prompt in all_prompts:
+    # load resource slots for parallel mode
+    resource_slots = None
+    if args.resource_slots:
+        resource_slots = load_json(args.resource_slots)
+        logging.info(f"Loaded {len(resource_slots)} resource slots from {args.resource_slots}.")
+
+    # build the list of prompts to run
+    prompts_to_run = []
+    for prompt in data:
         if prompt["parallelism_model"] not in models_to_test:
             logging.debug(f"Skipping prompt {prompt['name']} because it uses {prompt['parallelism_model']}.")
             continue
@@ -220,37 +221,72 @@ def main():
                 logging.debug(f"Prompt {prompt['name']} already has results. Overwriting.")
                 prompt["outputs"] = [p["generated_output"] for p in prompt["outputs"]]
             else:
-                logging.debug(f"Skipping prompt {prompt['name']} because it already has results. \
-                    Use --overwrite to overwrite existing results.")
+                logging.debug(f"Skipping prompt {prompt['name']} because it already has results.")
                 continue
+        prompts_to_run.append(prompt)
 
-        driver = get_driver(
-            prompt, 
-            args.scratch_dir, 
-            launch_configs, 
-            build_configs,
-            problem_sizes,
-            args.dry, 
-            display_build_errors=args.log_build_errors,
-            display_runs=args.log_runs,
-            early_exit_runs=args.early_exit_runs,
-            build_timeout=args.build_timeout,
-            run_timeout=args.run_timeout,
-            save_generated_dir=artifacts_dir,
-            relaxations=relaxations,
-            model_name=model_name,
-        )
+    driver_kwargs = dict(
+        launch_configs=launch_configs,
+        build_configs=build_configs,
+        problem_sizes=problem_sizes,
+        scratch_dir=args.scratch_dir,
+        dry=args.dry,
+        display_build_errors=args.log_build_errors,
+        display_runs=args.log_runs,
+        early_exit_runs=args.early_exit_runs,
+        build_timeout=args.build_timeout,
+        run_timeout=args.run_timeout,
+        save_generated_dir=artifacts_dir,
+        relaxations=relaxations,
+        model_name=model_name,
+    )
 
-        with contextlib.chdir(DRIVER_ROOT):
-            driver.test_all_outputs_in_prompt(prompt)
-
-        # go ahead and write out outputs now
+    def write_output():
         if args.output and args.output != '-':
             with open(args.output, "w") as fp:
                 json.dump(data, fp, indent=4)
+
+    if resource_slots:
+        # parallel mode: thread pool + resource queue
+        json_lock = threading.Lock()
+        rq = queue.Queue()
+        for slot in resource_slots:
+            rq.put(slot)
+
+        n_workers = rq.qsize()
+        logging.info(f"Parallel mode: {n_workers} workers ({n_workers} resource slots).")
+
+        progress = tqdm(total=len(prompts_to_run), desc="Testing prompts", disable=args.hide_progress)
+
+        def process_prompt(prompt):
+            slot = rq.get()
+            try:
+                driver = get_driver(prompt, resource_slot=slot, **driver_kwargs)
+                driver.test_all_outputs_in_prompt(prompt)
+            finally:
+                rq.put(slot)
+            with json_lock:
+                write_output()
+                if not args.hide_progress:
+                    progress.update(1)
+
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = {executor.submit(process_prompt, p): p for p in prompts_to_run}
+            for f in as_completed(futures):
+                f.result()
+
+        progress.close()
+
+    else:
+        # sequential mode (default / laptop)
+        all_prompts = prompts_to_run if args.hide_progress else tqdm(prompts_to_run, desc="Testing prompts")
+        for prompt in all_prompts:
+            driver = get_driver(prompt, **driver_kwargs)
+            driver.test_all_outputs_in_prompt(prompt)
+            write_output()
             logging.debug(f"Wrote intermediate results to {args.output}.")
 
-    # write out results
+    # write final results
     if args.output and args.output != '-':
         with open(args.output, "w") as fp:
             json.dump(data, fp, indent=4)

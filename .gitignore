@@ -20,7 +20,6 @@ a.out
 *~
 
 generate/**/*.json
-drivers/**/*.json
 prompts/**/*.json
 **/logs/
 
@@ -28,3 +27,6 @@ prompts/**/*.json
 /models
 scratch/
 **/artifacts/
+**/outputs/
+**/plots/
+*.xml

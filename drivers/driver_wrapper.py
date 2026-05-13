@@ -200,6 +200,7 @@ class DriverWrapper(ABC):
         save_generated_dir: Optional[PathLike] = None,
         relaxations: Optional[list] = None,
         model_name: str = "",
+        resource_slot: Optional[dict] = None,
     ):
         self.parallelism_model = parallelism_model
         self.validator = VALIDATORS[parallelism_model]
@@ -216,6 +217,7 @@ class DriverWrapper(ABC):
         self.save_generated_dir = save_generated_dir
         self.relaxations = relaxations or []
         self.model_name = model_name
+        self.resource_slot = resource_slot
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(parallelism_model={self.parallelism_model}, scratch_dir={self.scratch_dir})"

@@ -1,37 +1,41 @@
 #!/bin/bash
-#SBATCH --job-name=pareval-drivers
+#SBATCH --job-name=pareval-parallel
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
 #SBATCH --account=ehpc721
 #SBATCH -t 3-00:00:00
 #SBATCH -N 1
 #SBATCH --array=0-19
-#SBATCH --output=logs/slurm-%A_%a.out
-#SBATCH --error=logs/slurm-%A_%a.err
+#SBATCH --output=logs/slurm-parallel-%A_%a.out
+#SBATCH --error=logs/slurm-parallel-%A_%a.err
 
-# Run driver evaluation as a SLURM job array — one task per model.
-# Each task picks its model by index from the sorted list of generate output files.
+# Run driver evaluation with parallel runcompss instances.
+# Each SLURM array task handles one model; within the task, all prompts for
+# that model run concurrently, each pinned to a CPU slice on an allocated node.
 #
 # Usage:
-#   sbatch run-array-slurm.sh [dir] [--timeout N] [--relaxations MODE]
+#   sbatch [--array=0-$((N-1))] [-N <nodes>] run-all-models-slurm-parallel.sh <dir> [options]
 #
-# The --array bound must match the number of models. Use:
+# Options:
+#   --timeout N         Run timeout per runcompss call in seconds (default: 150)
+#   --relaxations MODE  Relaxation mode (default: all)
+#   --cpus-per-slot N   CPUs per runcompss instance (default: 5)
+#
+# The --array bound must match the number of models:
 #   N=$(ls ../generate/outputs/<dir>/output-*.json | wc -l)
-#   sbatch --array=0-$((N-1)) run-array-slurm.sh <dir>
-#
-# To rerun specific failed tasks (e.g. tasks 3 and 7):
-#   sbatch --array=3,7 run-array-slurm.sh <dir>
+#   sbatch --array=0-$((N-1)) run-all-models-slurm-parallel.sh <dir>
 #
 # Examples:
-#   sbatch --array=0-19 run-array-slurm.sh kernel-20
-#   sbatch --array=0-19 run-array-slurm.sh kernel-20 --timeout 300
-#   sbatch --array=3,7  run-array-slurm.sh kernel-20
+#   sbatch --array=0-19 -N 1 run-all-models-slurm-parallel.sh kernel-20
+#   sbatch --array=0-19 -N 2 run-all-models-slurm-parallel.sh kernel-20 --cpus-per-slot 10
+#   sbatch --array=3,7  -N 1 run-all-models-slurm-parallel.sh kernel-20
 
 DIR="${1:-kernel}"
 shift 2>/dev/null
 
 TIMEOUT=150
 RELAXATIONS=all
+CPUS_PER_SLOT=5
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -39,6 +43,8 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="$2"; shift 2 ;;
         --relaxations)
             RELAXATIONS="$2"; shift 2 ;;
+        --cpus-per-slot)
+            CPUS_PER_SLOT="$2"; shift 2 ;;
         *)
             echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -78,11 +84,14 @@ OUTPUT_FILE="${DRIVER_OUTPUTS_DIR}/output_drivers_${MODEL_NAME}.json"
 LOG_FILE="${LOGS_DIR}/log_drivers_${MODEL_NAME}.txt"
 ARTIFACTS_DIR="artifacts/${DIR}/${MODEL_NAME}"
 SCRATCH_DIR="../scratch/${DIR}/${MODEL_NAME}"
+RESOURCES_DIR="resources/${DIR}/${MODEL_NAME}"
+SLOTS_FILE="${SCRATCH_DIR}/slots.json"
 
 mkdir -p "$DRIVER_OUTPUTS_DIR"
 mkdir -p "$LOGS_DIR"
 mkdir -p "$ARTIFACTS_DIR"
 mkdir -p "$SCRATCH_DIR"
+mkdir -p "$RESOURCES_DIR"
 
 echo "Array task: ${SLURM_ARRAY_TASK_ID} (job ${SLURM_ARRAY_JOB_ID})"
 echo "Model:      $MODEL_NAME"
@@ -90,11 +99,27 @@ echo "Input:      $INPUT_FILE"
 echo "Output:     $OUTPUT_FILE"
 echo "Log:        $LOG_FILE"
 echo "Artifacts:  $ARTIFACTS_DIR"
+echo "Nodes:      $SLURM_JOB_NODELIST"
+echo "CPUs/slot:  $CPUS_PER_SLOT"
+
+# Generate resource slot definitions (XML files + slots JSON)
+python3 generate_resource_slots.py \
+    --cpus-per-node "$SLURM_CPUS_ON_NODE" \
+    --cpus-per-slot "$CPUS_PER_SLOT" \
+    --resources-dir "$RESOURCES_DIR" \
+    --output "$SLOTS_FILE"
+
+if [ $? -ne 0 ]; then
+    echo "Error: failed to generate resource slots."
+    exit 1
+fi
 
 python3 run-all.py "$INPUT_FILE" \
     -o "$OUTPUT_FILE" \
     --artifacts-dir "$ARTIFACTS_DIR" \
     --scratch-dir "$SCRATCH_DIR" \
+    --launch-configs launch-configs-slurm.json \
+    --resource-slots "$SLOTS_FILE" \
     --log-build-errors \
     --log-runs \
     --log DEBUG \

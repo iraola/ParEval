@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import shutil
 from pathlib import Path
 # local imports
@@ -85,10 +86,11 @@ def _runs_succeeded(run_results) -> bool:
 
 
 class PythonDriverWrapper(DriverWrapper):
-    
+
     # GLOBAL TRACKER: This stays alive across all instances of the class
     # to ensure folder _0, _1, _2 are assigned correctly.
     _GLOBAL_PROMPT_TO_ID = {}
+    _GLOBAL_PROMPT_TO_ID_LOCK = threading.Lock()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -224,12 +226,15 @@ class PythonDriverWrapper(DriverWrapper):
     def run(self, executable: PathLike, **run_config) -> RunOutput:
         """ Run the given executable. """
         launch_format = self.launch_configs["format"]
+        compss_workdir = None
+        if self.resource_slot:
+            compss_workdir = tempfile.mkdtemp(dir=self.scratch_dir)
+            run_config = {**run_config, **self.resource_slot, "master_working_dir": compss_workdir}
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
         try:
             run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
         except subprocess.TimeoutExpired as e:
             def _decode(b) -> str:
-                """Use this function to improve printing of timeout errors."""
                 if b is None:
                     return ""
                 return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b)
@@ -238,6 +243,9 @@ class PythonDriverWrapper(DriverWrapper):
         except UnicodeDecodeError as e:
             logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
             return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
+        finally:
+            if compss_workdir:
+                shutil.rmtree(compss_workdir, ignore_errors=True)
         stderr = self._enrich_stderr_with_compss_job_logs(run_process.stderr)
         return RunOutput(run_process.returncode, run_process.stdout, stderr, config=run_config)
 
@@ -249,10 +257,10 @@ class PythonDriverWrapper(DriverWrapper):
         preview = output[:500] + ("..." if len(output) > 500 else "")
         logging.debug("code preview:\n%s", _indent(preview))
 
-        if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
-            PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt] = len(PythonDriverWrapper._GLOBAL_PROMPT_TO_ID)
-        
-        p_idx = PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt]
+        with PythonDriverWrapper._GLOBAL_PROMPT_TO_ID_LOCK:
+            if prompt not in PythonDriverWrapper._GLOBAL_PROMPT_TO_ID:
+                PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt] = len(PythonDriverWrapper._GLOBAL_PROMPT_TO_ID)
+            p_idx = PythonDriverWrapper._GLOBAL_PROMPT_TO_ID[prompt]
 
         artifact_stem = f"py{output_index}_{_compress_model_name(self.model_name)}_{_prompt_id(prompt_name)}"
 

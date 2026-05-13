@@ -36,6 +36,4 @@ def run_command(cmd: str, timeout: Optional[int] = None, dry: bool = False, para
         return CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
     else:
         cmd = shlex.split(cmd)
-        if parallelism_model == "pycompss":
-            subprocess.run("compss_clean_procs", capture_output=True, text=True, timeout=timeout)
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
