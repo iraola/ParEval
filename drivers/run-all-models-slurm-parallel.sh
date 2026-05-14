@@ -4,7 +4,7 @@
 #SBATCH --exclusive
 #SBATCH --account=ehpc721
 #SBATCH -t 3-00:00:00
-#SBATCH -N 20
+#SBATCH -N 1
 #SBATCH --array=0-19
 #SBATCH --output=logs/slurm-%A_%a.out
 #SBATCH --error=logs/slurm-%A_%a.err
