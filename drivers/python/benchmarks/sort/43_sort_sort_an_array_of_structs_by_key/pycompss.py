@@ -1,5 +1,5 @@
 # Driver for 43_sort_sort_an_array_of_structs_by_key
-# """ Given an array of (start_time, duration, value) tuples, sort the array by start_time. """
+# """ Given an array of {"startTime", "duration", "value"} dicts, sort the array by startTime. """
 
 import random
 from python.utilities import fillRand, fequal 
@@ -30,7 +30,8 @@ class Context:
         self.values = [0.0] * self.size
         fillRand(self.values, 0.0, 50.0)
 
-        self.x = list(zip(self.start_times, self.durations, self.values))
+        self.x = [{"startTime": st, "duration": d, "value": v}
+                  for st, d, v in zip(self.start_times, self.durations, self.values)]
 
 
 def init():
@@ -81,8 +82,8 @@ def validate(ctx: Context):
         seq_res = correct_main(seq_res)
 
         # Check equality
-        for (p_start, p_dur, p_val), (s_start, s_dur, s_val) in zip(par_res, seq_res):
-            if p_start != s_start or p_dur != s_dur or not abs(p_val - s_val) < 1e-6:
+        for p, s in zip(par_res, seq_res):
+            if p["startTime"] != s["startTime"] or p["duration"] != s["duration"] or not abs(p["value"] - s["value"]) < 1e-6:
                 return False
             
     return True

@@ -53,9 +53,9 @@ class Context:
             for i, idx in enumerate(flat_indices):
                 r = idx // self.size
                 c = idx % self.size
-                self.A.append({'row': r, 'column': c, 'value': values[i]})
-                
-            self.A.sort(key=lambda item: (item['row'], item['column']))
+                self.A.append((r, c, values[i]))
+
+            self.A.sort(key=lambda item: (item[0], item[1]))
         
 
 def init():

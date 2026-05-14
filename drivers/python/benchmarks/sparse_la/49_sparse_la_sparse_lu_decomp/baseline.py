@@ -1,7 +1,7 @@
 def correct_main(A, N):
     A_dense = [[0.0 for _ in range(N)] for _ in range(N)]
     for elem in A:
-        A_dense[elem['row']][elem['column']] = float(elem['value'])
+        A_dense[elem[0]][elem[1]] = float(elem[2])
 
     L_dense = [[0.0 for _ in range(N)] for _ in range(N)]
     U_dense = [[0.0 for _ in range(N)] for _ in range(N)]
@@ -25,12 +25,12 @@ def correct_main(A, N):
     for i in range(N):
         for j in range(N):
             if L_dense[i][j] != 0.0:
-                L_sparse.append({'row': i, 'column': j, 'value': L_dense[i][j]})
+                L_sparse.append((i, j, L_dense[i][j]))
 
     U_sparse = []
     for i in range(N):
         for j in range(N):
             if U_dense[i][j] != 0.0:
-                U_sparse.append({'row': i, 'column': j, 'value': U_dense[i][j]})
+                U_sparse.append((i, j, U_dense[i][j]))
 
     return L_sparse, U_sparse

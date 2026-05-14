@@ -38,16 +38,16 @@ class Context:
         for i, idx in enumerate(flat_indices):
             r = idx // self.N
             c = idx % self.N
-            self.A_coo.append({'row': r, 'column': c, 'value': values[i]})
-            
-        self.A_coo.sort(key=lambda item: (item['row'], item['column']))
-        
+            self.A_coo.append((r, c, values[i]))
+
+        self.A_coo.sort(key=lambda item: (item[0], item[1]))
+
         x = [0.0] * self.N
         fillRand(x, -10.0, 10.0)
-        
+
         self.b = [0.0] * self.N
         for element in self.A_coo:
-            self.b[element['row']] += element['value'] * x[element['column']]
+            self.b[element[0]] += element[2] * x[element[1]]
 
 
 def init():

@@ -33,15 +33,15 @@ class Context:
                 if i != j:
                     if random.random() < self.sparsity:
                         val = random.uniform(-10.0, 10.0)
-                        row_entries.append({'row': i, 'column': j, 'value': val})
+                        row_entries.append((i, j, val))
                         row_sum += abs(val)
-            
+
             diag_val = row_sum + random.uniform(1.0, 5.0)
-            
+
             if random.random() < 0.5:
                 diag_val = -diag_val
-                
-            row_entries.append({'row': i, 'column': i, 'value': diag_val})
+
+            row_entries.append((i, i, diag_val))
             
             self.A.extend(row_entries)
 
@@ -69,8 +69,8 @@ def best(ctx: Context):
 
 
 def compare_sparse_matrices(mat_par, mat_seq, eps=1e-6):
-    par_dict = {(elem['row'], elem['column']): elem['value'] for elem in mat_par}
-    seq_dict = {(elem['row'], elem['column']): elem['value'] for elem in mat_seq}
+    par_dict = {(elem[0], elem[1]): elem[2] for elem in mat_par}
+    seq_dict = {(elem[0], elem[1]): elem[2] for elem in mat_seq}
     
     all_coords = set(par_dict.keys()).union(set(seq_dict.keys()))
     

@@ -1,2 +1,2 @@
 def correct_main(x):
-    return sorted(x, key=lambda x: x[0])
+    return sorted(x, key=lambda x: x["startTime"])

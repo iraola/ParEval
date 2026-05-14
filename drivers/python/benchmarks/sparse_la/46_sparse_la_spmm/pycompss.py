@@ -44,7 +44,7 @@ class Context:
         fillRand(a_rows, 0, self.M)
         fillRand(a_cols, 0, self.K)
         fillRand(a_vals, -1.0, 1.0)
-        self.A = [{'row': r, 'column': c, 'value': v} for r, c, v in zip(a_rows, a_cols, a_vals)]
+        self.A = list(zip(a_rows, a_cols, a_vals))
 
         # Pre-allocate and fill arrays for X
         x_rows = [0] * nVals_X
@@ -53,11 +53,11 @@ class Context:
         fillRand(x_rows, 0, self.K)
         fillRand(x_cols, 0, self.N)
         fillRand(x_vals, -1.0, 1.0)
-        self.X = [{'row': r, 'column': c, 'value': v} for r, c, v in zip(x_rows, x_cols, x_vals)]
+        self.X = list(zip(x_rows, x_cols, x_vals))
 
         # Sort elements: primarily by row, secondarily by column
-        self.A.sort(key=lambda item: (item['row'], item['column']))
-        self.X.sort(key=lambda item: (item['row'], item['column']))
+        self.A.sort(key=lambda item: (item[0], item[1]))
+        self.X.sort(key=lambda item: (item[0], item[1]))
 
 
 def init():

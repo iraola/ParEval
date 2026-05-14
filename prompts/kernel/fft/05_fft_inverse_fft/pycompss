@@ -3,6 +3,6 @@
    Provide a main(x) entrypoint that takes the input data and returns the result.
    Example:
    
-   input: [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+   input: [1.0+0j, 1.0+0j, 1.0+0j, 1.0+0j, 0.0+0j, 0.0+0j, 0.0+0j, 0.0+0j]
    output: [0.5+0j, 0.125+0.301777j, 0-0j, 0.125+0.0517767j, 0-0j, 0.125-0.0517767j, 0-0j, 0.125-0.301777j]
 """

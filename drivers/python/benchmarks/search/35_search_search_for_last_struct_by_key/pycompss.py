@@ -22,8 +22,8 @@ class Context:
 
     def reset_data(self):
         """
-        Populates the list of books. 
-        Each book is a tuple: (title: str, pages: int).
+        Populates the list of books.
+        Each book is a dict: {"title": str, "pages": int}.
         """
         titles = [""] * self.size
         pages = [0] * self.size
@@ -35,8 +35,7 @@ class Context:
         # to ensure the search logic is exercised.
         pages[random.randint(0, self.size - 1)] = random.randint(10, 99)
         
-        # Store as a list of tuples
-        self.books = list(zip(titles, pages))
+        self.books = [{"title": t, "pages": p} for t, p in zip(titles, pages)]
 
 
 def init():

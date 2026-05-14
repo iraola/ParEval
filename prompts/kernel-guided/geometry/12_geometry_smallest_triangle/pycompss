@@ -3,7 +3,7 @@ Generate a Python module to compute the smallest triangle area from a set of poi
 in parallel using the PyCOMPSs framework.
 
 Task Specifications:
-- Functionality: Find the minimum area of a triangle that can be formed by any 3 points from the input list 'points'. Assume points are given as lists or tuples of two floats [x, y]. Use the standard coordinate geometry formula for triangle area.
+- Functionality: Find the minimum area of a triangle that can be formed by any 3 points from the input list 'points'. Assume points are given as tuples of two floats (x, y). Use the standard coordinate geometry formula for triangle area.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
 - Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies (e.g., using a reduction tree to find the global minimum).
@@ -11,6 +11,6 @@ Task Specifications:
 - Return Type: Return a standard Python float representing the smallest area (ensure it is the final synchronized result, not a future).
 
 Example:
-- Input: points=[[0.0, 10.0], [5.0, 5.0], [1.0, 0.0], [-1.0, 1.0], [-10.0, 0.0]]
+- Input: points=[(0.0, 10.0), (5.0, 5.0), (1.0, 0.0), (-1.0, 1.0), (-10.0, 0.0)]
 - Output: 5.5
 """

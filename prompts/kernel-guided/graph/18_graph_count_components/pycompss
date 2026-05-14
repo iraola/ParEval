@@ -3,14 +3,14 @@ Generate a Python module to count the number of connected components in an
 undirected graph in parallel using the PyCOMPSs framework.
 
 Task Specifications:
-- Functionality: Given an N x N adjacency matrix 'A' (provided as a 1D list in row-major order), count the total number of connected components in the undirected graph.
+- Functionality: Given an N x N adjacency matrix 'A' (provided as a 2D list of lists), count the total number of connected components in the undirected graph.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
 - Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(A) function that determines N (square root of the input length), initializes the task graph, and manages the merging of components.
+- Orchestration: Provide a main(A) function that initializes the task graph and manages the merging of components.
 - Synchronization: The main(A) function must explicitly wait for all tasks to complete before returning the final integer count.
 - Return Type: Return a standard Python integer representing the number of connected components.
 
 Example:
-- Input: A = [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]
+- Input: A = [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
 - Output: 2
 """

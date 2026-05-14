@@ -36,9 +36,9 @@ class Context:
         # Fill x and y with random values based on sparsity
         for i in range(self.N):
             if random.random() < self.sparsity:
-                self.x.append({'index': i, 'value': random.uniform(-10.0, 10.0)})
+                self.x.append((i, random.uniform(-10.0, 10.0)))
             if random.random() < self.sparsity:
-                self.y.append({'index': i, 'value': random.uniform(-10.0, 10.0)})
+                self.y.append((i, random.uniform(-10.0, 10.0)))
 
         
 

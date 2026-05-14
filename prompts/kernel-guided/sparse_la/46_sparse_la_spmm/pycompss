@@ -3,7 +3,7 @@ Generate a Python module to compute sparse matrix multiplication
 in parallel using the PyCOMPSs framework.
 
 Task Specifications:
-- Functionality: Compute the matrix multiplication Y = AX, where 'A' and 'X' are sparse matrices represented in Coordinate (COO) format, and 'Y' is a dense MxN matrix. 
+- Functionality: Compute the matrix multiplication Y = AX, where 'A' and 'X' are sparse matrices represented in Coordinate (COO) format as lists of (row, column, value) tuples, and 'Y' is a dense MxN matrix.
 - Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
 - Parallelization: Use one or more @task decorated functions to handle the computation.
 - Orchestration: Provide a main(A, X, M, N) function that distributes the work, manages task dependencies, and aggregates the partial results into the final dense matrix.
@@ -12,8 +12,8 @@ Task Specifications:
 
 Example:
 - Input: 
-    A = [{"row": 0, "column": 0, "value": -2.0}, {"row": 0, "column": 1, "value": 1.0}, {"row": 1, "column": 1, "value": -1.0}]
-    X = [{"row": 0, "column": 1, "value": 2.0}, {"row": 1, "column": 0, "value": -1.0}]
+    A = [(0, 0, -2.0), (0, 1, 1.0), (1, 1, -1.0)]
+    X = [(0, 1, 2.0), (1, 0, -1.0)]
     M = 2
     N = 2
 - Output: [[-1.0, -4.0], [1.0, 0.0]]

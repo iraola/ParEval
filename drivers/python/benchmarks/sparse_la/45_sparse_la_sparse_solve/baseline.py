@@ -5,7 +5,7 @@ def correct_main(A_coo, b):
     b_copy = list(b)
 
     for element in A_coo:
-        r, c, v = element['row'], element['column'], element['value']
+        r, c, v = element
         matrix[r][c] = v
 
     x = [0.0] * N
