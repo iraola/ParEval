@@ -4,6 +4,7 @@
 """
 # std imports
 import copy
+import difflib
 import glob
 import logging
 import os
@@ -360,6 +361,18 @@ class PythonDriverWrapper(DriverWrapper):
                     if modified_output is None:
                         logging.debug("does not apply, skipping")
                         continue
+
+                    if logging.getLogger().isEnabledFor(logging.DEBUG):
+                        diff = "".join(difflib.unified_diff(
+                            output.splitlines(keepends=True),
+                            modified_output.splitlines(keepends=True),
+                            fromfile="original",
+                            tofile=f"after_{relaxation.name}",
+                            n=2,
+                        ))
+                        if diff:
+                            logging.debug("relaxation diff:\n%s",
+                                          _indent(f"--- diff ---\n{diff}--- end diff ---"))
 
                     self.write_source(prompt + "\n" + modified_output, src_path)
                     new_build = self.compile(*sources, output_path=exec_path)
