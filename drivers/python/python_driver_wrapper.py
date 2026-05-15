@@ -229,8 +229,10 @@ class PythonDriverWrapper(DriverWrapper):
         launch_format = self.launch_configs["format"]
         compss_workdir = None
         if self.resource_slot:
-            compss_workdir = tempfile.mkdtemp(dir=self.scratch_dir)
-            run_config = {**run_config, **self.resource_slot, "master_working_dir": compss_workdir}
+            local_tmp = os.environ.get("TMPDIR", "/tmp")
+            compss_workdir = tempfile.mkdtemp(dir=local_tmp)
+            run_config = {**run_config, **self.resource_slot,
+                          "master_working_dir": compss_workdir}
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
         try:
             run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
