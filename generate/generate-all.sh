@@ -112,4 +112,7 @@ while IFS= read -r model || [ -n "$model" ]; do
         --cache cache.json \
         --enforce_eager
 
+    # Allow CUDA/NCCL to fully release GPU memory before the next model.
+    sleep 30
+
 done < "$MODEL_LIST"
