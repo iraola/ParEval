@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A, N) function that distributes the work and manages task dependencies.
 - Synchronization: The main(A, N) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of lists of floats representing the factorized matrix (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [[4.0, 3.0], [6.0, 3.0]]

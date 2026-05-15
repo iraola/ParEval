@@ -1,6 +1,8 @@
 """Replace the i-th element of the vector x with the minimum value from indices 0 through i.
    Use PyCOMPSs to compute in parallel.
    Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Examples:
 
    input: [8, 6, -1, 7, 3, 4, 4]

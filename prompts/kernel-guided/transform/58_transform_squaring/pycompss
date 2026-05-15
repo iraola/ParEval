@@ -8,6 +8,7 @@ Task Specifications:
 - Orchestration: Provide a main(x) function that manages the data partitioning, distributes the work to tasks, and collects the results.
 - Synchronization: The main(x) function must explicitly wait for all tasks to complete before returning the final synchronized list.
 - Return Type: Return a standard Python list of integers representing the squared values (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x = [5, 1, 2, -4, 8]

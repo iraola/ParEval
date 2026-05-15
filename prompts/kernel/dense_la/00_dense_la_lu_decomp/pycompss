@@ -3,6 +3,8 @@
    A is an NxN matrix stored in row-major.
    Use PyCOMPSs to compute in parallel.
    Provide a main(A, N) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [[4, 3], [6, 3]]

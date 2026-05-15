@@ -2,6 +2,8 @@
    A is a sparse NxN matrix in COO format. x and b are dense vectors with N elements.
    Use PyCOMPSs to compute in parallel.
    Provide a main(A_coo, b) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
    
    input: A=[(0, 0, 1), (0, 1, 1), (1, 1, -2)] b=[1,4]

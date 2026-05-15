@@ -1,6 +1,8 @@
 """In the vector x negate the odd values and divide the even values by 2.
    Use PyCOMPSs to compute in parallel.
    Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [16, 11, 12, 14, 1, 0, 5]

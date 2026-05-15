@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(alpha, beta, A, x, y) function that distributes the work and manages task dependencies.
 - Synchronization: The main function must explicitly wait for all tasks to complete before returning the result.
 - Return Type: Return a standard Python list of floats representing the updated vector 'y' (ensure it is the final synchronized result).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

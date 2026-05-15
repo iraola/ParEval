@@ -10,6 +10,7 @@ Task Specifications:
 - Orchestration: Provide a main(A, N) function that manages the task graph and iterative dependencies required for the factorization.
 - Synchronization: The main function must explicitly wait for all tasks to complete before returning the results.
 - Return Type: Return a tuple (L, U) where 'L' and 'U' are lists of (row, column, value) tuples in COO format representing the resulting sparse matrices (ensure they are synchronized results).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

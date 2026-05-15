@@ -15,6 +15,7 @@ Task Specifications:
 - Orchestration: Provide a main(input) function that determines N (from the square root of the input length), distributes the data, and manages task dependencies.
 - Synchronization: The main function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of integers (row-major) representing the next generation (ensure it is the final synchronized result).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [0,0,0,0,0, 0,1,0,0,0, 0,1,1,0,0, 0,0,1,1,0, 0,1,0,0,0]

@@ -1,6 +1,8 @@
 """Return the distance between the closest two points in the vector points.
    Use PyCOMPSs to compute in parallel.
    Provide a main(points) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example: 
 
    input: [(2, 3), (12, 30), (40, 50), (5, 1), (12, 10), (3, 4)]

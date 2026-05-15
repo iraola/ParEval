@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x, k) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x, k) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python integer representing the target element (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x=[1, 7, 6, 0, 2, 2, 10, 6], k=4

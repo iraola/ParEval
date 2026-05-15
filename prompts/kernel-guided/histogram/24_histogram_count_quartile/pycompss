@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of four integers representing the final counts for each quartile interval (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x=[7.8, 4.2, 9.1, 7.6, 0.27, 1.5, 3.8]

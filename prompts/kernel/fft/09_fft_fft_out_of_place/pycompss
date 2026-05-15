@@ -1,6 +1,8 @@
 """Compute the fourier transform of x. Store the result in output.
    Use PyCOMPSs to compute in parallel.
    Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]

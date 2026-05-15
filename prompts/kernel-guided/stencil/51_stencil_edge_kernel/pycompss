@@ -11,6 +11,7 @@ Task Specifications:
 - Orchestration: Provide a main(matrix, N) function that distributes the image data to tasks and assembles the final result.
 - Synchronization: The main function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of integers (row-major) representing the convolved image (ensure it is the final synchronized result).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

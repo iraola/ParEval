@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(image) function that distributes the work and manages task dependencies.
 - Synchronization: The main(image) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of exactly 256 integers representing the counts for each intensity bin (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [2, 116, 201, 11, 92, 92, 201, 4, 2]

@@ -11,6 +11,7 @@ Task Specifications:
 - Synchronization: The main function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of floats (row-major) representing the 
   resulting grid (ensure it is the final synchronized result).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [3.0, 4.0, 1.0, 0.0, 1.0, 7.0, 5.0, 3.0, 2.0] (Representing a 3x3 grid)

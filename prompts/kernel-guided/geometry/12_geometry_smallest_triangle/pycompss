@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies (e.g., using a reduction tree to find the global minimum).
 - Synchronization: The main(points) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python float representing the smallest area (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: points=[(0.0, 10.0), (5.0, 5.0), (1.0, 0.0), (-1.0, 1.0), (-10.0, 0.0)]

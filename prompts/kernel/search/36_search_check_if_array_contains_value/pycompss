@@ -1,6 +1,8 @@
 """Return True if the vector x contains the value `target`. Return False otherwise.
    Use PyCOMPSs to search in parallel.
    Provide a main(x, target) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Examples:
 
    input: x=[1, 8, 2, 6, 4, 6], target=3

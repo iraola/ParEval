@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python integer representing the index of the first even number (ensure it is the final synchronized result, not a future). Return -1 if no even numbers exist in the list.
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x=[7, 3, 9, 5, 5, 7, 2, 9, 12, 11]

@@ -5,6 +5,8 @@
    Store the output of the computation in imageOut.
    Use PyCOMPSs to compute in parallel.
    Provide a main(matrix, N) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [[112, 118, 141, 152],

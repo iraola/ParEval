@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(books) function that distributes the work and manages task dependencies.
 - Synchronization: The main(books) function must explicitly wait for all tasks to complete and resolve the final maximum index.
 - Return Type: Return a standard Python integer representing the index (or -1 if no such book exists). Ensure it is the final synchronized result, not a future.
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [{"title": "Green Eggs and Ham", "pages": 72}, {"title": "Gulliver's Travels", "pages": 362}, {"title": "Stories of Your Life", "pages": 54}, {"title": "Hamilton", "pages": 818}]

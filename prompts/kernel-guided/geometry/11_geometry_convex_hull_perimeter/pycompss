@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
 - Synchronization: The main(points) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python float representing the total perimeter (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: points=[(0.0, 3.0), (1.0, 1.0), (2.0, 2.0), (4.0, 4.0), (0.0, 0.0), (1.0, 2.0), (3.0, 1.0), (3.0, 3.0)]

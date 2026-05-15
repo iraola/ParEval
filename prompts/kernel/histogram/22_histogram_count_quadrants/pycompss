@@ -2,6 +2,8 @@
    Store the counts in `bins`.
    Use PyCOMPSs to count in parallel.
    Provide a main(points) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [(1.5, 0.1), (-3, 1.1), (5, 9), (1.5, -1), (3, -7), (0.1, 2)]

@@ -10,6 +10,7 @@ Task Specifications:
 - Orchestration: Provide a main(input) function that manages the distribution of chunks and handles the dependencies.
 - Synchronization: The main function must explicitly wait for all tasks to complete before returning the final synchronized list.
 - Return Type: Return a standard Python list of floats representing the transformed array.
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [9.0, -6.0, -1.0, 2.0, 3.0]

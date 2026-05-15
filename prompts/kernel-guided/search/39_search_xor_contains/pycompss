@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x, y, val) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x, y, val) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python boolean (True or False) representing the XOR containment result (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x=[1, 8, 4, 3, 2], y=[3, 4, 4, 1, 1, 7], val=7

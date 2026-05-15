@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(strings) function that distributes the work and manages task dependencies.
 - Synchronization: The main(strings) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of 26 integers representing the counts for each letter from 'a' to 'z' (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: strings=["dog", "cat", "xray", "cow", "code", "type", "flower"]

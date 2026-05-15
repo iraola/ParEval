@@ -2,6 +2,8 @@
    Store the results in `ranks`.
    Use PyCOMPSs to compute in parallel.
    Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Examples:
 
    input: [3.1, 2.8, 9.1, 0.4, 3.14]

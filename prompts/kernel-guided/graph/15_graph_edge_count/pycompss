@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A) function that distributes the work, manages task dependencies, and aggregates the partial counts.
 - Synchronization: The main(A) function must explicitly wait for all tasks to complete and compute the final sum.
 - Return Type: Return a standard Python integer representing the total number of edges (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1], [1, 1, 1, 0]]

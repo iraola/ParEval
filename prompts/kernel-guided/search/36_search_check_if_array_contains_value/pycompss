@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x, target) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x, target) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python boolean (True or False) representing whether the target was found (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: x=[1, 8, 2, 6, 4, 6], target=3

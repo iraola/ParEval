@@ -2,6 +2,8 @@
    A is an NxN matrix in row-major. x and b have N elements.
    Use PyCOMPSs to compute in parallel.
    Provide a main(A, b) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
    
    input: A=[[1,4,2], [1,2,3], [2,1,3]] b=[11, 11, 13]

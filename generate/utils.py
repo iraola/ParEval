@@ -137,7 +137,10 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
         # Prefer blocks that contain Python code markers
         python_blocks = [b for b in code_blocks if re.search(r'(@task|^\s*import\s|^\s*from\s|^\s*def\s)', b, flags=re.MULTILINE)]
         if python_blocks:
-            return extract_pycompss_solution(python_blocks[0])
+            # If block 0 already has def main it's self-contained; else concatenate fragments - Applies to reasoning models with interleaved code and prose
+            if re.search(r'^def main\b', python_blocks[0], re.MULTILINE):
+                return extract_pycompss_solution(python_blocks[0])
+            return extract_pycompss_solution("\n\n".join(python_blocks))
         # Fallback: look for an unclosed ```python fence (truncated generation)
         unclosed = re.search(r"```(?:python)?\n(.*)", output, flags=re.DOTALL)
         if unclosed:

@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A, b) function that distributes the work and manages task dependencies across iterations until convergence or a set number of steps is reached.
 - Synchronization: The main(A, b) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of floats representing the final solution vector x (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: A=[(0, 0, 1.0), (0, 1, 1.0), (1, 1, -2.0)], b=[1.0, 4.0]

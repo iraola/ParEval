@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
 - Synchronization: The main(points) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of tuples of floats `(x, y)` representing the vertices of the convex hull (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [(0.0, 3.0), (1.0, 1.0), (2.0, 2.0), (4.0, 4.0), (0.0, 0.0), (1.0, 2.0), (3.0, 1.0), (3.0, 3.0)]

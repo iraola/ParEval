@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
 - Synchronization: The main(points) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of four integers representing the final counts for [Q1, Q2, Q3, Q4] (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: points=[(1.5, 0.1), (-3.0, 1.1), (5.0, 9.0), (1.5, -1.0), (3.0, -7.0), (0.1, 2.0)]

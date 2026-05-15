@@ -11,6 +11,7 @@ Task Specifications:
 - Orchestration: Provide a main(alpha, x, y, N) function that distributes the work and manages task dependencies.
 - Synchronization: The main function must explicitly wait for all tasks to complete before returning the final dense list.
 - Return Type: Return a standard Python list of 'N' floats representing the dense vector 'z' (ensure it is the final synchronized result).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

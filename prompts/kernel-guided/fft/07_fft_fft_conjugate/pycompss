@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of complex numbers (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [1.0+0j, 1.0+0j, 1.0+0j, 1.0+0j, 0.0+0j, 0.0+0j, 0.0+0j, 0.0+0j]

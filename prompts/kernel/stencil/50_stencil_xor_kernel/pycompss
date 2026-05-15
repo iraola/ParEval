@@ -3,6 +3,8 @@
    input and output are NxN grids of ints in row-major.
    Use PyCOMPSs to compute in parallel.
    Provide a main(matrix, N) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [[0, 1, 1, 0],

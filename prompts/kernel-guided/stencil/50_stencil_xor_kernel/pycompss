@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(matrix, N) function that distributes the work, manages task dependencies, and reassembles the grid chunks.
 - Synchronization: The main(matrix, N) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of lists of integers representing the newly computed NxN grid (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

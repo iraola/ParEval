@@ -1,6 +1,8 @@
 """Return the logical XOR reduction of the vector of bools x.
    Use PyCOMPSs to reduce in parallel.
    Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: [False, False, False, True]

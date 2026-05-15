@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A, X, M, N) function that distributes the work, manages task dependencies, and aggregates the partial results into the final dense matrix.
 - Synchronization: The main(A, X, M, N) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python list of lists of floats representing the dense MxN matrix 'Y' (ensure it is the final synchronized result, not a list of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: 

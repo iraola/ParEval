@@ -1,6 +1,8 @@
 """Compute z = alpha*x+y where x and y are sparse vectors. Store the result in the dense vector z.
    Use PyCOMPSs to compute in parallel.
    Provide a main(alpha, x, y, N) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
    
    input: x=[(5, 12), (8, 3), (12, -1)], y=[(3, 1), (5, -2), (7, 1), (8, -3)], alpha=1

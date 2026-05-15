@@ -2,6 +2,8 @@
    Assume all strings are in lower case. Store the output in `bins` array.
    Use PyCOMPSs to compute in parallel.
    Provide a main(strings) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: ["dog", "cat", "xray", "cow", "code", "type", "flower"]

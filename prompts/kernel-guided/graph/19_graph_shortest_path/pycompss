@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A, source, destination) function that distributes the work and manages task dependencies.
 - Synchronization: The main(A, source, destination) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python integer representing the shortest path length (ensure it is the final synchronized result, not a future). Return -1 if no path exists.
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: A=[[0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]], source=0, destination=3

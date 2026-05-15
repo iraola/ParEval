@@ -2,6 +2,8 @@
    i.e. sum = min(x_0, y_0) + min(x_1, y_1) + min(x_2, y_2) + ...
    Use PyCOMPSs to sum in parallel.
    Provide a main(x, y) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Example:
 
    input: x=[3, 4, 0, 2, 3], y=[2, 5, 3, 1, 7]

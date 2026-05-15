@@ -2,6 +2,8 @@
    Return False if it is in both or neither.
    Use PyCOMPSs to search in parallel.
    Provide a main(x, y, val) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
    Examples:
 
    input: x=[1,8,4,3,2], y=[3,4,4,1,1,7], val=7

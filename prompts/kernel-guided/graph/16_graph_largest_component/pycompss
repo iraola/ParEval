@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(A) function that distributes the work and manages task dependencies.
 - Synchronization: The main(A) function must explicitly wait for all tasks to complete.
 - Return Type: Return a standard Python integer representing the maximum number of vertices in a single component (ensure it is the final synchronized result, not a future).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: A=[[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]

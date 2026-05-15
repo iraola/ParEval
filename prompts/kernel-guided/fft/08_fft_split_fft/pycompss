@@ -9,6 +9,7 @@ Task Specifications:
 - Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
 - Synchronization: The main(x) function must explicitly wait for all tasks to complete.
 - Return Type: Return a tuple of two standard Python lists of floats (r, i) representing the real and imaginary parts (ensure they are the final synchronized results, not lists of futures).
+- Provide your complete solution in a single Python code block.
 
 Example:
 - Input: [1.0+0j, 1.0+0j, 1.0+0j, 1.0+0j, 0.0+0j, 0.0+0j, 0.0+0j, 0.0+0j]
