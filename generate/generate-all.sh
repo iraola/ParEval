@@ -26,7 +26,7 @@ DIR="${1:-kernel}"
 shift 2>/dev/null
 
 NUM_SAMPLES_PER_PROMPT="10"
-MAX_NEW_TOKENS="8192"
+MAX_NEW_TOKENS="32768"
 PROMPTS_FILE=""
 MODEL_LIST="models.txt"
 
@@ -87,13 +87,6 @@ while IFS= read -r model || [ -n "$model" ]; do
     echo "Running: $model"
     echo "============================================"
 
-    # Reasoning models need more tokens for their think blocks
-    if [[ "$model" == *"R1"* || "$model" == *"Qwen3"* ]]; then
-        model_max_tokens=$((MAX_NEW_TOKENS * 2))
-    else
-        model_max_tokens="$MAX_NEW_TOKENS"
-    fi
-
     rm -f cache.json
     touch cache.json
 
@@ -108,7 +101,7 @@ while IFS= read -r model || [ -n "$model" ]; do
         --model "$model" \
         --output "$output_file" \
         --num_samples_per_prompt "$NUM_SAMPLES_PER_PROMPT" \
-        --max_new_tokens "$model_max_tokens" \
+        --max_new_tokens "$MAX_NEW_TOKENS" \
         --cache cache.json \
         --enforce_eager
 
