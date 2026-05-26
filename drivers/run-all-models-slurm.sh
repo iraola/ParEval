@@ -64,7 +64,7 @@ if [ ! -d "$GENERATE_OUTPUTS_DIR" ]; then
 fi
 
 # Build sorted model list and pick this task's model by array task ID
-mapfile -t MODELS < <(ls "${GENERATE_OUTPUTS_DIR}"/output-*.json | sort | sed 's|.*/output-||;s|\.json$||')
+mapfile -t MODELS < <(ls "${GENERATE_OUTPUTS_DIR}"/output-*.json | sort -f | sed 's|.*/output-||;s|\.json$||')
 
 if [[ $SLURM_ARRAY_TASK_ID -ge ${#MODELS[@]} ]]; then
     echo "Array task ID $SLURM_ARRAY_TASK_ID >= number of models (${#MODELS[@]}); nothing to do."

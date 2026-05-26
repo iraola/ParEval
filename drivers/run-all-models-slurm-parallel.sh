@@ -19,7 +19,7 @@
 # Options:
 #   --timeout N         Run timeout per runcompss call in seconds (default: 60)
 #   --relaxations MODE  Relaxation mode (default: all)
-#   --cpus-per-slot N   CPUs per runcompss instance (default: 5)
+#   --cpus-per-slot N   CPUs per runcompss instance (default: 10)
 #
 # The --array bound must match the number of models:
 #   N=$(ls ../generate/outputs/<dir>/output-*.json | wc -l)
@@ -35,7 +35,7 @@ shift 2>/dev/null
 
 TIMEOUT=60
 RELAXATIONS=all
-CPUS_PER_SLOT=5
+CPUS_PER_SLOT=10
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -70,7 +70,7 @@ if [ ! -d "$GENERATE_OUTPUTS_DIR" ]; then
 fi
 
 # Build sorted model list and pick this task's model by array task ID
-mapfile -t MODELS < <(ls "${GENERATE_OUTPUTS_DIR}"/output-*.json | sort | sed 's|.*/output-||;s|\.json$||')
+mapfile -t MODELS < <(ls "${GENERATE_OUTPUTS_DIR}"/output-*.json | sort -f | sed 's|.*/output-||;s|\.json$||')
 
 if [[ $SLURM_ARRAY_TASK_ID -ge ${#MODELS[@]} ]]; then
     echo "Array task ID $SLURM_ARRAY_TASK_ID >= number of models (${#MODELS[@]}); nothing to do."
