@@ -153,7 +153,7 @@ def try_to_find_path(src_path):
 
 def _compress_model_name(model_name: str) -> str:
     name = model_name.split("/")[-1]
-    return "".join(p[:2] for p in re.split(r"[-_]", name) if p)
+    return "".join(p[:2] for p in re.split(r"[-_.]", name) if p)
 
 
 def _prompt_id(prompt_name: str) -> str:
