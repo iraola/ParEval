@@ -8,6 +8,7 @@ Coverage:
 """
 import pytest
 from driver_wrapper import BuildOutput, GeneratedTextResult, RunOutput, _find_problem_size
+from python.parallel_validation import PyCOMPSSValidator
 
 PASS_OUT = "Time: 0.100\nBestSequential: 0.200\nValidation: PASS\n"
 FAIL_OUT = "Time: 0.050\nBestSequential: 0.100\nValidation: FAIL\n"
@@ -171,3 +172,33 @@ class TestGeneratedTextResult:
 
     def test_relaxations_applied_defaults_to_empty(self):
         assert self._make().relaxations_applied == []
+
+
+# ---------------------------------------------------------------------------
+# PyCOMPSSValidator
+# ---------------------------------------------------------------------------
+
+class TestPyCOMPSSValidator:
+    def test_true_when_task_decorator_present(self):
+        assert PyCOMPSSValidator().validate("@task()\ndef f(): pass\n")
+
+    def test_true_when_task_with_parameters(self):
+        assert PyCOMPSSValidator().validate("@task(returns=int)\ndef compute(x): return x\n")
+
+    def test_false_for_sequential_python(self):
+        assert not PyCOMPSSValidator().validate("def f(x):\n    return x + 1\n")
+
+    def test_false_for_empty_string(self):
+        assert not PyCOMPSSValidator().validate("")
+
+    def test_false_when_only_pycompss_import_present(self):
+        code = "from pycompss.api.task import task\ndef f(): pass\n"
+        assert not PyCOMPSSValidator().validate(code)
+
+    def test_true_with_import_and_decorator(self):
+        code = (
+            "from pycompss.api.task import task\n"
+            "@task(returns=list)\n"
+            "def compute(data): return data\n"
+        )
+        assert PyCOMPSSValidator().validate(code)

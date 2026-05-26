@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple
 # local imports
 from util import all_equal, mean
 from cpp.parallel_validation import Validator, OMPValidator, MPIValidator, MPIandOMPValidator, EmptyValidator
+from python.parallel_validation import PyCOMPSSValidator
 
 
 def _find_problem_size(problem_sizes: dict, name: str, parallelism_model: str, default: str) -> str:
@@ -164,7 +165,7 @@ VALIDATORS = {
     "kokkos": EmptyValidator(),
     "cuda": EmptyValidator(),
     "hip": EmptyValidator(),
-    "pycompss": EmptyValidator()
+    "pycompss": PyCOMPSSValidator()
 }
 
 class DriverWrapper(ABC):

@@ -424,6 +424,10 @@ class PythonDriverWrapper(DriverWrapper):
             Writes generated_code.py, stages a harness (existing cpu_harness.py/cpu.py or a tiny adapter),
             and launches the shared model driver under runcompss via a small runner.py.
         """
+        if "@task" not in output:
+            logging.info("output %d: FAIL  no @task decorator — not a PyCOMPSs solution", output_index)
+            return GeneratedTextResult(False, BuildOutput(1, "", "rejected: no @task decorator"))
+
         preview = output[:500] + ("..." if len(output) > 500 else "")
         logging.debug("code preview:\n%s", _indent(preview))
 

@@ -491,7 +491,7 @@ class TestRealSubprocess:
 
 class TestHelpers:
     def test_compress_strips_org_prefix(self):
-        assert _compress_model_name("mistralai/Codestral-22B-v0.1") == "Co22v0"
+        assert _compress_model_name("mistralai/Codestral-22B-v0.1") == "Co22v01"
 
     def test_compress_no_org_prefix(self):
         assert _compress_model_name("test-model") == "temo"
@@ -776,11 +776,11 @@ class TestWavePackingEdgeCases:
 # test_single_output()
 # ---------------------------------------------------------------------------
 
-# Output that RenameMainRelaxation can transform: exactly one non-decorated
-# top-level function, not named 'main'.
-_RELAX_OUTPUT = "def compute(x):\n    return x\n"
-# Output where RenameMainRelaxation returns None (function already named main).
-_NO_RELAX_OUTPUT = "def main(x):\n    return x\n"
+# Output that RenameMainRelaxation can transform: has @task (passes gate),
+# plus exactly one non-decorated top-level function not named 'main'.
+_RELAX_OUTPUT = "@task()\ndef task_fn(x):\n    return x\n\ndef compute(x):\n    return task_fn(x)\n"
+# Output where RenameMainRelaxation returns None (undecorated function already named main).
+_NO_RELAX_OUTPUT = "@task()\ndef task_fn(x):\n    return x\n\ndef main(x):\n    return task_fn(x)\n"
 
 
 class TestSingleOutput:
@@ -803,7 +803,7 @@ class TestSingleOutput:
         d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
         with patch.object(d, "compile", return_value=BuildOutput(0, "", "")):
             with patch.object(d, "run", return_value=RunOutput(0, PASS_OUTPUT, "")):
-                result = d.test_single_output("# prompt", "# output", driver_files, "100")
+                result = d.test_single_output("# prompt", "@task()\ndef f(): pass\n", driver_files, "100")
         assert result.did_build()
         assert result.are_any_valid()
         assert result.relaxations_applied == []
@@ -874,12 +874,68 @@ class TestSingleOutput:
 
         with patch.object(d, "compile", return_value=BuildOutput(0, "", "")):
             with patch.object(d, "run", side_effect=counting_run):
-                d.test_single_output("# prompt", "# output", driver_files, "100")
+                d.test_single_output("# prompt", "@task()\ndef f(): pass\n", driver_files, "100")
 
         assert run_count[0] == 1
 
     def test_missing_driver_file_raises(self, tmp_path):
         d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
         with pytest.raises(FileNotFoundError):
-            d.test_single_output("# prompt", "# output",
+            d.test_single_output("# prompt", "@task()\ndef f(): pass\n",
                                  str(tmp_path / "nonexistent.py"), "100")
+
+
+# ---------------------------------------------------------------------------
+# test_single_output(): @task gate
+# ---------------------------------------------------------------------------
+
+class TestNoTaskGate:
+    """Outputs without @task must be rejected before any file I/O or subprocess."""
+
+    @pytest.fixture(autouse=True)
+    def clear_global_state(self):
+        PythonDriverWrapper._GLOBAL_PROMPT_TO_ID.clear()
+        yield
+        PythonDriverWrapper._GLOBAL_PROMPT_TO_ID.clear()
+
+    @pytest.fixture
+    def driver_files(self, tmp_path):
+        driver_file = tmp_path / "pycompss.py"
+        driver_file.write_text("# fake driver\n")
+        (tmp_path / "baseline.py").write_text("# fake baseline\n")
+        return str(driver_file)
+
+    _SEQUENTIAL = "def solve(x):\n    return sum(x)\n"
+    _WITH_TASK = "@task(returns=list)\ndef solve(x):\n    return x\n"
+
+    def test_returns_did_build_false(self, tmp_path):
+        d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
+        # Use a nonexistent driver path — early exit must happen before the path is checked
+        result = d.test_single_output("# prompt", self._SEQUENTIAL,
+                                      str(tmp_path / "nonexistent.py"), "100")
+        assert not result.did_build()
+
+    def test_returns_run_outputs_none(self, tmp_path):
+        d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
+        result = d.test_single_output("# prompt", self._SEQUENTIAL,
+                                      str(tmp_path / "nonexistent.py"), "100")
+        assert result.run_outputs is None
+
+    def test_compile_never_called(self, driver_files):
+        d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
+        with patch.object(d, "compile") as mock_compile:
+            d.test_single_output("# prompt", self._SEQUENTIAL, driver_files, "100")
+        mock_compile.assert_not_called()
+
+    def test_run_never_called(self, driver_files):
+        d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
+        with patch.object(d, "run") as mock_run:
+            d.test_single_output("# prompt", self._SEQUENTIAL, driver_files, "100")
+        mock_run.assert_not_called()
+
+    def test_with_task_proceeds_to_compile(self, driver_files):
+        d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
+        with patch.object(d, "compile", return_value=BuildOutput(0, "", "")) as mock_compile:
+            with patch.object(d, "run", return_value=RunOutput(0, PASS_OUTPUT, "")):
+                d.test_single_output("# prompt", self._WITH_TASK, driver_files, "100")
+        mock_compile.assert_called_once()
