@@ -403,21 +403,22 @@ class PythonDriverWrapper(DriverWrapper):
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
         try:
             run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
+            stderr = self._enrich_stderr_with_compss_job_logs(run_process.stderr)
+            result = RunOutput(run_process.returncode, run_process.stdout, stderr, config=run_config)
         except subprocess.TimeoutExpired as e:
             def _decode(b) -> str:
                 if b is None:
                     return ""
                 return b.decode("utf-8", errors="replace") if isinstance(b, bytes) else str(b)
             stderr = self._enrich_stderr_with_compss_job_logs(f"[Timeout] {_decode(e.stderr)}")
-            return RunOutput(-1, _decode(e.stdout), stderr, config=run_config)
+            result = RunOutput(-1, _decode(e.stdout), stderr, config=run_config)
         except UnicodeDecodeError as e:
             logging.warning(f"UnicodeDecodeError: {str(e)}\nRunnning command: {launch_cmd}")
-            return RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
+            result = RunOutput(-1, "", f"UnicodeDecodeError: {str(e)}", config=run_config)
         finally:
             if compss_workdir:
                 shutil.rmtree(compss_workdir, ignore_errors=True)
-        stderr = self._enrich_stderr_with_compss_job_logs(run_process.stderr)
-        return RunOutput(run_process.returncode, run_process.stdout, stderr, config=run_config)
+        return result
 
     def test_single_output(self, prompt: str, output: str, test_driver_file: PathLike, problem_size: str, prompt_name: str = "prompt", problem_type: str = "problem", output_index: int = 0) -> GeneratedTextResult:
         """ Test a single generated output for PyCOMPSs.
