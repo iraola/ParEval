@@ -259,6 +259,10 @@ class DriverWrapper(ABC):
 
         outputs = []
         for i, generated_output in enumerate(prompt["outputs"]):
+            if isinstance(generated_output, dict):
+                # Skip output that has already been evaluated (dict, not string)
+                outputs.append(generated_output)
+                continue
             logging.debug("── output %d/%d %s", i + 1, num_outputs, "─" * 50)
             results = self.test_single_output(
                 prompt["prompt"],

@@ -138,18 +138,15 @@ def get_driver(
         build_configs=build_configs, problem_sizes=problem_sizes, scratch_dir=scratch_dir, dry=dry, **kwargs)
 
 def already_has_results(prompt: dict) -> bool:
-    """ Check if a prompt already has results stored in it. """
+    """ 
+    Check if a prompt already has results stored in it. 
+    return True only when every output is a dict (fully evaluated). A mixed or
+    all-string list means at least one output still needs evaluation.
+    """
     if "outputs" not in prompt or not isinstance(prompt["outputs"], list):
         raise ValueError(f"Prompt {prompt.get('name', 'unknown')} does not have any outputs.")
-    
     outputs = prompt["outputs"]
-    if len(outputs) == 0 or all(isinstance(o, str) for o in outputs):
-        return False
-
-    if len(outputs) > 0 and all(isinstance(o, dict) for o in outputs):
-        return True
-
-    raise ValueError(f"Prompt {prompt.get('name', 'unknown')} has invalid outputs.")
+    return bool(outputs) and all(isinstance(o, dict) for o in outputs)
 
 def main():
     args = get_args()
