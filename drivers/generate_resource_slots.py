@@ -21,22 +21,16 @@ import argparse
 import json
 import sys
 
-_BASE_PORT = 43001
-
-
 def generate_slots(cpus_per_node: int, cpus_per_slot: int) -> list[dict]:
     """Generate slot definitions. Returns the slot manifest."""
     slots = []
-    slot_index = 0
     cpu = 0
     while cpu + cpus_per_slot <= cpus_per_node:
         slots.append({
             "cpu_start": cpu,
             "slot_cpus": cpus_per_slot,
-            "base_port": _BASE_PORT + 2 * slot_index,
         })
         cpu += cpus_per_slot
-        slot_index += 1
     return slots
 
 
@@ -53,7 +47,7 @@ def main():
 
     slots = generate_slots(args.cpus_per_node, args.cpus_per_slot)
     n = len(slots)
-    print(f"Generated {n} slot(s) ({n} × {args.cpus_per_slot} CPUs, base_port {_BASE_PORT}).")
+    print(f"Generated {n} slot(s) ({n} × {args.cpus_per_slot} CPUs).")
 
     with open(args.output, "w") as f:
         json.dump(slots, f, indent=2)

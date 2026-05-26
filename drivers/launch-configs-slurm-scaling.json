@@ -64,7 +64,7 @@
         "params": [{}]
     },
     "pycompss": {
-        "format": "runcompss --cpu_affinity={cpu_affinity} --resources={resources_xml} --master_working_dir={master_working_dir} --log_dir={master_working_dir} --lang=python {exec_path} {args}",
+        "format": "runcompss --cpu_affinity={cpu_affinity} --master_port={master_port} --resources={resources_xml} --master_working_dir={master_working_dir} --log_dir={master_working_dir} --lang=python {exec_path} {args}",
         "params": [
             {"num_procs": 1},
             {"num_procs": 2},

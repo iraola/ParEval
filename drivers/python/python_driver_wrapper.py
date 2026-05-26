@@ -9,7 +9,7 @@ Normal (correctness) mode
 
     Example slot (one of 22 on a 112-CPU node, 5 CPUs each)::
 
-        {"cpu_start": 10, "slot_cpus": 5, "base_port": 43011}
+        {"cpu_start": 10, "slot_cpus": 5}
 
 Scaling mode
     `resource_slot` is set; `launch_configs["params"]` contains two or more
@@ -20,7 +20,7 @@ Scaling mode
 
     Example slot (whole node)::
 
-        {"cpu_start": 0, "slot_cpus": 112, "base_port": 43001}
+        {"cpu_start": 0, "slot_cpus": 112}
 
     Wave packing for configs [64, 32, 16, 8, 4, 2, 1] on a 112-CPU slot::
 
@@ -28,16 +28,22 @@ Scaling mode
         Wave 2  (15 CPUs):  8  (0-7) +  4  (8-11) +  2 (12-13) + 1 (14)
 
 NIO port assignment
-    Each concurrent runcompss instance needs a unique port pair.  Within a slot,
-    `min_port = base_port + (sub_cpu_start - cpu_start) * 2`.  Because CPU
-    sub-ranges never overlap within a wave, the derived ports are guaranteed unique.
+    Two distinct port spaces, both below Linux ephemeral range (32768+):
+
+    Master port (--master_port, range 30001–32767)
+        Allocated per-run by `_alloc_master_port`.  Each concurrent runcompss
+        instance gets a unique master NIO server port, preventing the TOCTOU
+        race that occurs when multiple instances scan a shared default range.
+
+    Worker ports (resources.xml MinPort/MaxPort, range 10001–29999)
+        Allocated per-run by `_alloc_nio_port`.  Step = num_procs+3 leaves a
+        gap so worker JVMs that scan beyond MaxPort never reach the next
+        allocation's MinPort.  The allocator also socket-probes each candidate
+        to skip ports held by zombie JVMs from timed-out runs.
 
 Resource cleanup
     Each `run()` call creates a temporary COMPSs workdir under `$TMPDIR`
     (local NVMe on SLURM nodes) and deletes it in a `finally` block.
-    `runcompss` is launched via `os.setsid` so its worker JVM processes are
-    in a dedicated process group; the group is killed with SIGTERM after the
-    master exits, preventing heap accumulation over many runs.
 
 Laptop / sequential mode
     When `resource_slot` is None the driver falls back to a plain
@@ -53,6 +59,7 @@ from os import PathLike
 import re
 import subprocess
 import sys
+import socket
 import tempfile
 import threading
 import shutil
@@ -62,6 +69,57 @@ from pathlib import Path
 sys.path.append("..")
 from drivers.driver_wrapper import DriverWrapper, BuildOutput, RunOutput, GeneratedTextResult
 from util import run_command
+
+# Process-wide counters for NIO port allocation.  All ranges are below the
+# Linux ephemeral range (32768+) so the OS never reuses them as source ports.
+#
+# Worker ports (resources.xml MinPort/MaxPort): 10001–29999
+#   Step = num_procs+3 so worker JVMs scanning past MaxPort never reach the
+#   next allocation's MinPort.  Socket-probed to skip zombie-held blocks.
+#
+# Master ports (--master_port): 30001–32767
+#   One port per runcompss instance; no overlap with worker range.
+_NIO_PORT_BASE = 10001
+_NIO_PORT_MAX  = 29999
+_nio_port_current = _NIO_PORT_BASE
+_nio_port_lock = threading.Lock()
+
+_MASTER_PORT_BASE = 30001
+_MASTER_PORT_MAX  = 32767
+_master_port_current = _MASTER_PORT_BASE
+_master_port_lock = threading.Lock()
+
+
+def _alloc_nio_port(num_procs: int = 1) -> int:
+    """Return a worker MinPort block that is currently free to bind.
+
+    Skips any block whose MinPort is already in use (e.g. zombie JVMs from
+    timed-out runs) as a safety net against unexpected port conflicts.
+    """
+    global _nio_port_current
+    step = num_procs + 3
+    max_attempts = (_NIO_PORT_MAX - _NIO_PORT_BASE) // step
+    with _nio_port_lock:
+        for _ in range(max_attempts):
+            port = _nio_port_current
+            _nio_port_current = _NIO_PORT_BASE if port + step > _NIO_PORT_MAX else port + step
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(("", port))
+                return port
+            except OSError:
+                logging.debug("NIO MinPort %d in use (zombie JVM?), skipping block", port)
+        raise RuntimeError("No free NIO port block found in range %d-%d", _NIO_PORT_BASE, _NIO_PORT_MAX)
+
+
+def _alloc_master_port() -> int:
+    """Return a unique master NIO port for --master_port."""
+    global _master_port_current
+    with _master_port_lock:
+        port = _master_port_current
+        _master_port_current = _MASTER_PORT_BASE if port + 1 > _MASTER_PORT_MAX else port + 1
+        return port
+
 
 def _indent(text: str, prefix: str = "    ") -> str:
     return "\n".join(prefix + line for line in text.splitlines())
@@ -376,7 +434,6 @@ class PythonDriverWrapper(DriverWrapper):
             slot = self.resource_slot
             cpu_start = slot["cpu_start"]
             slot_cpus = slot["slot_cpus"]
-            base_port = slot["base_port"]
 
             compss_workdir = tempfile.mkdtemp(dir=tempfile.gettempdir())
 
@@ -388,16 +445,18 @@ class PythonDriverWrapper(DriverWrapper):
                 end = cpu_start + num_procs - 1
                 run_config["cpu_affinity"] = f"{cpu_start}-{end}" if num_procs > 1 else str(cpu_start)
 
-            # NIO ports derived from sub-range start, unique within a concurrent wave
-            sub_cpu_start = int(run_config["cpu_affinity"].split("-")[0])
-            min_port = base_port + (sub_cpu_start - cpu_start) * 2
-            max_port = min_port + 1
+            min_port = _alloc_nio_port(num_procs)
+            max_port = min_port + num_procs
+            master_port = _alloc_master_port()
+            logging.debug("NIO ports %d-%d (worker) / %d (master) assigned for cpu_affinity=%s",
+                          min_port, max_port, master_port, run_config.get("cpu_affinity", "?"))
 
             resources_xml = os.path.join(compss_workdir, "resources.xml")
             _write_resources_xml(resources_xml, num_procs, min_port, max_port)
 
             run_config = {**run_config,
                           "resources_xml": resources_xml,
+                          "master_port": master_port,
                           "master_working_dir": compss_workdir}
 
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
