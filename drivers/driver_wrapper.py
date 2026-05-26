@@ -201,6 +201,7 @@ class DriverWrapper(ABC):
         relaxations: Optional[list] = None,
         model_name: str = "",
         resource_slot: Optional[dict] = None,
+        problem_size_override: Optional[str] = None,
     ):
         self.parallelism_model = parallelism_model
         self.validator = VALIDATORS[parallelism_model]
@@ -218,6 +219,7 @@ class DriverWrapper(ABC):
         self.relaxations = relaxations or []
         self.model_name = model_name
         self.resource_slot = resource_slot
+        self.problem_size_override = problem_size_override
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(parallelism_model={self.parallelism_model}, scratch_dir={self.scratch_dir})"
@@ -253,7 +255,10 @@ class DriverWrapper(ABC):
         driver_dirname = f"{name}"
         driver_base = DRIVER_MAP[self.parallelism_model]
         test_driver_file = os.path.join(lang, "benchmarks", ptype, driver_dirname, driver_base + ext)
-        problem_size = _find_problem_size(self.problem_sizes, name, self.parallelism_model, "(1<<18)")
+        if self.problem_size_override is not None:
+            problem_size = self.problem_size_override
+        else:
+            problem_size = _find_problem_size(self.problem_sizes, name, self.parallelism_model, "(1<<18)")
         num_outputs = len(prompt["outputs"])
         logging.info("══ PROMPT: %s  [%d outputs | size=%s]", name, num_outputs, problem_size)
 

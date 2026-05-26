@@ -75,6 +75,8 @@ def get_args():
         help="config for how to build samples. If not provided, will use the default build settings for each model.")
     parser.add_argument("--problem-sizes", type=str, default="problem-sizes.json",
         help="config for how to run samples.")
+    parser.add_argument("--problem-size-override", type=str, metavar="SIZE", default=None,
+        help="Use this problem size for every prompt instead of looking up from the problem-sizes file (e.g. '5' or '(1<<10)'). Pass 'none' to disable. Useful for quick correctness runs.")
     parser.add_argument("--yes-to-all", action="store_true", help="If provided, automatically answer yes to all prompts.")
     parser.add_argument("--dry", action="store_true", help="Dry run. Do not actually run the code snippets.")
     parser.add_argument("--resume", action="store_true", help="If the output file already exists, load it as starting data instead of input_json, skipping already-evaluated entries.")
@@ -150,6 +152,9 @@ def already_has_results(prompt: dict) -> bool:
 
 def main():
     args = get_args()
+
+    if args.problem_size_override is not None and args.problem_size_override.lower() == "none":
+        args.problem_size_override = None
 
     # setup logging
     numeric_level = getattr(logging, args.log.upper(), None)
@@ -271,6 +276,7 @@ def main():
         save_generated_dir=artifacts_dir,
         relaxations=relaxations,
         model_name=model_name,
+        problem_size_override=args.problem_size_override,
     )
 
     def write_output():

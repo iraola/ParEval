@@ -18,6 +18,7 @@ shift 2>/dev/null
 
 TIMEOUT=150
 RELAXATION=all
+PROBLEM_SIZE_OVERRIDE=none   # pass a number (e.g. 5) to override all problem sizes
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -25,6 +26,8 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="$2"; shift 2 ;;
         --relaxation)
             RELAXATION="$2"; shift 2 ;;
+        --problem-size-override)
+            PROBLEM_SIZE_OVERRIDE="$2"; shift 2 ;;
         *)
             echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -68,6 +71,7 @@ for INPUT_FILE in "$GENERATE_OUTPUTS_DIR"/output-*.json; do
         --log DEBUG \
         --run-timeout "$TIMEOUT" \
         --relaxation "$RELAXATION" \
+        --problem-size-override "$PROBLEM_SIZE_OVERRIDE" \
         --resume \
         --yes-to-all 2>&1 | tee -a "$LOG_FILE"
 

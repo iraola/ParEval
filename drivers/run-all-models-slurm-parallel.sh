@@ -36,6 +36,7 @@ shift 2>/dev/null
 TIMEOUT=60
 RELAXATIONS=all
 CPUS_PER_SLOT=10
+PROBLEM_SIZE_OVERRIDE=5   # pass "none" to use problem-sizes.json instead
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -45,6 +46,8 @@ while [[ $# -gt 0 ]]; do
             RELAXATIONS="$2"; shift 2 ;;
         --cpus-per-slot)
             CPUS_PER_SLOT="$2"; shift 2 ;;
+        --problem-size-override)
+            PROBLEM_SIZE_OVERRIDE="$2"; shift 2 ;;
         *)
             echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -99,6 +102,7 @@ echo "Log:        $LOG_FILE"
 echo "Artifacts:  $ARTIFACTS_DIR"
 echo "Nodes:      $SLURM_JOB_NODELIST"
 echo "CPUs/slot:  $CPUS_PER_SLOT"
+echo "Size ovrd:  $PROBLEM_SIZE_OVERRIDE"
 
 # Generate resource slot definitions
 python3 generate_resource_slots.py \
@@ -117,6 +121,7 @@ python3 run-all.py "$INPUT_FILE" \
     --scratch-dir "$SCRATCH_DIR" \
     --launch-configs launch-configs-slurm.json \
     --resource-slots "$SLOTS_FILE" \
+    --problem-size-override "$PROBLEM_SIZE_OVERRIDE" \
     --log-build-errors \
     --log-runs \
     --log DEBUG \
