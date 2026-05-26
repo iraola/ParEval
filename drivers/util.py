@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import signal
 from os import PathLike
 import shlex
 import subprocess
@@ -34,6 +36,32 @@ def run_command(cmd: str, timeout: Optional[int] = None, dry: bool = False, para
     logging.debug(f"Running command: {cmd}")
     if dry:
         return CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+    cmd_list = shlex.split(cmd)
+    if parallelism_model == "pycompss":
+        # COMPSs spawns worker JVMs that outlive the runcompss master process.
+        # Put the whole tree in its own process group so stragglers are killed
+        # when the master exits, preventing gradual heap accumulation.
+        proc = subprocess.Popen(
+            cmd_list,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            preexec_fn=os.setsid,
+        )
+        pgid = proc.pid  # after setsid, child's PGID == its own PID
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(pgid, signal.SIGKILL)
+            stdout, stderr = proc.communicate()
+            raise subprocess.TimeoutExpired(cmd_list, timeout,
+                                            output=stdout.encode(),
+                                            stderr=stderr.encode())
+        finally:
+            try:
+                os.killpg(pgid, signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                pass
+        return CompletedProcess(cmd_list, proc.returncode, stdout, stderr)
     else:
-        cmd = shlex.split(cmd)
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(cmd_list, capture_output=True, text=True, timeout=timeout)
