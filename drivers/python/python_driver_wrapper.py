@@ -1,6 +1,47 @@
-""" Wrapper for calling python drivers
-    author: 
-    date: November 2025
+"""PyCOMPSs driver wrapper — builds, runs, and evaluates generated Python/PyCOMPSs code.
+
+Two operating modes
+-------------------
+Normal (correctness) mode
+    `resource_slot` is set; `launch_configs["params"]` contains a single
+    config dict (typically {}).  One `runcompss` call per output, using all
+    CPUs in the slot.  `_in_scaling_mode()` returns False.
+
+    Example slot (one of 22 on a 112-CPU node, 5 CPUs each)::
+
+        {"cpu_start": 10, "slot_cpus": 5, "base_port": 43011}
+
+Scaling mode
+    `resource_slot` is set; `launch_configs["params"]` contains two or more
+    dicts each with a `num_procs` key (e.g. 1, 2, 4, 8 …).  The driver packs
+    these configs into greedy waves that fit within `slot_cpus`, then runs each
+    wave concurrently via an inner `ThreadPoolExecutor`.  `_in_scaling_mode()`
+    returns True.
+
+    Example slot (whole node)::
+
+        {"cpu_start": 0, "slot_cpus": 112, "base_port": 43001}
+
+    Wave packing for configs [64, 32, 16, 8, 4, 2, 1] on a 112-CPU slot::
+
+        Wave 1 (112 CPUs): 64 (0-63) + 32 (64-95) + 16 (96-111)
+        Wave 2  (15 CPUs):  8  (0-7) +  4  (8-11) +  2 (12-13) + 1 (14)
+
+NIO port assignment
+    Each concurrent runcompss instance needs a unique port pair.  Within a slot,
+    `min_port = base_port + (sub_cpu_start - cpu_start) * 2`.  Because CPU
+    sub-ranges never overlap within a wave, the derived ports are guaranteed unique.
+
+Resource cleanup
+    Each `run()` call creates a temporary COMPSs workdir under `$TMPDIR`
+    (local NVMe on SLURM nodes) and deletes it in a `finally` block.
+    `runcompss` is launched via `os.setsid` so its worker JVM processes are
+    in a dedicated process group; the group is killed with SIGTERM after the
+    master exits, preventing heap accumulation over many runs.
+
+Laptop / sequential mode
+    When `resource_slot` is None the driver falls back to a plain
+    `subprocess.run` with no CPU pinning or workdir management.
 """
 # std imports
 import copy
@@ -15,6 +56,7 @@ import sys
 import tempfile
 import threading
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 # local imports
 sys.path.append("..")
@@ -23,6 +65,47 @@ from util import run_command
 
 def _indent(text: str, prefix: str = "    ") -> str:
     return "\n".join(prefix + line for line in text.splitlines())
+
+
+_RESOURCES_XML_TEMPLATE = """\
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ResourcesList>
+    <ComputeNode Name="localhost">
+        <Processor Name="MainProcessor">
+            <ComputingUnits>{computing_units}</ComputingUnits>
+        </Processor>
+        <Adaptors>
+            <Adaptor Name="es.bsc.compss.nio.master.NIOAdaptor">
+                <SubmissionSystem>
+                    <Interactive/>
+                </SubmissionSystem>
+                <Ports>
+                    <MinPort>{min_port}</MinPort>
+                    <MaxPort>{max_port}</MaxPort>
+                </Ports>
+            </Adaptor>
+            <Adaptor Name="es.bsc.compss.gat.master.GATAdaptor">
+                <SubmissionSystem>
+                    <Batch>
+                        <Queue>sequential</Queue>
+                    </Batch>
+                    <Interactive/>
+                </SubmissionSystem>
+                <BrokerAdaptor>sshtrilead</BrokerAdaptor>
+            </Adaptor>
+        </Adaptors>
+    </ComputeNode>
+</ResourcesList>
+"""
+
+
+def _write_resources_xml(path: str, computing_units: int, min_port: int, max_port: int):
+    with open(path, "w") as f:
+        f.write(_RESOURCES_XML_TEMPLATE.format(
+            computing_units=computing_units,
+            min_port=min_port,
+            max_port=max_port,
+        ))
 
 
 """ Map parallelism models to driver files """
@@ -224,15 +307,99 @@ class PythonDriverWrapper(DriverWrapper):
 
         return stderr + "".join(appended)
 
+    def _in_scaling_mode(self, configs: list) -> bool:
+        """True only when multiple num_procs configs are present (scaling run).
+
+        A single config with num_procs is treated as normal mode so that a
+        one-entry params list like [{"num_procs": 5}] still runs sequentially.
+        """
+        return (
+            self.resource_slot is not None
+            and len(configs) > 1
+            and "num_procs" in configs[0]
+        )
+
+    def _run_configs_in_waves(self, exec_path: PathLike, configs: list) -> list:
+        """Pack configs into waves that fit slot_cpus, run each wave in parallel."""
+        slot = self.resource_slot
+        cpu_start = slot["cpu_start"]
+        slot_cpus = slot["slot_cpus"]
+
+        # Sort descending by num_procs for greedy wave packing
+        indexed = sorted(enumerate(configs), key=lambda x: x[1].get("num_procs", 1), reverse=True)
+
+        waves: list[list] = []
+        wave: list = []
+        wave_cpus = 0
+        wave_cpu_pos = cpu_start
+        for orig_idx, c in indexed:
+            num_procs = c.get("num_procs", 1)
+            if wave_cpus + num_procs > slot_cpus:
+                waves.append(wave)
+                wave, wave_cpus, wave_cpu_pos = [], 0, cpu_start
+            end = wave_cpu_pos + num_procs - 1
+            cpu_aff = f"{wave_cpu_pos}-{end}" if num_procs > 1 else str(wave_cpu_pos)
+            wave.append((orig_idx, c, cpu_aff))
+            wave_cpus += num_procs
+            wave_cpu_pos += num_procs
+        if wave:
+            waves.append(wave)
+
+        run_results: list = [None] * len(configs)
+        for wave in waves:
+            with ThreadPoolExecutor(max_workers=len(wave)) as pool:
+                futures = {
+                    pool.submit(self.run, exec_path, cpu_affinity=cpu_aff, **dict(c)): orig_idx
+                    for orig_idx, c, cpu_aff in wave
+                }
+                for f in as_completed(futures):
+                    orig_idx = futures[f]
+                    run_result = f.result()
+                    run_results[orig_idx] = run_result
+                    num_procs = configs[orig_idx].get("num_procs", slot_cpus)
+                    time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
+                    logging.info("[run num_procs=%d] exit=%d  valid=%s  time=%s",
+                                 num_procs, run_result.exit_code, run_result.is_valid, time_str)
+                    if self.display_runs:
+                        logging.debug(
+                            "[run num_procs=%d output]\n%s",
+                            num_procs,
+                            _indent(f"--- stdout ---\n{run_result.stdout}\n--- stderr ---\n{run_result.stderr}"),
+                        )
+        return run_results
+
     def run(self, executable: PathLike, **run_config) -> RunOutput:
         """ Run the given executable. """
         launch_format = self.launch_configs["format"]
         compss_workdir = None
         if self.resource_slot:
-            local_tmp = os.environ.get("TMPDIR", "/tmp")
-            compss_workdir = tempfile.mkdtemp(dir=local_tmp)
-            run_config = {**run_config, **self.resource_slot,
+            slot = self.resource_slot
+            cpu_start = slot["cpu_start"]
+            slot_cpus = slot["slot_cpus"]
+            base_port = slot["base_port"]
+
+            compss_workdir = tempfile.mkdtemp(dir=tempfile.gettempdir())
+
+            # num_procs: from config (scaling) or full slot (correctness)
+            num_procs = run_config.get("num_procs", slot_cpus)
+
+            # cpu_affinity: pre-assigned by wave coordinator or derived from slot
+            if "cpu_affinity" not in run_config:
+                end = cpu_start + num_procs - 1
+                run_config["cpu_affinity"] = f"{cpu_start}-{end}" if num_procs > 1 else str(cpu_start)
+
+            # NIO ports derived from sub-range start, unique within a concurrent wave
+            sub_cpu_start = int(run_config["cpu_affinity"].split("-")[0])
+            min_port = base_port + (sub_cpu_start - cpu_start) * 2
+            max_port = min_port + 1
+
+            resources_xml = os.path.join(compss_workdir, "resources.xml")
+            _write_resources_xml(resources_xml, num_procs, min_port, max_port)
+
+            run_config = {**run_config,
+                          "resources_xml": resources_xml,
                           "master_working_dir": compss_workdir}
+
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
         try:
             run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
@@ -330,22 +497,25 @@ class PythonDriverWrapper(DriverWrapper):
             configs = self.launch_configs["params"]
             n_configs = len(configs)
             if build_result.did_build:
-                run_results = []
-                for j, c in enumerate(configs):
-                    logging.debug("[run %d/%d]", j + 1, n_configs)
-                    run_result = self.run(exec_path, **c)
-                    run_results.append(run_result)
-                    time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
-                    logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
-                                 j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
-                    if self.display_runs:
-                        logging.debug(
-                            "[run %d/%d output]\n%s",
-                            j + 1, n_configs,
-                            _indent(f"--- stdout ---\n{run_result.stdout}\n--- stderr ---\n{run_result.stderr}"),
-                        )
-                    if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
-                        break
+                if self._in_scaling_mode(configs):
+                    run_results = self._run_configs_in_waves(exec_path, configs)
+                else:
+                    run_results = []
+                    for j, c in enumerate(configs):
+                        logging.debug("[run %d/%d]", j + 1, n_configs)
+                        run_result = self.run(exec_path, **c)
+                        run_results.append(run_result)
+                        time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
+                        logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
+                                     j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
+                        if self.display_runs:
+                            logging.debug(
+                                "[run %d/%d output]\n%s",
+                                j + 1, n_configs,
+                                _indent(f"--- stdout ---\n{run_result.stdout}\n--- stderr ---\n{run_result.stderr}"),
+                            )
+                        if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
+                            break
             else:
                 run_results = None
 
@@ -384,22 +554,25 @@ class PythonDriverWrapper(DriverWrapper):
                         continue
                     logging.debug("[build] OK")
 
-                    new_runs = []
-                    for j, c in enumerate(configs):
-                        logging.debug("[run %d/%d]", j + 1, n_configs)
-                        run_result = self.run(exec_path, **c)
-                        new_runs.append(run_result)
-                        time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
-                        logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
-                                     j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
-                        if self.display_runs:
-                            logging.debug(
-                                "[run %d/%d output]\n  --- stdout ---\n%s\n  --- end stdout ---\n"
-                                "  --- stderr ---\n%s\n  --- end stderr ---",
-                                j + 1, n_configs, run_result.stdout, run_result.stderr,
-                            )
-                        if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
-                            break
+                    if self._in_scaling_mode(configs):
+                        new_runs = self._run_configs_in_waves(exec_path, configs)
+                    else:
+                        new_runs = []
+                        for j, c in enumerate(configs):
+                            logging.debug("[run %d/%d]", j + 1, n_configs)
+                            run_result = self.run(exec_path, **c)
+                            new_runs.append(run_result)
+                            time_str = f"{run_result.runtime:.3f}s" if run_result.runtime is not None else "–"
+                            logging.info("[run %d/%d] exit=%d  valid=%s  time=%s",
+                                         j + 1, n_configs, run_result.exit_code, run_result.is_valid, time_str)
+                            if self.display_runs:
+                                logging.debug(
+                                    "[run %d/%d output]\n  --- stdout ---\n%s\n  --- end stdout ---\n"
+                                    "  --- stderr ---\n%s\n  --- end stderr ---",
+                                    j + 1, n_configs, run_result.stdout, run_result.stderr,
+                                )
+                            if self.early_exit_runs and (run_result.exit_code != 0 or not run_result.is_valid):
+                                break
 
                     if _runs_succeeded(new_runs):
                         logging.debug("succeeded")

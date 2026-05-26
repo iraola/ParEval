@@ -84,14 +84,12 @@ OUTPUT_FILE="${DRIVER_OUTPUTS_DIR}/output_drivers_${MODEL_NAME}.json"
 LOG_FILE="${LOGS_DIR}/log_drivers_${MODEL_NAME}.txt"
 ARTIFACTS_DIR="artifacts/${DIR}/${MODEL_NAME}"
 SCRATCH_DIR="../scratch/${DIR}/${MODEL_NAME}"
-RESOURCES_DIR="resources/${DIR}/${MODEL_NAME}"
 SLOTS_FILE="${SCRATCH_DIR}/slots.json"
 
 mkdir -p "$DRIVER_OUTPUTS_DIR"
 mkdir -p "$LOGS_DIR"
 mkdir -p "$ARTIFACTS_DIR"
 mkdir -p "$SCRATCH_DIR"
-mkdir -p "$RESOURCES_DIR"
 
 echo "Array task: ${SLURM_ARRAY_TASK_ID} (job ${SLURM_ARRAY_JOB_ID})"
 echo "Model:      $MODEL_NAME"
@@ -102,11 +100,10 @@ echo "Artifacts:  $ARTIFACTS_DIR"
 echo "Nodes:      $SLURM_JOB_NODELIST"
 echo "CPUs/slot:  $CPUS_PER_SLOT"
 
-# Generate resource slot definitions (XML files + slots JSON)
+# Generate resource slot definitions
 python3 generate_resource_slots.py \
     --cpus-per-node "$SLURM_CPUS_ON_NODE" \
     --cpus-per-slot "$CPUS_PER_SLOT" \
-    --resources-dir "$RESOURCES_DIR" \
     --output "$SLOTS_FILE"
 
 if [ $? -ne 0 ]; then
@@ -127,5 +124,7 @@ python3 run-all.py "$INPUT_FILE" \
     --relaxations "$RELAXATIONS" \
     --resume \
     --yes-to-all 2>&1 | tee -a "$LOG_FILE"
+EXIT_CODE=${PIPESTATUS[0]}
 
-echo "Done: $MODEL_NAME"
+echo "Done: $MODEL_NAME (exit $EXIT_CODE)"
+exit $EXIT_CODE
