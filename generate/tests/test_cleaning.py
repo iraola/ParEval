@@ -12,7 +12,12 @@ Run with:
 
 import unittest
 
-from generate.utils import extract_pycompss_solution, clean_output, clean_instruct_output
+from generate.utils import (
+    extract_pycompss_solution,
+    extract_code_blocks,
+    clean_output,
+    clean_instruct_output,
+)
 
 
 PYCOMPSS_PROMPT = "Write a PyCOMPSs solution"
@@ -45,7 +50,10 @@ class TestExtractStartDetection(unittest.TestCase):
         result = extract_pycompss_solution(code)
         self.assertTrue(result.startswith("def helper"))
 
-    def test_preamble_text_before_code_is_discarded(self):
+    def test_leading_lines_are_preserved(self):
+        # Leading top-level lines are kept, not stripped: the extractor favours
+        # preserving module-level constants (e.g. CHUNK_SIZE = 10) that precede
+        # the functions, so it cannot also drop prose preambles via a start rule.
         code = (
             "Here is my solution:\n"
             "As you can see below:\n"
@@ -55,14 +63,19 @@ class TestExtractStartDetection(unittest.TestCase):
             "    pass"
         )
         result = extract_pycompss_solution(code)
-        self.assertTrue(result.startswith("import numpy"))
-        self.assertNotIn("Here is my solution", result)
+        self.assertIn("import numpy", result)
+        self.assertIn("Here is my solution", result)
 
-    def test_no_matching_start_uses_whole_input_from_line_zero(self):
-        # No import/from/@task/def — start_index stays 0
-        code = "x = 1\ny = 2"
+    def test_module_level_constant_before_functions_preserved(self):
+        # The reason leading lines are not stripped: real constants must survive.
+        code = "CHUNK_SIZE = 10\n\n@task(returns=1)\ndef g(x):\n    return x"
         result = extract_pycompss_solution(code)
-        self.assertIn("x = 1", result)
+        self.assertTrue(result.startswith("CHUNK_SIZE = 10"))
+
+    def test_no_code_markers_returns_empty(self):
+        # No import/from/def/@ anywhere → not a real solution → ''.
+        code = "x = 1\ny = 2"
+        self.assertEqual(extract_pycompss_solution(code), "")
 
     def test_indented_import_is_matched(self):
         # The pattern allows leading whitespace (\s*)
@@ -207,8 +220,9 @@ class TestExtractStoppingCondition(unittest.TestCase):
         result = extract_pycompss_solution(code)
         self.assertIn("# helper function", result)
 
-    def test_trailing_top_level_comment_included(self):
-        # A top-level comment at the end (before if __name__) is included
+    def test_trailing_top_level_comment_trimmed(self):
+        # Output is trimmed back to the last indented (in-body) line, so a
+        # trailing top-level comment appended after the solution is dropped.
         code = (
             "import os\n\n"
             "def main():\n"
@@ -216,7 +230,8 @@ class TestExtractStoppingCondition(unittest.TestCase):
             "# end of solution"
         )
         result = extract_pycompss_solution(code)
-        self.assertIn("# end of solution", result)
+        self.assertNotIn("# end of solution", result)
+        self.assertIn("x = 1", result)
 
     def test_deeply_nested_code_included(self):
         code = (
@@ -254,11 +269,12 @@ class TestExtractOutputStripping(unittest.TestCase):
         result = extract_pycompss_solution(code)
         self.assertEqual(result, result.strip())
 
-    def test_preamble_excluded_from_result(self):
+    def test_leading_comment_preserved(self):
+        # Leading lines are preserved (see test_leading_lines_are_preserved):
+        # a top-level comment before the first import is kept, not stripped.
         code = "# preamble\nimport os\n\ndef main():\n    pass"
-        # '# preamble' does not match start_pattern, so start_index -> import
         result = extract_pycompss_solution(code)
-        self.assertTrue(result.startswith("import os"))
+        self.assertTrue(result.startswith("# preamble"))
 
 
 # ===========================================================================
@@ -511,6 +527,114 @@ class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
         self.assertIn("def main", result)
         self.assertIn("print(result)", result)
         self.assertNotIn("if __name__", result)
+
+
+class TestExtractCodeBlocks(unittest.TestCase):
+    """Line-based fence scanner — the fundamental fence-parsing primitive."""
+
+    def test_single_block(self):
+        text = "before\n```python\nimport os\n```\nafter"
+        self.assertEqual(extract_code_blocks(text), ["import os"])
+
+    def test_multiple_blocks_in_order(self):
+        text = "```python\nimport os\n```\nmid\n```python\nimport sys\n```"
+        self.assertEqual(extract_code_blocks(text), ["import os", "import sys"])
+
+    def test_indented_fence_is_recognized(self):
+        # Reasoning models put illustrative snippets inside numbered lists, so the
+        # fence is indented. Both the fence and its content are indented; content
+        # is dedented by the fence indent.
+        text = "1. Example:\n   ```python\n   x = 1\n   ```\nprose"
+        self.assertEqual(extract_code_blocks(text), ["x = 1"])
+
+    def test_indented_snippet_does_not_swallow_following_block(self):
+        # An indented snippet fence must not pair with the column-0 opening 
+        # fence of the real solution.
+        text = (
+            "1. trick:\n"
+            "   ```python\n"
+            "   (n & (n - 1)) == 0\n"
+            "   ```\n"
+            "   prose here\n"
+            "\n"
+            "```python\n"
+            "from pycompss.api.task import task\n"
+            "def main(x):\n"
+            "    return x\n"
+            "```\n"
+        )
+        blocks = extract_code_blocks(text)
+        self.assertEqual(blocks[0], "(n & (n - 1)) == 0")
+        self.assertIn("from pycompss.api.task import task", blocks[1])
+        # No fence markers leak into any block
+        self.assertFalse(any("```" in b for b in blocks))
+
+    def test_unclosed_fence_returns_final_block(self):
+        # Truncated generation: opener with no closer still yields the content.
+        text = "here:\n```python\nimport os\ndef main():\n    pass"
+        self.assertEqual(extract_code_blocks(text), ["import os\ndef main():\n    pass"])
+
+    def test_dangling_closing_fence_yields_no_block(self):
+        # A lone closing fence (no opener) produces only an empty block, which is
+        # dropped so the code sitting outside it is not masked.
+        text = "import os\ndef main():\n    pass\n```"
+        self.assertEqual(extract_code_blocks(text), [])
+
+    def test_empty_blocks_dropped(self):
+        text = "```\n```\n```python\nimport os\n```"
+        self.assertEqual(extract_code_blocks(text), ["import os"])
+
+
+class TestCleanInstructOutputIndentedFence(unittest.TestCase):
+    """Regression: indented snippet fences used to leak ``` into the solution."""
+
+    def test_indented_snippet_then_real_solution(self):
+        tag = PYCOMPSS_RESPONSE_TAG
+        output = (
+            f"{tag}\n"
+            "Reasoning. The trick is:\n"
+            "1. bitwise check:\n"
+            "   ```python\n"
+            "   (n & (n - 1)) == 0\n"
+            "   ```\n"
+            "   which we wrap in a task.\n"
+            "\n"
+            "### Implementation\n"
+            "```python\n"
+            "from pycompss.api.task import task\n"
+            "from pycompss.api.api import compss_wait_on\n"
+            "\n"
+            "@task(returns=bool)\n"
+            "def check(n):\n"
+            "    return n > 0 and (n & (n - 1)) == 0\n"
+            "\n"
+            "def main(x):\n"
+            "    return compss_wait_on([check(v) for v in x])\n"
+            "```\n"
+            "### Example\n"
+            "```python\n"
+            "if __name__ == '__main__':\n"
+            "    main([1, 2])\n"
+            "```\n"
+        )
+        result = clean_instruct_output(output, PYCOMPSS_PROMPT, tag)
+        self.assertNotIn("```", result)
+        self.assertIn("from pycompss.api.task import task", result)
+        self.assertIn("def main", result)
+        self.assertNotIn("if __name__", result)
+
+    def test_dangling_closing_fence_keeps_unfenced_code(self):
+        tag = PYCOMPSS_RESPONSE_TAG
+        output = (
+            f"{tag}\n"
+            "from pycompss.api.task import task\n"
+            "def main(x):\n"
+            "    return x\n"
+            "```"
+        )
+        result = clean_instruct_output(output, PYCOMPSS_PROMPT, tag)
+        self.assertIn("from pycompss", result)
+        self.assertNotIn("```", result)
 
 
 if __name__ == "__main__":

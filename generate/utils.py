@@ -108,6 +108,51 @@ def find_matching_brace_index(code: str, open_brace_index: int) -> int:
     raise ValueError("Unmatched opening brace")
 
 
+def extract_code_blocks(text: str) -> List[str]:
+    """Return the contents of fenced ``` code blocks, scanned line by line.
+
+    A line is a fence delimiter when its stripped form starts with ```. This
+    tolerates fences indented inside Markdown lists or quotes (reasoning models
+    routinely emit illustrative snippets that way), and content is dedented by
+    the opening fence's indent. A final unclosed fence (generation truncated
+    mid-block) is returned as the last block.
+    """
+    blocks, current, indent = [], None, 0
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            if current is None:
+                current, indent = [], len(line) - len(line.lstrip())
+            else:
+                blocks.append("\n".join(current))
+                current = None
+        elif current is not None:
+            dedent = min(indent, len(line) - len(line.lstrip(" ")))
+            current.append(line[dedent:])
+    if current is not None:
+        blocks.append("\n".join(current))
+    # Drop empty blocks and stray closing ``` with no opener
+    return [b for b in blocks if b.strip()]
+
+
+def extract_pycompss_code(text: str) -> str:
+    """Select the PyCOMPSs solution from text that may contain fenced blocks.
+
+    For instruct/chat models whose answer is Markdown prose wrapping fenced code.
+    Note this is the wrong primitive for base-completion models, where the real
+    solution is the unfenced continuation and any later fence is usually junk —
+    those use `extract_pycompss_solution` directly.
+    """
+    code_blocks = extract_code_blocks(text)
+    # Prefer blocks that contain Python code markers
+    python_blocks = [b for b in code_blocks if re.search(r'(@task|^\s*import\s|^\s*from\s|^\s*def\s)', b, flags=re.MULTILINE)]
+    if python_blocks:
+        # If block 0 already has def main it's self-contained; else concatenate fragments - Applies to reasoning models with interleaved code and prose
+        if re.search(r'^def main\b', python_blocks[0], re.MULTILINE):
+            return extract_pycompss_solution(python_blocks[0])
+        return extract_pycompss_solution("\n\n".join(python_blocks))
+    return extract_pycompss_solution(code_blocks[0] if code_blocks else text.strip())
+
+
 def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     """ Clean LLM output to find code solution. """
 
@@ -123,29 +168,13 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     if prompt_loc != -1:
         output = output[prompt_loc + len(response_tag):].strip()
 
-    # Extract code blocks (```python, ```c++, or plain ```)
-    code_blocks = re.findall(r"```(?:\w*)\n(.*?)\n```", output, flags=re.DOTALL)
-
-    if len(code_blocks) > 0:
-        raw_code = code_blocks[0]
-    else:
-        raw_code = output.strip()
-        if raw_code.startswith("```"): raw_code = raw_code[3:]
-        if raw_code.endswith("```"): raw_code = raw_code[:-3]
-
     if "pycompss" in prompt.lower():
-        # Prefer blocks that contain Python code markers
-        python_blocks = [b for b in code_blocks if re.search(r'(@task|^\s*import\s|^\s*from\s|^\s*def\s)', b, flags=re.MULTILINE)]
-        if python_blocks:
-            # If block 0 already has def main it's self-contained; else concatenate fragments - Applies to reasoning models with interleaved code and prose
-            if re.search(r'^def main\b', python_blocks[0], re.MULTILINE):
-                return extract_pycompss_solution(python_blocks[0])
-            return extract_pycompss_solution("\n\n".join(python_blocks))
-        # Fallback: look for an unclosed ```python fence (truncated generation)
-        unclosed = re.search(r"```(?:python)?\n(.*)", output, flags=re.DOTALL)
-        if unclosed:
-            return extract_pycompss_solution(unclosed.group(1))
-        return extract_pycompss_solution(raw_code)
+        return extract_pycompss_code(output)
+
+    # Extract fenced code blocks (```python, ```c++, plain ```). A lone unclosed
+    # fence becomes the final block, so truncated generations are covered too.
+    code_blocks = extract_code_blocks(output)
+    raw_code = code_blocks[0] if code_blocks else output.strip()
 
     try:
         sub_prompt = prompt.rstrip().removesuffix(response_tag).rstrip()
@@ -371,6 +400,14 @@ class PhindConfig(InferenceConfig):
         return prompt.strip()
 
     def clean_output(self, output: str, prompt: str) -> str:
+        # Phind-CodeLlama is instruction-tuned and answers with Markdown prose
+        # around fenced code, so strip the echoed prompt then use the fence-aware
+        # extractor rather than the base-completion path.
+        prompt_loc = output.find(prompt)
+        if prompt_loc != -1:
+            output = output[prompt_loc + len(prompt):]
+        if "pycompss" in prompt.lower():
+            return extract_pycompss_code(output)
         return clean_output(output, prompt)
 
 
