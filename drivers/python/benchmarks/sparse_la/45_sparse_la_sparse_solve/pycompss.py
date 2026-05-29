@@ -85,14 +85,13 @@ def validate(ctx: Context):
         reset(ctx)
         
         import copy
-        b_copy = copy.deepcopy(ctx.b)
-        A_copy = copy.deepcopy(ctx.A_coo)
+        ctx_par = copy.deepcopy(ctx)
 
         # Parallel execution
-        par_res = main(ctx.A_coo, ctx.b, ctx.N)
+        par_res = compute(ctx_par)
         
         # Sequential execution
-        seq_res = correct_main(A_copy, b_copy, ctx.N)
+        seq_res = best(ctx)
         
         # Check equality
         if not fequal(par_res, seq_res, eps=1e-6):

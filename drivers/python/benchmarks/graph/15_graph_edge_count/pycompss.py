@@ -3,8 +3,9 @@
 # An edge is represented by a 1 in the adjacency matrix.
 # """
 
+import copy
 import random
-from python.utilities import fillRand, fequal 
+from python.utilities import fillRand, fequal
 
 class Context:
     """
@@ -71,8 +72,8 @@ def validate(ctx: Context):
         
         # Create copies to avoid modifying the source data in place during comparison
         # if the tasks operate in-place.
-        par_res = ctx.A[:]
-        seq_res = ctx.A[:]
+        par_res = copy.deepcopy(ctx.A)
+        seq_res = copy.deepcopy(ctx.A)
 
         # Parallel execution
         par_res = main(par_res)
