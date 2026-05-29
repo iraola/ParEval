@@ -9,7 +9,9 @@
 #SBATCH --output=logs/slurm-%A_%a.out
 #SBATCH --error=logs/slurm-%A_%a.err
 
-# Run driver evaluation with parallel runcompss instances.
+# Run driver correctness evaluation with parallel runcompss instances.
+# Each slot has 1 CPU and uses the local connector to use master-in-worker mode
+# (no ssh) - valid for correctness, not for performance evaluation.
 # Each SLURM array task handles one model; within the task, all prompts for
 # that model run concurrently, each pinned to a CPU slice on an allocated node.
 #
@@ -35,7 +37,8 @@ shift 2>/dev/null
 
 TIMEOUT=60
 RELAXATIONS=all
-CPUS_PER_SLOT=10
+CPUS_PER_SLOT=1
+CPUS_ON_NODE=60  # restricted to leave room for master nodes
 PROBLEM_SIZE_OVERRIDE=5   # pass "none" to use problem-sizes.json instead
 
 while [[ $# -gt 0 ]]; do
@@ -106,7 +109,7 @@ echo "Size ovrd:  $PROBLEM_SIZE_OVERRIDE"
 
 # Generate resource slot definitions
 python3 generate_resource_slots.py \
-    --cpus-per-node "$SLURM_CPUS_ON_NODE" \
+    --cpus-per-node "$CPUS_ON_NODE" \
     --cpus-per-slot "$CPUS_PER_SLOT" \
     --output "$SLOTS_FILE"
 
@@ -119,7 +122,7 @@ python3 run-all.py "$INPUT_FILE" \
     -o "$OUTPUT_FILE" \
     --artifacts-dir "$ARTIFACTS_DIR" \
     --scratch-dir "$SCRATCH_DIR" \
-    --launch-configs launch-configs-slurm.json \
+    --launch-configs launch-configs-slurm-correctness.json \
     --resource-slots "$SLOTS_FILE" \
     --problem-size-override "$PROBLEM_SIZE_OVERRIDE" \
     --log-build-errors \
