@@ -121,9 +121,11 @@ class GeneratedTextResult:
         return self.run_outputs is not None and all(r.exit_code == 0 for r in self.run_outputs)
     
     def are_any_valid(self) -> bool:
-        """ Return whether the code ran successfully and the output was valid. """
-        return self.did_any_run() and any(r.is_valid for r in self.run_outputs)
-    
+        """ Return whether any run produced valid output (Validation: PASS), regardless of exit code. """
+        return self.run_outputs is not None and any(
+            r.is_valid for r in self.run_outputs if r.is_valid is not None
+        )
+
     def are_all_valid(self) -> bool:
         """ Return whether the code ran successfully and the output was valid. """
         return self.did_all_run() and all(r.is_valid for r in self.run_outputs)

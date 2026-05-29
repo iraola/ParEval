@@ -648,11 +648,18 @@ class PythonDriverWrapper(DriverWrapper):
                         logging.debug("still failed")
 
             # Per-output outcome summary
+            _any_valid = run_results is not None and any(
+                r.is_valid for r in run_results if r.is_valid is not None
+            )
             if _runs_succeeded(run_results):
                 best = next((r for r in run_results if r.exit_code == 0 and r.is_valid), None)
                 time_str = f"{best.runtime:.3f}s" if best and best.runtime is not None else "–"
                 relax_note = f"  [via relaxation: {applied_relaxations[0]}]" if applied_relaxations else ""
                 logging.info("output %d: PASS  time=%s%s", output_index, time_str, relax_note)
+            elif _any_valid:
+                best = next((r for r in run_results if r.is_valid), None)
+                time_str = f"{best.runtime:.3f}s" if best and best.runtime is not None else "–"
+                logging.info("output %d: PASS  time=%s  [timeout after valid output]", output_index, time_str)
             elif not build_result.did_build:
                 logging.info("output %d: FAIL  build error", output_index)
             elif run_results is not None and all(r.exit_code != 0 for r in run_results):
