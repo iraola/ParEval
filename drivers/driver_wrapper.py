@@ -89,18 +89,34 @@ class RunOutput:
         return validation, runtime, best_sequential_runtime
 
 
+def _run_executed(run_output: "RunOutput", parallelism_model: str = "") -> bool:
+    """Whether a run actually executed.
+
+    Usually this means a clean (zero) exit. For pycompss the exit code can be
+    -1 even when the program ran and validated: the run is killed on timeout
+    (e.g. the COMPSs runtime hanging on teardown) after stdout already holds
+    "Validation: PASS". So for pycompss a produced validation verdict
+    (is_valid is not None) also counts as having executed.
+    """
+    if run_output.exit_code == 0:
+        return True
+    return parallelism_model == "pycompss" and run_output.is_valid is not None
+
+
 class GeneratedTextResult:
     """ The result of running a single prompt """
     source_write_success: bool
     build_output: BuildOutput
     run_outputs: Optional[List[RunOutput]]
     relaxations_applied: List[str]
+    parallelism_model: str
 
-    def __init__(self, source_write_success: bool, build_output: BuildOutput, run_outputs: Optional[List[RunOutput]] = None, relaxations_applied: Optional[List[str]] = None):
+    def __init__(self, source_write_success: bool, build_output: BuildOutput, run_outputs: Optional[List[RunOutput]] = None, relaxations_applied: Optional[List[str]] = None, parallelism_model: str = ""):
         self.source_write_success = source_write_success
         self.build_output = build_output
         self.run_outputs = run_outputs
         self.relaxations_applied = relaxations_applied or []
+        self.parallelism_model = parallelism_model
 
         assert self.build_output.did_build == (self.run_outputs is not None), \
             "Build output and run output must be consistent."
@@ -114,11 +130,11 @@ class GeneratedTextResult:
     
     def did_any_run(self) -> bool:
         """ Return whether the any of the code ran successfully. """
-        return self.run_outputs is not None and any(r.exit_code == 0 for r in self.run_outputs)
-    
+        return self.run_outputs is not None and any(_run_executed(r, self.parallelism_model) for r in self.run_outputs)
+
     def did_all_run(self) -> bool:
         """ Return whether all of the code ran successfully. """
-        return self.run_outputs is not None and all(r.exit_code == 0 for r in self.run_outputs)
+        return self.run_outputs is not None and all(_run_executed(r, self.parallelism_model) for r in self.run_outputs)
     
     def are_any_valid(self) -> bool:
         """ Return whether any run produced valid output (Validation: PASS), regardless of exit code. """
@@ -297,7 +313,7 @@ class DriverWrapper(ABC):
                 **( {"build_stderr": build_stderr[:2000]} if build_stderr else {} ),
                 "runs": [
                     {
-                        "did_run": r.exit_code == 0,
+                        "did_run": _run_executed(r, self.parallelism_model),
                         "is_valid": r.is_valid,
                         "runtime": r.runtime,
                         **r.config,

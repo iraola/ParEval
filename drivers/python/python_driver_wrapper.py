@@ -221,10 +221,16 @@ def _prompt_id(prompt_name: str) -> str:
 
 
 def _runs_succeeded(run_results) -> bool:
-    """Return True if at least one run completed and validated successfully."""
+    """Return True if at least one run validated successfully.
+
+    Success depends on is_valid, not exit_code: a pycompss run can validate
+    and still be killed on timeout (COMPSs runtime hanging on teardown), which
+    reports a nonzero exit code. Requiring exit_code == 0 would wrongly discard
+    those validated runs (e.g. reject a relaxation that actually fixed the code).
+    """
     if not run_results:
         return False
-    return any(r.exit_code == 0 and r.is_valid for r in run_results)
+    return any(r.is_valid for r in run_results)
 
 
 class PythonDriverWrapper(DriverWrapper):
@@ -486,7 +492,7 @@ class PythonDriverWrapper(DriverWrapper):
         """
         if "@task" not in output:
             logging.info("output %d: FAIL  no @task decorator — not a PyCOMPSs solution", output_index)
-            return GeneratedTextResult(False, BuildOutput(1, "", "rejected: no @task decorator"))
+            return GeneratedTextResult(False, BuildOutput(1, "", "rejected: no @task decorator"), parallelism_model=self.parallelism_model)
 
         preview = output[:500] + ("..." if len(output) > 500 else "")
         logging.debug("code preview:\n%s", _indent(preview))
@@ -648,18 +654,17 @@ class PythonDriverWrapper(DriverWrapper):
                         logging.debug("still failed")
 
             # Per-output outcome summary
-            _any_valid = run_results is not None and any(
-                r.is_valid for r in run_results if r.is_valid is not None
-            )
             if _runs_succeeded(run_results):
-                best = next((r for r in run_results if r.exit_code == 0 and r.is_valid), None)
+                clean = next((r for r in run_results if r.exit_code == 0 and r.is_valid), None)
+                best = clean or next((r for r in run_results if r.is_valid), None)
                 time_str = f"{best.runtime:.3f}s" if best and best.runtime is not None else "–"
-                relax_note = f"  [via relaxation: {applied_relaxations[0]}]" if applied_relaxations else ""
-                logging.info("output %d: PASS  time=%s%s", output_index, time_str, relax_note)
-            elif _any_valid:
-                best = next((r for r in run_results if r.is_valid), None)
-                time_str = f"{best.runtime:.3f}s" if best and best.runtime is not None else "–"
-                logging.info("output %d: PASS  time=%s  [timeout after valid output]", output_index, time_str)
+                if applied_relaxations:
+                    note = f"  [via relaxation: {applied_relaxations[0]}]"
+                elif clean is None:
+                    note = "  [timeout after valid output]"
+                else:
+                    note = ""
+                logging.info("output %d: PASS  time=%s%s", output_index, time_str, note)
             elif not build_result.did_build:
                 logging.info("output %d: FAIL  build error", output_index)
             elif run_results is not None and all(r.exit_code != 0 for r in run_results):
@@ -670,4 +675,4 @@ class PythonDriverWrapper(DriverWrapper):
                 relax_note = " — all relaxations exhausted" if self.relaxations else ""
                 logging.info("output %d: FAIL%s", output_index, relax_note)
 
-            return GeneratedTextResult(write_success, build_result, run_results, relaxations_applied=applied_relaxations)
+            return GeneratedTextResult(write_success, build_result, run_results, relaxations_applied=applied_relaxations, parallelism_model=self.parallelism_model)

@@ -667,7 +667,8 @@ class TestHelpers:
         assert not _runs_succeeded([RunOutput(0, FAIL_OUTPUT, "")])
 
     def test_runs_succeeded_nonzero_exit(self):
-        assert not _runs_succeeded([RunOutput(1, PASS_OUTPUT, "")])
+        # A pycompss run can validate yet exit nonzero (timeout on teardown)
+        assert _runs_succeeded([RunOutput(1, PASS_OUTPUT, "")])
 
     def test_runs_succeeded_mixed_any_pass(self):
         assert _runs_succeeded([RunOutput(1, FAIL_OUTPUT, ""), RunOutput(0, PASS_OUTPUT, "")])

@@ -7,7 +7,7 @@ Coverage:
     best_sequential_runtime
 """
 import pytest
-from driver_wrapper import BuildOutput, GeneratedTextResult, RunOutput, _find_problem_size
+from driver_wrapper import BuildOutput, GeneratedTextResult, RunOutput, _find_problem_size, _run_executed
 from python.parallel_validation import PyCOMPSSValidator
 
 PASS_OUT = "Time: 0.100\nBestSequential: 0.200\nValidation: PASS\n"
@@ -172,6 +172,33 @@ class TestGeneratedTextResult:
 
     def test_relaxations_applied_defaults_to_empty(self):
         assert self._make().relaxations_applied == []
+
+
+# ---------------------------------------------------------------------------
+# _run_executed (pycompss-aware "did it run")
+# ---------------------------------------------------------------------------
+
+class TestRunExecuted:
+    def test_clean_exit_counts_for_any_model(self):
+        assert _run_executed(_run(0, PASS_OUT)) is True
+        assert _run_executed(_run(0, FAIL_OUT)) is True
+
+    def test_nonzero_exit_does_not_count_for_non_pycompss(self):
+        # e.g. cpp/omp/mpi: nonzero exit means it did not run, even if validated
+        assert _run_executed(_run(1, PASS_OUT), "omp") is False
+
+    def test_nonzero_exit_but_validated_counts_for_pycompss(self):
+        # timeout on teardown after the program already validated
+        assert _run_executed(_run(1, PASS_OUT), "pycompss") is True
+
+    def test_nonzero_exit_without_verdict_does_not_count_for_pycompss(self):
+        # killed before producing a Validation line (e.g. NIO worker never started)
+        assert _run_executed(_run(1, "no verdict here"), "pycompss") is False
+
+    def test_pycompss_did_run_serialization_invariant(self):
+        # is_valid True must never coexist with did_run False for pycompss
+        result = GeneratedTextResult(True, _build(True), [_run(1, PASS_OUT)], parallelism_model="pycompss")
+        assert result.did_any_run() is True
 
 
 # ---------------------------------------------------------------------------

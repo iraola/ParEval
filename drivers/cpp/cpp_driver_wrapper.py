@@ -170,4 +170,4 @@ class CppDriverWrapper(DriverWrapper):
                     if run_result.exit_code != 0:
                         logging.debug(f"Ouputs:\n\tstdout: {run_result.stdout}\n\tstderr: {run_result.stderr}")
         
-        return GeneratedTextResult(write_success, build_result, run_results)
+        return GeneratedTextResult(write_success, build_result, run_results, parallelism_model=self.parallelism_model)
