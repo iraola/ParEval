@@ -104,7 +104,7 @@ def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
             ((df["parallelism_model"] == "omp") & (df["num_threads"] == 32)) |
             ((df["parallelism_model"] == "mpi") & (df["num_procs"] == 512)) |
             ((df["parallelism_model"] == "mpi+omp") & (df["num_procs"] == 4) & (df["num_threads"] == 64)) |
-            (df["parallelism_model"] == "pycompss")]
+            ((df["parallelism_model"] == "pycompss") & (df["num_procs"] == 64))]
     df = df.copy()
 
     # use min best_sequential_runtime
@@ -202,7 +202,7 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
             ((df["parallelism_model"] == "omp") & (df["num_threads"] == 32)) |
             ((df["parallelism_model"] == "mpi") & (df["num_procs"] == 512)) |
             ((df["parallelism_model"] == "mpi+omp") & (df["num_procs"] == 4) & (df["num_threads"] == 64)) |
-            (df["parallelism_model"] == "pycompss")]
+            ((df["parallelism_model"] == "pycompss") & (df["num_procs"] == 64))]
 
     # set n_resources column to 1 for serial; 32 for kokkos; 32 for omp; 512 for mpi; 4*64 for mpi+omp;
     # set it to problem_size for cuda and hip
@@ -213,7 +213,7 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     df.loc[df["parallelism_model"] == "omp", "n_resources"] = 8
     df.loc[df["parallelism_model"] == "mpi", "n_resources"] = 512
     df.loc[df["parallelism_model"] == "mpi+omp", "n_resources"] = 4*64
-    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["problem_size"]  # TODO: what is n_resources for pycompss
+    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["num_procs"]
 
     df = df.copy()
 
@@ -250,7 +250,7 @@ def efficiencyk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
     df.loc[df["parallelism_model"] == "omp", "n_resources"] = df["num_threads"]
     df.loc[df["parallelism_model"] == "mpi", "n_resources"] = df["num_procs"]
     df.loc[df["parallelism_model"] == "mpi+omp", "n_resources"] = df["num_procs"] * df["num_threads"]
-    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["problem_size"]  # TODO: what is n_resources for pycompss
+    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["num_procs"]
 
     # choose the row with min num_resources * runtime
     df = df.groupby(["name", "parallelism_model", "output_idx"]).apply(
@@ -273,6 +273,33 @@ def efficiencyk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"efficiency_max@{k}": "mean"})
 
     return df
+
+def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
+    """For PyCOMPSs, replace best_sequential_runtime with the n=1 (single-worker) runtime.
+
+    PyCOMPSs carries inherent scheduling overhead that makes comparison against a purely
+    sequential baseline reflect overhead rather than scaling. Using n=1 as the reference
+    isolates how well the code scales with additional resources.
+    Requires df["n"] to be populated before calling.
+    """
+    df = df.copy()
+    mask = df["parallelism_model"] == "pycompss"
+    if not mask.any():
+        return df
+
+    n1_baselines = (
+        df[mask & (df["n"] == 1) & df["is_valid"]]
+        .groupby(["name", "output_idx"])["runtime"]
+        .min()
+        .reset_index()
+        .rename(columns={"runtime": "n1_baseline"})
+    )
+
+    df = df.merge(n1_baselines, on=["name", "output_idx"], how="left")
+    updated = mask & df["n1_baseline"].notna()
+    df.loc[updated, "best_sequential_runtime"] = df.loc[updated, "n1_baseline"]
+    return df.drop(columns=["n1_baseline"])
+
 
 def parse_problem_size(problem_size: str) -> int:
     """ problem size is of format '(1<<n)' """
@@ -306,6 +333,11 @@ def main():
     # without --relaxations, relaxed passes are treated as failures
     if not args.relaxations and "relaxation_used" in df.columns:
         df.loc[df["relaxation_used"] == True, "is_valid"] = False
+
+    # For PyCOMPSs, scale relative to n=1 instead of the purely sequential baseline.
+    # Set n transiently so apply_n1_baseline can locate single-worker runs.
+    df.loc[df["parallelism_model"] == "pycompss", "n"] = df["num_procs"]
+    df = apply_n1_baseline(df)
 
     # get only valid runs
     valid_runs = get_correctness_df(df)

@@ -213,7 +213,7 @@ def plot_k_vs_passk(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
     ax.set_ylabel("pass@k")
     ax.set_title("pass@k vs k  (mean across problem types)")
     ax.set_xticks(k_values)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim((0, 1))
     _style(ax)
     ax.legend(bbox_to_anchor=(1.01, 1), loc="upper left", frameon=False)
     fig.tight_layout()

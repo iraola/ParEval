@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument("input_csv", type=str, help="Input CSV file containing the test cases.")
     parser.add_argument("-k", "--k", type=int, default=1, help="K value for speedup@k and efficiency@k")
     parser.add_argument("-n", "--n", type=int, nargs='+', default=[1,2,4,8,16,32,64,128,256,512], help="Number of resources for speedup@k and efficiency@k")
-    parser.add_argument("--execution-model", choices=['mpi', 'mpi+omp', 'omp', 'kokkos'], default='mpi', help="Execution model to use for speedup@k and efficiency@k")
+    parser.add_argument("--execution-model", choices=['mpi', 'mpi+omp', 'omp', 'kokkos', 'pycompss'], default='mpi', help="Execution model to use for speedup@k and efficiency@k")
     parser.add_argument("-o", "--output", type=str, help="Output csv file containing the results.")
     parser.add_argument("--problem-sizes", type=str, default='../drivers/problem-sizes.json', help="Json with problem sizes. Used for calculating GPU efficiency.")
     parser.add_argument("--model-name", type=str, help="Add model name column with this value")
@@ -124,10 +124,40 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
 
     return df
 
+def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
+    """For PyCOMPSs, replace best_sequential_runtime with the n=1 (single-worker) runtime.
+
+    PyCOMPSs carries inherent scheduling overhead that makes comparison against a purely
+    sequential baseline reflect overhead rather than scaling. Using n=1 as the reference
+    isolates how well the code scales with additional resources.
+    Requires df["n"] to be populated before calling.
+    """
+    df = df.copy()
+    mask = df["parallelism_model"] == "pycompss"
+    if not mask.any():
+        return df
+
+    n1_baselines = (
+        df[mask & (df["n"] == 1) & df["is_valid"]]
+        .groupby(["name", "output_idx"])["runtime"]
+        .min()
+        .reset_index()
+        .rename(columns={"runtime": "n1_baseline"})
+    )
+
+    df = df.merge(n1_baselines, on=["name", "output_idx"], how="left")
+    updated = mask & df["n1_baseline"].notna()
+    df.loc[updated, "best_sequential_runtime"] = df.loc[updated, "n1_baseline"]
+    return df.drop(columns=["n1_baseline"])
+
+
 def parse_problem_size(problem_size: str) -> int:
-    """ problem size is of format '(1<<n)' """
-    num = problem_size.split("<<")[1][:-1]
-    return 2 ** int(num)
+    """ problem size is of format '(1<<n)' or a plain integer """
+    if "<<" in problem_size:
+        num = problem_size.split("<<")[1][:-1]
+        return 2 ** int(num)
+    else:
+        return int(problem_size)
 
 def main():
     args = get_args()
@@ -161,8 +191,14 @@ def main():
     elif args.execution_model == "kokkos":
         df = df[df["parallelism_model"] == "kokkos"]
         df["n"] = df["num_threads"]
+    elif args.execution_model == "pycompss":
+        df = df[df["parallelism_model"] == "pycompss"]
+        df["n"] = df["num_procs"]
     else:
         raise NotImplementedError(f"Unsupported execution model {args.execution_model}")
+
+    # For PyCOMPSs, scale relative to n=1 instead of the purely sequential baseline
+    df = apply_n1_baseline(df)
 
     # get values for each k
     all_results = []
