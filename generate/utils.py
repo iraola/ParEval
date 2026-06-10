@@ -875,6 +875,8 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return ReplitConfig(**kwargs)
     elif model_name.startswith('ise-uiuc/Magicoder'):
         return MagicoderConfig(**kwargs)
+    elif model_name == 'deepseek-ai/deepseek-coder-6.7b-instruct':
+        return InstructConfig(instruction_tag='### Instruction:', response_tag='### Response:', **kwargs)
     elif model_name.startswith('deepseek-ai/') and 'Instruct' not in model_name and 'R1' not in model_name:
         return DeepSeekBaseConfig(**kwargs)
     elif model_name.startswith('hpcgroup/hpc-coder-v2'):
@@ -887,8 +889,6 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
         return ChatMLConfig(**kwargs)
     elif model_name.startswith('Qwen/Qwen2.5'):
         return QwenConfig(**kwargs)
-    elif model_name == 'deepseek-ai/deepseek-coder-6.7b-instruct':
-        return InstructConfig(instruction_tag='### Instruction:', response_tag='### Response:', **kwargs)
     elif ('Llama-3.1' in model_name or 'Llama-3.3' in model_name) and 'Instruct' in model_name:
         return Llama3InstructConfig(**kwargs)
     elif 'DeepSeek-R1' in model_name:
