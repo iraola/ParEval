@@ -301,6 +301,7 @@ class DriverWrapper(ABC):
             build_stderr = results.build_output.stderr.strip()
             outputs.append({
                 "generated_output": generated_output,
+                "problem_size": problem_size,
                 "source_write_success": results.source_write_success,
                 "did_build": results.did_build(),
                 "is_source_valid": self.validator.validate(generated_output),
