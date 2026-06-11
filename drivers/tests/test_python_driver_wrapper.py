@@ -11,8 +11,8 @@ Coverage:
   - Wave CPU assignment (no overlap, within bounds, single-CPU format)
   - Wave result ordering (original config order preserved)
   - Wave overflow (configs that don't fit split into a second wave)
-  - NIO port uniqueness within a concurrent wave and across waves
-  - Resources XML content (computing_units, ports)
+  - Master port uniqueness within a concurrent wave and across waves
+  - Project XML content (computing_units)
   - Workdir lifecycle (created under TMPDIR, deleted on success and timeout)
   - Normal mode (no resource_slot: no XML, no cpu_affinity injection)
   - Integration: real subprocess parsing Time/BestSequential/Validation output
@@ -43,9 +43,7 @@ from python.relaxations import RenameMainRelaxation  # noqa: E402
 
 
 def _reset_port_counter():
-    """Reset both NIO port counters to their base values between tests."""
-    with _pdw_module._nio_port_lock:
-        _pdw_module._nio_port_current = _pdw_module._NIO_PORT_BASE
+    """Reset the master port counter to its base value between tests."""
     with _pdw_module._master_port_lock:
         _pdw_module._master_port_current = _pdw_module._MASTER_PORT_BASE
 
@@ -56,11 +54,12 @@ def _reset_port_counter():
 PASS_OUTPUT = "Time: 0.100\nBestSequential: 0.200\nValidation: PASS\n"
 FAIL_OUTPUT = "Time: 0.050\nBestSequential: 0.100\nValidation: FAIL\n"
 
-# Format that exercises all resource-slot placeholders
+# Format that exercises all resource-slot placeholders (mirrors the real
+# pycompss launch format: taskset for affinity, project.xml, master port)
 SLOT_FMT = (
-    "fake_runcompss --cpu_affinity={cpu_affinity} "
+    "taskset -c {cpu_affinity} fake_runcompss "
+    "--project={project_xml} "
     "--master_port={master_port} "
-    "--resources={resources_xml} "
     "--master_working_dir={master_working_dir} "
     "{exec_path} {args}"
 )
@@ -121,9 +120,9 @@ def _parse_affinity(aff: str) -> set:
 
 
 def _xml_from_cmd(cmd: str):
-    """Extract and parse the resources XML file referenced in a fake_runcompss command."""
-    m = re.search(r"--resources=(\S+)", cmd)
-    assert m, f"No --resources= in command: {cmd}"
+    """Extract and parse the project XML file referenced in a fake_runcompss command."""
+    m = re.search(r"--project=(\S+)", cmd)
+    assert m, f"No --project= in command: {cmd}"
     return ET.parse(m.group(1)).getroot()
 
 
@@ -241,23 +240,21 @@ class TestWavePacking:
 # NIO port uniqueness
 # ---------------------------------------------------------------------------
 
-class TestPortDerivation:
+class TestMasterPortAllocation:
     @pytest.fixture(autouse=True)
     def reset_counter(self):
         _reset_port_counter()
         yield
         _reset_port_counter()
 
-    def _collect_port_pairs(self, driver, configs=None, **run_kwargs):
-        """Run either _run_configs_in_waves (if configs given) or run() once, collecting all XML port pairs."""
-        port_pairs, lock = [], threading.Lock()
+    def _collect_master_ports(self, driver, configs=None, **run_kwargs):
+        """Run either _run_configs_in_waves (if configs given) or run() once, collecting master ports."""
+        ports, lock = [], threading.Lock()
 
         def mock_cmd(cmd, **kw):
-            root = _xml_from_cmd(cmd)
-            mn = int(root.find(".//MinPort").text)
-            mx = int(root.find(".//MaxPort").text)
+            m = re.search(r"--master_port=(\d+)", cmd)
             with lock:
-                port_pairs.append((mn, mx))
+                ports.append(int(m.group(1)) if m else -1)
             return CompletedProcess(cmd, 0, PASS_OUTPUT, "")
 
         with patch("python.python_driver_wrapper.run_command", mock_cmd):
@@ -265,62 +262,57 @@ class TestPortDerivation:
                 driver._run_configs_in_waves("dummy.py", configs)
             else:
                 driver.run("dummy.py", **run_kwargs)
-        return port_pairs
+        return ports
 
-    def test_run_gets_min_max_pair(self):
-        """run() writes a resources XML with max_port == min_port + num_procs."""
+    def test_run_gets_a_master_port(self):
+        """run() assigns a master port within the configured range."""
         d = make_driver(resource_slot=SLOT_8)
-        pairs = self._collect_port_pairs(d, num_procs=4, cpu_affinity="0-3")
-        assert len(pairs) == 1
-        mn, mx = pairs[0]
-        assert mx == mn + 4  # max_port = min_port + num_procs
+        ports = self._collect_master_ports(d, num_procs=4, cpu_affinity="0-3")
+        assert len(ports) == 1
+        assert _pdw_module._MASTER_PORT_BASE <= ports[0] <= _pdw_module._MASTER_PORT_MAX
 
     def test_ports_unique_across_all_concurrent_wave_configs(self):
-        """No two configs in the same wave should share a port number."""
+        """No two configs in the same wave should share a master port."""
         d = make_driver(resource_slot=SLOT_8)
         configs = [{"num_procs": 4}, {"num_procs": 2}, {"num_procs": 1}, {"num_procs": 1}]
-        pairs = self._collect_port_pairs(d, configs=configs)
-        all_ports = [p for mn, mx in pairs for p in (mn, mx)]
-        assert len(all_ports) == len(set(all_ports)), f"Duplicate ports detected: {pairs}"
+        ports = self._collect_master_ports(d, configs=configs)
+        assert len(ports) == len(set(ports)), f"Duplicate ports detected: {ports}"
 
     def test_sequential_runs_on_same_slot_get_unique_ports(self):
         """Correctness mode: multiple outputs run sequentially on the same slot.
         Every call to run() must get a fresh port, not reuse the previous one."""
         d = make_driver(resource_slot=SLOT_8)
-        pairs = []
+        ports = []
         for _ in range(5):
-            pairs.extend(self._collect_port_pairs(d, num_procs=8, cpu_affinity="0-7"))
-        all_ports = [p for mn, mx in pairs for p in (mn, mx)]
-        assert len(all_ports) == len(set(all_ports)), \
-            f"Port reused across sequential correctness runs: {pairs}"
+            ports.extend(self._collect_master_ports(d, num_procs=8, cpu_affinity="0-7"))
+        assert len(ports) == len(set(ports)), \
+            f"Port reused across sequential correctness runs: {ports}"
 
     def test_counter_wraps_before_exceeding_max(self):
-        """When the counter reaches _NIO_PORT_MAX it wraps back to _NIO_PORT_BASE,
+        """When the counter reaches _MASTER_PORT_MAX it wraps back to _MASTER_PORT_BASE,
         keeping port numbers within a safe range."""
         d = make_driver(resource_slot=SLOT_8)
-        # Drive the counter to one step before the wrap boundary.
-        with _pdw_module._nio_port_lock:
-            _pdw_module._nio_port_current = _pdw_module._NIO_PORT_MAX - 1
+        with _pdw_module._master_port_lock:
+            _pdw_module._master_port_current = _pdw_module._MASTER_PORT_MAX
 
-        pairs_before = self._collect_port_pairs(d, num_procs=8, cpu_affinity="0-7")
-        pairs_after  = self._collect_port_pairs(d, num_procs=8, cpu_affinity="0-7")
+        before = self._collect_master_ports(d, num_procs=8, cpu_affinity="0-7")
+        after  = self._collect_master_ports(d, num_procs=8, cpu_affinity="0-7")
 
-        assert pairs_before[0][0] == _pdw_module._NIO_PORT_MAX - 1
-        assert pairs_after[0][0]  == _pdw_module._NIO_PORT_BASE
-        assert pairs_after[0][0] <= _pdw_module._NIO_PORT_MAX
+        assert before[0] == _pdw_module._MASTER_PORT_MAX
+        assert after[0]  == _pdw_module._MASTER_PORT_BASE
 
 
 # ---------------------------------------------------------------------------
-# NIO port uniqueness across waves
+# Master port uniqueness across waves
 # ---------------------------------------------------------------------------
 
 class TestPortUniquenessAcrossWaves:
-    """Worker ports must be globally unique across all waves, not just within one wave.
+    """Master ports must be globally unique across all waves, not just within one wave.
     Each test resets the counter so port values are deterministic and don't
     depend on the number of run() calls made by earlier tests.
 
-    Fixed by a global atomic counter (_alloc_nio_port) that advances regardless
-    of wave boundaries, so no two configs ever receive the same MinPort block.
+    A global atomic counter (_alloc_master_port) advances regardless of wave
+    boundaries, so no two concurrent runcompss instances share a master port.
     """
 
     @pytest.fixture(autouse=True)
@@ -328,21 +320,6 @@ class TestPortUniquenessAcrossWaves:
         _reset_port_counter()
         yield
         _reset_port_counter()
-
-    def _collect_min_ports(self, driver, configs):
-        """Run _run_configs_in_waves, return one min_port per config (from XML)."""
-        min_ports = []
-        lock = threading.Lock()
-
-        def mock_cmd(cmd, **kw):
-            root = _xml_from_cmd(cmd)
-            with lock:
-                min_ports.append(int(root.find(".//MinPort").text))
-            return CompletedProcess(cmd, 0, PASS_OUTPUT, "")
-
-        with patch("python.python_driver_wrapper.run_command", mock_cmd):
-            driver._run_configs_in_waves("dummy.py", configs)
-        return min_ports
 
     def _collect_master_ports(self, driver, configs):
         """Run _run_configs_in_waves, return one master_port per config (from cmd)."""
@@ -365,18 +342,18 @@ class TestPortUniquenessAcrossWaves:
         must use a different port."""
         d = make_driver(resource_slot=SLOT_8)
         configs = [{"num_procs": 4}, {"num_procs": 4}, {"num_procs": 4}]
-        min_ports = self._collect_min_ports(d, configs)
-        assert len(min_ports) == 3
-        assert len(set(min_ports)) == len(min_ports), \
-            f"Port reuse across waves: {min_ports}"
+        ports = self._collect_master_ports(d, configs)
+        assert len(ports) == 3
+        assert len(set(ports)) == len(ports), \
+            f"Port reuse across waves: {ports}"
 
     def test_wave2_first_config_does_not_reuse_wave1_first_config_port(self):
         """Wave 2 resets cpu_start to 0 but must not reuse Wave 1's port."""
         d = make_driver(resource_slot=SLOT_8)
         configs = [{"num_procs": 4}, {"num_procs": 4}, {"num_procs": 4}]
-        min_ports = self._collect_min_ports(d, configs)
-        assert len(set(min_ports)) == len(min_ports), \
-            f"Port reuse detected: {min_ports}"
+        ports = self._collect_master_ports(d, configs)
+        assert len(set(ports)) == len(ports), \
+            f"Port reuse detected: {ports}"
 
     def test_full_scaling_scenario_reproduces_original_bug(self):
         """Exact scenario from the bug: [1,2,4,8,16,32,64] on a 112-CPU slot.
@@ -384,32 +361,32 @@ class TestPortUniquenessAcrossWaves:
         Wave 1 (112 CPUs): 64-proc @ cpu 0, 32-proc @ cpu 64, 16-proc @ cpu 96.
         Wave 2  (15 CPUs):  8-proc @ cpu 0, 4-proc @ cpu 8, 2-proc @ cpu 12, 1-proc @ cpu 14.
 
-        The global counter ensures Wave 2's 8-proc config gets a different MinPort
-        than Wave 1's 64-proc config, preventing BindException on port reuse.
+        The global counter ensures Wave 2's 8-proc config gets a different master
+        port than Wave 1's 64-proc config, preventing BindException on port reuse.
         """
         slot = {"cpu_start": 0, "slot_cpus": 112, }
         d = make_driver(resource_slot=slot)
         configs = [{"num_procs": n} for n in [1, 2, 4, 8, 16, 32, 64]]
-        min_ports = self._collect_min_ports(d, configs)
-        assert len(min_ports) == 7
-        assert len(set(min_ports)) == 7, \
-            f"Duplicate ports detected (original bug): {min_ports}"
+        ports = self._collect_master_ports(d, configs)
+        assert len(ports) == 7
+        assert len(set(ports)) == 7, \
+            f"Duplicate ports detected (original bug): {ports}"
 
     def test_three_waves_all_ports_unique(self):
         """[4,4,4,4,4,4] on 8-CPU slot → three waves of two, all ports unique."""
         d = make_driver(resource_slot=SLOT_8)
         configs = [{"num_procs": 4}] * 6
-        min_ports = self._collect_min_ports(d, configs)
-        assert len(set(min_ports)) == 6, \
-            f"Port reuse across three waves: {min_ports}"
+        ports = self._collect_master_ports(d, configs)
+        assert len(set(ports)) == 6, \
+            f"Port reuse across three waves: {ports}"
 
     def test_offset_slot_ports_unique_across_waves(self):
         """Same check on a non-zero cpu_start slot (cpu_start=10)."""
         d = make_driver(resource_slot=SLOT_OFFSET)  # cpu_start=10, slot_cpus=8
         configs = [{"num_procs": 4}, {"num_procs": 4}, {"num_procs": 4}]
-        min_ports = self._collect_min_ports(d, configs)
-        assert len(set(min_ports)) == 3, \
-            f"Port reuse with offset slot: {min_ports}"
+        ports = self._collect_master_ports(d, configs)
+        assert len(set(ports)) == 3, \
+            f"Port reuse with offset slot: {ports}"
 
     def test_master_ports_unique_within_concurrent_wave(self):
         """Concurrent runs in a scaling wave must each get a unique master port.
@@ -444,8 +421,8 @@ class TestRunMethod:
             result = d.run("myexec.py")
 
         assert len(captured) == 1
-        assert "cpu_affinity" not in captured[0]
-        assert "resources_xml" not in captured[0]
+        assert "taskset" not in captured[0]
+        assert "--project=" not in captured[0]
         assert result.is_valid is True
 
     def test_slot_mode_injects_full_slot_cpu_affinity(self):
@@ -461,7 +438,7 @@ class TestRunMethod:
             d.run("exec.py")
 
         assert captured
-        assert "--cpu_affinity=0-7" in captured[0]
+        assert "taskset -c 0-7" in captured[0]
 
     def test_xml_computing_units_matches_num_procs(self):
         d = make_driver(resource_slot=SLOT_8)
@@ -893,8 +870,8 @@ class TestRunMethodExtra:
             d.run("exec.py", num_procs=1, cpu_affinity="5")
 
         assert captured
-        assert "--cpu_affinity=5" in captured[0]
-        assert "--cpu_affinity=5-5" not in captured[0]
+        assert "taskset -c 5 " in captured[0]
+        assert "taskset -c 5-5" not in captured[0]
 
 
 # ---------------------------------------------------------------------------

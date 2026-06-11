@@ -27,19 +27,17 @@ Scaling mode
         Wave 1 (112 CPUs): 64 (0-63) + 32 (64-95) + 16 (96-111)
         Wave 2  (15 CPUs):  8  (0-7) +  4  (8-11) +  2 (12-13) + 1 (14)
 
-NIO port assignment
-    Two distinct port spaces, both below Linux ephemeral range (32768+):
+Resource allocation per run
+    Each run executes master-only: a generated project.xml sets the
+    MasterNode's ComputingUnits to num_procs (no separate worker JVMs), and
+    `taskset -c {cpu_affinity}` pins the runcompss process tree to that many
+    CPUs.
 
     Master port (--master_port, range 30001–32767)
-        Allocated per-run by `_alloc_master_port`.  Each concurrent runcompss
-        instance gets a unique master NIO server port, preventing the TOCTOU
-        race that occurs when multiple instances scan a shared default range.
-
-    Worker ports (resources.xml MinPort/MaxPort, range 10001–29999)
-        Allocated per-run by `_alloc_nio_port`.  Step = num_procs+3 leaves a
-        gap so worker JVMs that scan beyond MaxPort never reach the next
-        allocation's MinPort.  The allocator also socket-probes each candidate
-        to skip ports held by zombie JVMs from timed-out runs.
+        Allocated per-run by `_alloc_master_port` (below the Linux ephemeral
+        range so the OS never reuses it as a source port).  Each concurrent
+        runcompss instance gets a unique master NIO server port, preventing
+        the collision that occurs when instances share the default port.
 
 Resource cleanup
     Each `run()` call creates a temporary COMPSs workdir under `$TMPDIR`
@@ -59,7 +57,6 @@ from os import PathLike
 import re
 import subprocess
 import sys
-import socket
 import tempfile
 import threading
 import shutil
@@ -70,46 +67,13 @@ sys.path.append("..")
 from drivers.driver_wrapper import DriverWrapper, BuildOutput, RunOutput, GeneratedTextResult
 from util import run_command
 
-# Process-wide counters for NIO port allocation.  All ranges are below the
-# Linux ephemeral range (32768+) so the OS never reuses them as source ports.
-#
-# Worker ports (resources.xml MinPort/MaxPort): 10001–29999
-#   Step = num_procs+3 so worker JVMs scanning past MaxPort never reach the
-#   next allocation's MinPort.  Socket-probed to skip zombie-held blocks.
-#
-# Master ports (--master_port): 30001–32767
-#   One port per runcompss instance; no overlap with worker range.
-_NIO_PORT_BASE = 10001
-_NIO_PORT_MAX  = 29999
-_nio_port_current = _NIO_PORT_BASE
-_nio_port_lock = threading.Lock()
-
+# Process-wide master-port counter for runcompss.  Range is below the Linux
+# ephemeral range (32768+) so the OS never reuses it as a source port; one
+# unique port per concurrent runcompss instance.
 _MASTER_PORT_BASE = 30001
 _MASTER_PORT_MAX  = 32767
 _master_port_current = _MASTER_PORT_BASE
 _master_port_lock = threading.Lock()
-
-
-def _alloc_nio_port(num_procs: int = 1) -> int:
-    """Return a worker MinPort block that is currently free to bind.
-
-    Skips any block whose MinPort is already in use (e.g. zombie JVMs from
-    timed-out runs) as a safety net against unexpected port conflicts.
-    """
-    global _nio_port_current
-    step = num_procs + 3
-    max_attempts = (_NIO_PORT_MAX - _NIO_PORT_BASE) // step
-    with _nio_port_lock:
-        for _ in range(max_attempts):
-            port = _nio_port_current
-            _nio_port_current = _NIO_PORT_BASE if port + step > _NIO_PORT_MAX else port + step
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(("", port))
-                return port
-            except OSError:
-                logging.debug("NIO MinPort %d in use (zombie JVM?), skipping block", port)
-        raise RuntimeError("No free NIO port block found in range %d-%d", _NIO_PORT_BASE, _NIO_PORT_MAX)
 
 
 def _alloc_master_port() -> int:
@@ -125,45 +89,21 @@ def _indent(text: str, prefix: str = "    ") -> str:
     return "\n".join(prefix + line for line in text.splitlines())
 
 
-_RESOURCES_XML_TEMPLATE = """\
+_PROJECT_XML_TEMPLATE = """\
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<ResourcesList>
-    <ComputeNode Name="localhost">
+<Project>
+    <MasterNode>
         <Processor Name="MainProcessor">
             <ComputingUnits>{computing_units}</ComputingUnits>
         </Processor>
-        <Adaptors>
-            <Adaptor Name="es.bsc.compss.nio.master.NIOAdaptor">
-                <SubmissionSystem>
-                    <Interactive/>
-                </SubmissionSystem>
-                <Ports>
-                    <MinPort>{min_port}</MinPort>
-                    <MaxPort>{max_port}</MaxPort>
-                </Ports>
-            </Adaptor>
-            <Adaptor Name="es.bsc.compss.gat.master.GATAdaptor">
-                <SubmissionSystem>
-                    <Batch>
-                        <Queue>sequential</Queue>
-                    </Batch>
-                    <Interactive/>
-                </SubmissionSystem>
-                <BrokerAdaptor>sshtrilead</BrokerAdaptor>
-            </Adaptor>
-        </Adaptors>
-    </ComputeNode>
-</ResourcesList>
+    </MasterNode>
+</Project>
 """
 
 
-def _write_resources_xml(path: str, computing_units: int, min_port: int, max_port: int):
+def _write_project_xml(path: str, computing_units: int):
     with open(path, "w") as f:
-        f.write(_RESOURCES_XML_TEMPLATE.format(
-            computing_units=computing_units,
-            min_port=min_port,
-            max_port=max_port,
-        ))
+        f.write(_PROJECT_XML_TEMPLATE.format(computing_units=computing_units))
 
 
 """ Map parallelism models to driver files """
@@ -451,17 +391,16 @@ class PythonDriverWrapper(DriverWrapper):
                 end = cpu_start + num_procs - 1
                 run_config["cpu_affinity"] = f"{cpu_start}-{end}" if num_procs > 1 else str(cpu_start)
 
-            min_port = _alloc_nio_port(num_procs)
-            max_port = min_port + num_procs
+            # Unique master port so concurrent runcompss instances don't collide
             master_port = _alloc_master_port()
-            logging.debug("NIO ports %d-%d (worker) / %d (master) assigned for cpu_affinity=%s",
-                          min_port, max_port, master_port, run_config.get("cpu_affinity", "?"))
+            logging.debug("Assigned cpu_affinity=%s master_port=%d",
+                          run_config.get("cpu_affinity", "?"), master_port)
 
-            resources_xml = os.path.join(compss_workdir, "resources.xml")
-            _write_resources_xml(resources_xml, num_procs, min_port, max_port)
+            project_xml = os.path.join(compss_workdir, "project.xml")
+            _write_project_xml(project_xml, num_procs)
 
             run_config = {**run_config,
-                          "resources_xml": resources_xml,
+                          "project_xml": project_xml,
                           "master_port": master_port,
                           "master_working_dir": compss_workdir}
 

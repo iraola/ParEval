@@ -113,7 +113,7 @@ def get_args():
         ),
     )
     parser.add_argument("--resource-slots", type=str, metavar="FILE",
-        help="JSON file listing resource slots for parallel execution (keys: cpu_affinity, resources_xml). One thread per slot.")
+        help="JSON file listing resource slots for parallel execution (keys: cpu_start, slot_cpus). One thread per slot.")
     return parser.parse_args()
 
 def resolve_relaxations(relaxations_arg):
