@@ -23,7 +23,7 @@
 #   sbatch [--array=0-$((N-1))] run-all-models-slurm-scaling.sh <dir> [options]
 #
 # Options:
-#   --timeout N            Run timeout per runcompss call in seconds (default: 300)
+#   --timeout N            Run timeout per runcompss call in seconds (default: 240)
 #   --relaxations MODE     Relaxation mode (default: all)
 #   --problem-sizes FILE   Problem-sizes JSON (default: problem-sizes.json)
 #
@@ -34,7 +34,7 @@
 DIR="${1:-kernel}"
 shift 2>/dev/null
 
-TIMEOUT=300
+TIMEOUT=240
 RELAXATIONS=all
 PROBLEM_SIZES=problem-sizes.json
 

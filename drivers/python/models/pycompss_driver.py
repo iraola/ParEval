@@ -1,5 +1,5 @@
 import time
-NITER = 5
+NITER = 3
 MAX_VALIDATION_ATTEMPTS = 2
 
 def run_benchmark():
