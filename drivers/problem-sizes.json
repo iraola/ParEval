@@ -7,7 +7,7 @@
     "kokkos": "(1<<9)",
     "cuda": "(1<<10)",
     "hip": "(1<<10)",
-    "pycompss": "5"
+    "pycompss": "(1<<8)"
   },
   "01_dense_la_solve": {
     "serial": "(1<<10)",
@@ -17,7 +17,7 @@
     "kokkos": "(1<<9)",
     "cuda": "(1<<10)",
     "hip": "(1<<10)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "02_dense_la_gemm": {
     "serial": "(1<<9)",
@@ -27,7 +27,7 @@
     "kokkos": "(1<<9)",
     "cuda": "(1<<9)",
     "hip": "(1<<9)",
-    "pycompss": "5"
+    "pycompss": "(1<<8)"
   },
   "03_dense_la_axpy": {
     "serial": "(1<<24)",
@@ -37,7 +37,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "04_dense_la_gemv": {
     "serial": "(1<<13)",
@@ -47,7 +47,7 @@
     "kokkos": "(1<<13)",
     "cuda": "(1<<13)",
     "hip": "(1<<13)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "05_fft_inverse_fft": {
     "serial": "(1<<17)",
@@ -57,7 +57,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "06_fft_dft": {
     "serial": "(1<<11)",
@@ -67,7 +67,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<11)",
     "hip": "(1<<11)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "07_fft_fft_conjugate": {
     "serial": "(1<<18)",
@@ -77,7 +77,7 @@
     "kokkos": "(1<<18)",
     "cuda": "(1<<18)",
     "hip": "(1<<18)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "08_fft_split_fft": {
     "serial": "(1<<17)",
@@ -87,7 +87,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "09_fft_fft_out_of_place": {
     "serial": "(1<<17)",
@@ -97,7 +97,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "10_geometry_convex_hull": {
     "serial": "(1<<14)",
@@ -107,7 +107,7 @@
     "kokkos": "(1<<14)",
     "cuda": "(1<<14)",
     "hip": "(1<<14)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "11_geometry_convex_hull_perimeter": {
     "serial": "(1<<14)",
@@ -117,7 +117,7 @@
     "kokkos": "(1<<14)",
     "cuda": "(1<<14)",
     "hip": "(1<<14)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "12_geometry_smallest_triangle": {
     "serial": "(1<<8)",
@@ -127,7 +127,7 @@
     "kokkos": "(1<<7)",
     "cuda": "(1<<10)",
     "hip": "(1<<10)",
-    "pycompss": "5"
+    "pycompss": "(1<<7)"
   },
   "13_geometry_closest_pair_2d": {
     "serial": "(1<<14)",
@@ -137,7 +137,7 @@
     "kokkos": "(1<<13)",
     "cuda": "(1<<14)",
     "hip": "(1<<14)",
-    "pycompss": "10"
+    "pycompss": "(1<<9)"
   },
   "14_geometry_closest_pair_1d": {
     "serial": "(1<<14)",
@@ -147,7 +147,7 @@
     "kokkos": "(1<<13)",
     "cuda": "(1<<14)",
     "hip": "(1<<14)",
-    "pycompss": "10"
+    "pycompss": "(1<<9)"
   },
   "15_graph_edge_count": {
     "serial": "(1<<12)",
@@ -157,7 +157,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "16_graph_largest_component": {
     "serial": "(1<<12)",
@@ -167,7 +167,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "17_graph_highest_degree": {
     "serial": "(1<<12)",
@@ -177,7 +177,7 @@
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "18_graph_count_components": {
     "serial": "(1<<12)",
@@ -187,7 +187,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "19_graph_shortest_path": {
     "serial": "(1<<12)",
@@ -197,7 +197,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "20_histogram_pixel_histogram": {
     "serial": "(1<<22)",
@@ -207,7 +207,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "21_histogram_bin_0-100": {
     "serial": "(1<<22)",
@@ -217,7 +217,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "22_histogram_count_quadrants": {
     "serial": "(1<<22)",
@@ -227,7 +227,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "23_histogram_first_letter_counts": {
     "serial": "(1<<22)",
@@ -237,7 +237,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<17)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "24_histogram_count_quartile": {
     "serial": "(1<<22)",
@@ -247,7 +247,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "25_reduce_xor": {
     "serial": "(1<<24)",
@@ -257,7 +257,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "26_reduce_product_of_inverses": {
     "serial": "(1<<23)",
@@ -267,7 +267,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<23)",
     "hip": "(1<<23)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "27_reduce_average": {
     "serial": "(1<<24)",
@@ -277,7 +277,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "28_reduce_smallest_odd_number": {
     "serial": "(1<<24)",
@@ -287,7 +287,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "29_reduce_sum_of_min_of_pairs": {
     "serial": "(1<<24)",
@@ -297,7 +297,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "30_scan_prefix_sum": {
     "serial": "(1<<23)",
@@ -307,7 +307,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<23)",
     "hip": "(1<<23)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "31_scan_scan_with_min_function": {
     "serial": "(1<<22)",
@@ -317,7 +317,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "32_scan_sum_of_prefix_sum_array": {
     "serial": "(1<<22)",
@@ -327,7 +327,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "33_scan_reverse_prefix_sum": {
     "serial": "(1<<22)",
@@ -337,7 +337,7 @@
     "kokkos": "(1<<22)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "34_scan_largest_contiguous_subarray_sum": {
     "serial": "(1<<15)",
@@ -347,7 +347,7 @@
     "kokkos": "(1<<15)",
     "cuda": "(1<<15)",
     "hip": "(1<<15)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "35_search_search_for_last_struct_by_key": {
     "serial": "(1<<21)",
@@ -357,7 +357,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "36_search_check_if_array_contains_value": {
     "serial": "(1<<21)",
@@ -367,7 +367,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "37_search_find_the_closest_number_to_pi": {
     "serial": "(1<<21)",
@@ -377,7 +377,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "38_search_find_the_first_even_number": {
     "serial": "(1<<21)",
@@ -387,7 +387,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "39_search_xor_contains": {
     "serial": "(1<<21)",
@@ -397,7 +397,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "40_sort_sort_an_array_of_complex_numbers_by_magnitude": {
     "serial": "(1<<17)",
@@ -407,7 +407,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "41_sort_k-th_smallest_element": {
     "serial": "(1<<17)",
@@ -417,7 +417,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "42_sort_sorted_ranks": {
     "serial": "(1<<17)",
@@ -427,7 +427,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "43_sort_sort_an_array_of_structs_by_key": {
     "serial": "(1<<17)",
@@ -437,7 +437,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "44_sort_sort_non-zero_elements": {
     "serial": "(1<<17)",
@@ -447,7 +447,7 @@
     "kokkos": "(1<<17)",
     "cuda": "(1<<17)",
     "hip": "(1<<17)",
-    "pycompss": "10"
+    "pycompss": "(1<<10)"
   },
   "45_sparse_la_sparse_solve": {
     "serial": "(1<<10)",
@@ -457,7 +457,7 @@
     "kokkos": "(1<<9)",
     "cuda": "(1<<10)",
     "hip": "(1<<10)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "46_sparse_la_spmm": {
     "serial": "(1<<8)",
@@ -467,7 +467,7 @@
     "kokkos": "(1<<8)",
     "cuda": "(1<<8)",
     "hip": "(1<<8)",
-    "pycompss": "5"
+    "pycompss": "(1<<8)"
   },
   "47_sparse_la_spmv": {
     "serial": "(1<<11)",
@@ -477,7 +477,7 @@
     "kokkos": "(1<<11)",
     "cuda": "(1<<11)",
     "hip": "(1<<11)",
-    "pycompss": "5"
+    "pycompss": "(1<<10)"
   },
   "48_sparse_la_sparse_axpy": {
     "serial": "(1<<21)",
@@ -487,7 +487,7 @@
     "kokkos": "(1<<19)",
     "cuda": "(1<<20)",
     "hip": "(1<<20)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "49_sparse_la_sparse_lu_decomp": {
     "serial": "(1<<9)",
@@ -497,7 +497,7 @@
     "kokkos": "(1<<8)",
     "cuda": "(1<<9)",
     "hip": "(1<<9)",
-    "pycompss": "5"
+    "pycompss": "(1<<8)"
   },
   "50_stencil_xor_kernel": {
     "serial": "(1<<12)",
@@ -507,7 +507,7 @@
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<9)"
   },
   "51_stencil_edge_kernel": {
     "serial": "(1<<12)",
@@ -517,7 +517,7 @@
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<9)"
   },
   "52_stencil_1d_jacobi_3-point_stencil": {
     "serial": "(1<<24)",
@@ -527,7 +527,7 @@
     "kokkos": "(1<<23)",
     "cuda": "(1<<24)",
     "hip": "(1<<24)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "53_stencil_2d_jacobi_5-point_stencil": {
     "serial": "(1<<12)",
@@ -537,7 +537,7 @@
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<9)"
   },
   "54_stencil_game_of_life": {
     "serial": "(1<<12)",
@@ -547,7 +547,7 @@
     "kokkos": "(1<<12)",
     "cuda": "(1<<12)",
     "hip": "(1<<12)",
-    "pycompss": "5"
+    "pycompss": "(1<<9)"
   },
   "55_transform_relu": {
     "serial": "(1<<22)",
@@ -557,7 +557,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "56_transform_negate_odds": {
     "serial": "(1<<22)",
@@ -567,7 +567,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "57_transform_inverse_offset": {
     "serial": "(1<<21)",
@@ -577,7 +577,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "58_transform_squaring": {
     "serial": "(1<<22)",
@@ -587,7 +587,7 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<22)",
     "hip": "(1<<22)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   },
   "59_transform_map_function": {
     "serial": "(1<<21)",
@@ -597,6 +597,6 @@
     "kokkos": "(1<<21)",
     "cuda": "(1<<21)",
     "hip": "(1<<21)",
-    "pycompss": "15"
+    "pycompss": "(1<<10)"
   }
 }

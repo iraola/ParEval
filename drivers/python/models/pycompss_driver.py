@@ -1,4 +1,7 @@
+import sys
 import time
+sys.setrecursionlimit(100000)
+
 NITER = 3
 MAX_VALIDATION_ATTEMPTS = 2
 
