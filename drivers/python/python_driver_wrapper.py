@@ -405,8 +405,10 @@ class PythonDriverWrapper(DriverWrapper):
                           "master_working_dir": compss_workdir}
 
         launch_cmd = launch_format.format(exec_path=executable, args="", **run_config).strip()
+        # Extra time to num_procs=1, with most serial work per run
+        run_timeout = self.run_timeout * 1.2 if run_config.get("num_procs") == 1 else self.run_timeout
         try:
-            run_process = run_command(launch_cmd, timeout=self.run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
+            run_process = run_command(launch_cmd, timeout=run_timeout, dry=self.dry, parallelism_model=self.parallelism_model)
             stderr = self._enrich_stderr_with_compss_job_logs(run_process.stderr)
             result = RunOutput(run_process.returncode, run_process.stdout, stderr, config=run_config)
         except subprocess.TimeoutExpired as e:
