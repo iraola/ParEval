@@ -39,7 +39,7 @@ TIMEOUT=60
 RELAXATIONS=all
 CPUS_PER_SLOT=1
 CPUS_ON_NODE=60  # restricted to leave room for master nodes
-PROBLEM_SIZE_OVERRIDE=5   # pass "none" to use problem-sizes.json instead
+PROBLEM_SIZE_OVERRIDE=8   # pass "none" to use problem-sizes.json instead
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

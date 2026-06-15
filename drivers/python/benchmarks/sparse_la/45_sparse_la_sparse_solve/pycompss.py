@@ -24,14 +24,21 @@ class Context:
 
     def reset_data(self):
         """
-        Generates a solvable sparse linear system in COO format with 15% density.
+        Generates a solvable sparse linear system in COO format with ~15% density.
+        Always includes the full diagonal (nonzero) so the dense Gaussian-elimination
+        baseline never hits a singular pivot, even at small N.
         """
         total_elements = self.N * self.N
         nnz = int(0.15 * total_elements)
-        
-        flat_indices = random.sample(range(total_elements), nnz)
-        
-        values = [0.0] * nnz
+
+        diagonal_indices = [i * self.N + i for i in range(self.N)]
+        off_diagonal_indices = [idx for idx in range(total_elements) if idx % self.N != idx // self.N]
+        n_extra = max(nnz - self.N, 0)
+        extra_indices = random.sample(off_diagonal_indices, min(n_extra, len(off_diagonal_indices)))
+
+        flat_indices = diagonal_indices + extra_indices
+
+        values = [0.0] * len(flat_indices)
         fillRand(values, -10.0, 10.0)
         
         self.A_coo = []

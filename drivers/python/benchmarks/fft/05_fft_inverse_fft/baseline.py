@@ -1,7 +1,25 @@
 import cmath
 
+def _is_power_of_two(n):
+    return n > 0 and (n & (n - 1)) == 0
+
+def _dft_direct(x):
+    # Direct O(n^2) DFT, used as a fallback for sizes the Cooley-Tukey
+    # butterfly below can't handle (it requires n to be a power of two).
+    n = len(x)
+    output = [0.0j] * n
+    for k in range(n):
+        total = 0.0j
+        for j in range(n):
+            angle = -2j * cmath.pi * k * j / n
+            total += x[j] * cmath.exp(angle)
+        output[k] = total
+    return output
+
 def fft_iterative(x):
     n = len(x)
+    if not _is_power_of_two(n):
+        return _dft_direct(x)
 
     # Bit-reversal permutation
     j = 0
