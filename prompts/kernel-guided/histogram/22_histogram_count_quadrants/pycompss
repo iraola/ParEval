@@ -1,17 +1,17 @@
 """
-Generate a Python module to count Cartesian points by quadrant 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Count the number of points that fall into each of the four Cartesian quadrants (Q1, Q2, Q3, Q4). The input 'points' is a list of tuples (x, y) representing the coordinates.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
-- Synchronization: The main(points) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of four integers representing the final counts for [Q1, Q2, Q3, Q4] (ensure it is the final synchronized result, not a list of futures).
-- Provide your complete solution in a single Python code block.
+Count the number of cartesian points in each quadrant. The vector points contains a list of (x, y) tuples.
+  Store the counts in `bins`.
+  Use PyCOMPSs to count in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+  Parallelization: Use one or more @task decorated functions to handle the computation.
+  Orchestration: Provide a main(points) function that distributes the work and manages task dependencies.
+  Synchronization: The main(points) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python list of four integers representing the final counts for [Q1, Q2, Q3, Q4] (ensure it is the final synchronized result, not a list of futures).
+  Provide your complete solution in a single Python code block.
 
 Example:
-- Input: points=[(1.5, 0.1), (-3.0, 1.1), (5.0, 9.0), (1.5, -1.0), (3.0, -7.0), (0.1, 2.0)]
-- Output: [3, 1, 0, 2]
+
+   input: [(1.5, 0.1), (-3, 1.1), (5, 9), (1.5, -1), (3, -7), (0.1, 2)]
+   output: [3, 1, 0, 2]
+
 """

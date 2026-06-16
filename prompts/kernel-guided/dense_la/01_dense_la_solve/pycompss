@@ -1,17 +1,17 @@
 """
-Generate a Python module to solve a linear system of equations (Ax = b) 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Solve the linear system Ax = b for the unknown vector 'x', where 'A' is an NxN square matrix and 'b' is a vector of length N. 
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on, and any parameter directions like INOUT if modifying state in-place).
-- Parallelization: Use one or more @task decorated functions to handle the parallel computation steps.
-- Orchestration: Provide a main(A, b) function that distributes the work and manages task dependencies.
-- Synchronization: The main(A, b) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of floats representing the solution vector 'x' (ensure it is the final synchronized result, not a list of futures).
-- Provide your complete solution in a single Python code block.
+Solve the linear system Ax=b for x.
+  A is an NxN matrix in row-major. x and b have N elements.
+  Use PyCOMPSs to compute in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on, and any parameter directions like INOUT if modifying state in-place).
+  Parallelization: Use one or more @task decorated functions to handle the parallel computation steps.
+  Orchestration: Provide a main(A, b) function that distributes the work and manages task dependencies.
+  Synchronization: The main(A, b) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python list of floats representing the solution vector 'x' (ensure it is the final synchronized result, not a list of futures).
+  Provide your complete solution in a single Python code block.
 
 Example:
-- Input: A=[[1.0, 4.0, 2.0], [1.0, 2.0, 3.0], [2.0, 1.0, 3.0]], b=[11.0, 11.0, 13.0]
-- Output: [3.0, 1.0, 2.0]
+   
+   input: A=[[1,4,2], [1,2,3], [2,1,3]] b=[11, 11, 13]
+   output: x=[3, 1, 2]
+
 """

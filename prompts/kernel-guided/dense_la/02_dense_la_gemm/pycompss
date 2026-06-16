@@ -1,17 +1,17 @@
 """
-Generate a Python module to compute matrix multiplication (GEMM) 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Multiply an MxK matrix 'A' by a KxN matrix 'B' to compute an MxN result matrix 'C'.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(A, B) function that distributes the work and manages task dependencies.
-- Synchronization: The main(A, B) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of lists of floats representing the resulting matrix 'C' (ensure it is the final synchronized result, not a list of futures).
-- Provide your complete solution in a single Python code block.
+Multiply the matrix A by the matrix B. Store the results in the matrix C.
+  A is an MxK matrix, B is a KxN matrix, and C is a MxN matrix. The matrices are stored in row-major.
+  Use PyCOMPSs to compute in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+  Parallelization: Use one or more @task decorated functions to handle the computation.
+  Orchestration: Provide a main(A, B) function that distributes the work and manages task dependencies.
+  Synchronization: The main(A, B) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python list of lists of floats representing the resulting matrix 'C' (ensure it is the final synchronized result, not a list of futures).
+  Provide your complete solution in a single Python code block.
 
 Example:
-- Input: A=[[1.0, -1.0, 2.0], [0.0, -2.0, 1.0]], B=[[4.0, 1.0], [-1.0, 0.0], [2.0, 2.0]]
-- Output: [[9.0, 5.0], [4.0, 2.0]]
+
+   input: A=[[1, -1, 2], [0, -2, 1]] B=[[4, 1], [-1, 0], [2, 2]]
+   output: C=[[9, 5], [4, 2]]
+
 """

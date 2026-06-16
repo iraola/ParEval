@@ -1,17 +1,17 @@
 """
-Generate a Python module to count the first letters of strings 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Count the number of strings in the input list 'strings' that start with each letter of the English alphabet (a-z). Assume all strings are lowercase.
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(strings) function that distributes the work and manages task dependencies.
-- Synchronization: The main(strings) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of 26 integers representing the counts for each letter from 'a' to 'z' (ensure it is the final synchronized result, not a list of futures).
-- Provide your complete solution in a single Python code block.
+For each letter in the alphabet, count the number of strings in the vector s that start with that letter.
+  Assume all strings are in lower case. Store the output in `bins` array.
+  Use PyCOMPSs to compute in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+  Parallelization: Use one or more @task decorated functions to handle the computation.
+  Orchestration: Provide a main(strings) function that distributes the work and manages task dependencies.
+  Synchronization: The main(strings) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python list of 26 integers representing the counts for each letter from 'a' to 'z' (ensure it is the final synchronized result, not a list of futures).
+  Provide your complete solution in a single Python code block.
 
 Example:
-- Input: strings=["dog", "cat", "xray", "cow", "code", "type", "flower"]
-- Output: [0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+
+   input: ["dog", "cat", "xray", "cow", "code", "type", "flower"]
+   output: [0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+
 """

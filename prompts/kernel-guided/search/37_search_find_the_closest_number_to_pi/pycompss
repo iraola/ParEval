@@ -1,17 +1,17 @@
 """
-Generate a Python module to find the index of the value closest to Pi 
-in parallel using the PyCOMPSs framework.
-
-Task Specifications:
-- Functionality: Find the index of the element in the input list 'x' that has the smallest absolute difference from the mathematical constant Pi (use `math.pi`).
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on) as well as the standard `math` module.
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python integer representing the index of the closest value (ensure it is the final synchronized result, not a future).
-- Provide your complete solution in a single Python code block.
+Return the index of the value in the vector x that is closest to the math constant PI.
+  Use M_PI for the value of PI.
+  Use PyCOMPSs to search in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on) as well as the standard `math` module.
+  Parallelization: Use one or more @task decorated functions to handle the computation.
+  Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+  Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python integer representing the index of the closest value (ensure it is the final synchronized result, not a future).
+  Provide your complete solution in a single Python code block.
 
 Example:
-- Input: x=[9.18, 3.05, 7.24, 11.3, -166.49, 2.1]
-- Output: 1
+
+   input: [9.18, 3.05, 7.24, 11.3, -166.49, 2.1]
+   output: 1
+
 """

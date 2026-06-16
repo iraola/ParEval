@@ -1,17 +1,19 @@
 """
-Generate a Python module to compute the partial (running) minimums of a list 
-in parallel using the PyCOMPSs framework.
+Replace the i-th element of the vector x with the minimum value from indices 0 through i.
+  Use PyCOMPSs to compute in parallel.
+  Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
+  Parallelization: Use one or more @task decorated functions to handle the computation.
+  Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
+  Synchronization: The main(x) function must explicitly wait for all tasks to complete.
+  Return Type: Return a standard Python list of floats representing the running minimums (ensure it is the final synchronized result, not a list of futures).
+  Provide your complete solution in a single Python code block.
 
-Task Specifications:
-- Functionality: Replace the i-th element of the input list 'x' with the minimum value from indices 0 through i (inclusive). 
-- Imports: Include all necessary PyCOMPSs imports (e.g., @task, compss_wait_on).
-- Parallelization: Use one or more @task decorated functions to handle the computation.
-- Orchestration: Provide a main(x) function that distributes the work and manages task dependencies.
-- Synchronization: The main(x) function must explicitly wait for all tasks to complete.
-- Return Type: Return a standard Python list of floats representing the running minimums (ensure it is the final synchronized result, not a list of futures).
-- Provide your complete solution in a single Python code block.
+Examples:
 
-Example:
-- Input: x=[8.0, 6.0, -1.0, 7.0, 3.0, 4.0, 4.0]
-- Output: [8.0, 6.0, -1.0, -1.0, -1.0, -1.0, -1.0]
+   input: [8, 6, -1, 7, 3, 4, 4]
+   output: [8, 6, -1, -1, -1, -1, -1]
+
+   input: [5, 4, 6, 4, 3, 6, 1, 1]
+   output: [5, 4, 4, 4, 3, 3, 1, 1]
+
 """
