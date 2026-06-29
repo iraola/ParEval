@@ -108,7 +108,7 @@ echo "CPUs/slot:  $CPUS_PER_SLOT"
 echo "Size ovrd:  $PROBLEM_SIZE_OVERRIDE"
 
 # Generate resource slot definitions
-python3 generate_resource_slots.py \
+python3 tools/generate_resource_slots.py \
     --cpus-per-node "$CPUS_ON_NODE" \
     --cpus-per-slot "$CPUS_PER_SLOT" \
     --output "$SLOTS_FILE"

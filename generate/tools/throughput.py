@@ -15,6 +15,8 @@ import torch
 from transformers import pipeline
 
 # local imports
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils import BalancedBracketsCriteria, PromptDataset, clean_output, get_inference_config
 
 

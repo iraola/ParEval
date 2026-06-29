@@ -12,7 +12,11 @@ Pass the same path to --input and --output to update in-place.
 import argparse
 import json
 import os
+import sys
+from pathlib import Path
 
+# Allow running from generate/ now that this script lives in generate/tools/
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils import check_output_integrity, get_inference_config
 
 

@@ -1,6 +1,7 @@
 # IDE management
 .idea/
 *.code-workspace
+.vscode/
 .venv*
 venv*
 
@@ -25,6 +26,7 @@ prompts/**/*.json
 
 # local data
 /models
+generate/audit-report.md
 scratch/
 **/artifacts/
 **/outputs/

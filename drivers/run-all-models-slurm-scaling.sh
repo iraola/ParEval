@@ -113,7 +113,7 @@ echo "Timeout:      $TIMEOUT s"
 if [ -f "$SCALING_FILE" ]; then
     echo "Scaling file already exists, skipping filter-correct.py (resuming): $SCALING_FILE"
 else
-    python3 filter-correct.py "$CORRECTNESS_FILE" "$SCALING_FILE"
+    python3 tools/filter-correct.py "$CORRECTNESS_FILE" "$SCALING_FILE"
     if [ $? -ne 0 ]; then
         echo "Error: filter-correct.py failed."
         exit 1
@@ -121,7 +121,7 @@ else
 fi
 
 # One slot = whole node; wave execution packs configs within it
-python3 generate_resource_slots.py \
+python3 tools/generate_resource_slots.py \
     --cpus-per-node "$SLURM_CPUS_ON_NODE" \
     --cpus-per-slot "$SLURM_CPUS_ON_NODE" \
     --output "$SLOTS_FILE"
