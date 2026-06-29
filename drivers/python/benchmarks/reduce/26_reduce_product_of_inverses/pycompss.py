@@ -1,6 +1,7 @@
 # Driver for 26_reduce_product_of_inverses
 # """ Compute the product of even elements and inverses of odd elements in a list.
 
+import math
 import random
 from python.utilities import fillRand, fequal 
 
@@ -71,8 +72,8 @@ def validate(ctx: Context):
         # Sequential execution
         seq_res = correct_main(ctx.x)
         
-        # Check equality
-        if abs(par_res - seq_res) > 1e-9:
+        # Check equality (relative tolerance: product spans orders of magnitude)
+        if not math.isclose(par_res, seq_res, rel_tol=1e-6, abs_tol=1e-12):
             return False
             
     return True
