@@ -470,6 +470,7 @@ class PythonDriverWrapper(DriverWrapper):
                 f.write(f"# Auto-generated configuration\n")
                 f.write(f"DRIVER_PROBLEM_SIZE = {problem_size}\n")
                 f.write(f"MAX_VALIDATION_ATTEMPTS = 5\n")
+                f.write(f"DRIVER_SEED = 1234\n")
 
             # Build
             exec_path = os.path.join(tmpdir, f"{artifact_stem}_merged.py")

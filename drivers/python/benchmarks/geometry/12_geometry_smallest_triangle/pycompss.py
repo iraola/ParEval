@@ -17,7 +17,7 @@ class Context:
         self.reset_data()
 
     def reset_data(self):
-        self.points = [(random.randint(0, 100), random.randint(0, 100)) for _ in range(self.size)]
+        self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(self.size)]
 
 def init():
     """ 
