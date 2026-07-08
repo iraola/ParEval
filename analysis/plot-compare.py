@@ -1,98 +1,19 @@
 """ Compare pass@k for the same models across two prompt sets. """
 import argparse
 import os
-import re
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 from matplotlib.lines import Line2D
 import pandas as pd
-import seaborn as sns
 
-# ── Model filter presets ──────────────────────────────────────────────────────
+import plotstyle as ps
 
-def _is_reasoning(name: str) -> bool:
-    return bool(re.search(r'R1|Qwen3|Magistral', name, re.IGNORECASE))
-
-def _is_instruct(name: str) -> bool:
-    return bool(re.search(r'Instruct|Codestral|Mistral|Mixtral|Magistral|gpt-oss', name, re.IGNORECASE))
-
-PRESETS = {
-    "all":          lambda models: models,
-    "instruct":     lambda models: [m for m in models if _is_instruct(m)],
-    "no-reasoning": lambda models: [m for m in models if not _is_reasoning(m)],
-    "reasoning":    lambda models: [m for m in models if _is_reasoning(m)],
-    "base":         lambda models: [m for m in models if not _is_instruct(m) and not _is_reasoning(m)],
-}
-
-# ── Style ─────────────────────────────────────────────────────────────────────
-
-def _style(ax, *, ygrid=True):
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    if ygrid:
-        ax.yaxis.set_major_locator(mticker.MultipleLocator(0.2))
-        ax.grid(axis="y", which="major", color="#cccccc", linewidth=0.6, zorder=0)
-    ax.set_axisbelow(True)
-    ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-    ax.tick_params(labelsize=9)
-
-plt.rcParams.update({
-    "font.family": "sans-serif",
-    "font.size": 10,
-    "axes.titlesize": 12,
-    "axes.labelsize": 10,
-    "legend.fontsize": 8,
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-})
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def resolve_metrics_dir(value: str) -> str:
-    if os.path.isdir(value):
-        return value
-    candidate = os.path.join(os.path.dirname(__file__), "outputs", value)
-    if os.path.isdir(candidate):
-        return candidate
-    raise FileNotFoundError(
-        f"'{value}' is not a valid directory and was not found under outputs/")
-
-def _short_name(name: str) -> str:
-    name = re.sub(r'-Instruct$', '', name)
-    name = re.sub(r'-v\d+\.\d+$', '', name)
-    return name
-
-def _save_both(fig, output_dir, base_fname):
-    """Save twice: with titles (_with_title suffix) and without titles (no suffix)."""
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, base_fname + "_with_title.png")
-        fig.savefig(path, bbox_inches="tight", dpi=150)
-        print(f"Saved: {path}")
-        for ax in fig.axes:
-            ax.set_title("")
-        if fig._suptitle is not None:
-            fig._suptitle.set_visible(False)
-        fig.tight_layout()
-        path = os.path.join(output_dir, base_fname + ".png")
-        fig.savefig(path, bbox_inches="tight", dpi=150)
-        print(f"Saved: {path}")
-    else:
-        plt.show()
-    plt.close(fig)
+PRESETS = ps.PRESETS
 
 # ── Data loading & filtering ──────────────────────────────────────────────────
 
 def load_metrics(metrics_dir: str) -> pd.DataFrame:
-    frames = []
-    for fname in sorted(os.listdir(metrics_dir)):
-        if not fname.startswith("metrics_") or not fname.endswith(".csv"):
-            continue
-        frames.append(pd.read_csv(os.path.join(metrics_dir, fname)))
-    if not frames:
-        raise FileNotFoundError(f"No metrics_*.csv files found in {metrics_dir}")
-    return pd.concat(frames, ignore_index=True)
+    return ps.load_csvs(metrics_dir, "metrics_")
 
 def _apply_preset_filter(df: pd.DataFrame, args) -> pd.DataFrame:
     """Apply --filter / --models / --exclude, but NOT --top."""
@@ -111,16 +32,7 @@ def _apply_preset_filter(df: pd.DataFrame, args) -> pd.DataFrame:
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
 def fname_suffix(args) -> str:
-    parts = []
-    if args.models:
-        parts.append("custom")
-    elif args.filter != "all":
-        parts.append(args.filter.replace("-", ""))
-    if args.exclude:
-        parts.append("excl")
-    if args.top:
-        parts.append(f"top{args.top}")
-    return ("_" + "_".join(parts)) if parts else ""
+    return ps.fname_suffix(args)
 
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -151,26 +63,21 @@ def plot_compare_passk(df_a, label_a, df_b, label_b, k_values, output_dir, suffi
     agg_a = df_a.groupby("model")[cols].mean()
     agg_b = df_b.groupby("model")[cols].mean()
     model_order = agg_a["pass@1"].sort_values(ascending=False).index.tolist()
-
-    n       = len(model_order)
-    palette = sns.color_palette("tab10" if n <= 10 else "tab20", n_colors=n)
-    markers = ["o", "s", "^", "D", "v", "P", "X", "*", "h", ">", "<", "p"]
-    xs      = k_values[:len(cols)]
+    xs = k_values[:len(cols)]
 
     fig, ax = plt.subplots(figsize=(9, 5))
 
-    for i, model in enumerate(model_order):
-        color  = palette[i]
-        marker = markers[i % len(markers)]
-        short  = _short_name(model)
+    for model in model_order:
+        color  = ps.color_for(model)
+        marker = ps.marker_for(model)
         ax.plot(xs, agg_a.loc[model, cols].tolist(),
                 marker=marker, color=color, linestyle="-",
-                linewidth=1.8, markersize=6, label=short)
+                label=ps.label_for(model), **ps.LINE_KW)
         ax.plot(xs, agg_b.loc[model, cols].tolist(),
                 marker=marker, color=color, linestyle="--",
-                linewidth=1.8, markersize=6, label="_nolegend_")
+                label="_nolegend_", **ps.LINE_KW)
 
-    # Model color entries come from the solid lines; add linestyle entries below.
+    # Model colour entries come from the solid lines; add linestyle entries below.
     model_handles, model_labels = ax.get_legend_handles_labels()
     style_handles = [
         Line2D([0], [0], color="black", linestyle="-",  linewidth=1.8, label=label_a),
@@ -185,17 +92,17 @@ def plot_compare_passk(df_a, label_a, df_b, label_b, k_values, output_dir, suffi
     ax.set_title(f"pass@k  —  {label_a}  vs  {label_b}  (mean across problem types)")
     ax.set_xticks(xs)
     ax.set_ylim(bottom=0)
-    _style(ax)
+    ps.style_axis(ax)
     fig.tight_layout()
-    _save_both(fig, output_dir, f"compare_passk_{label_a}_vs_{label_b}{suffix}")
+    ps.save_both(fig, output_dir, f"compare_passk_{label_a}_vs_{label_b}{suffix}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     args = get_args()
 
-    args.dir_a = resolve_metrics_dir(args.dir_a)
-    args.dir_b = resolve_metrics_dir(args.dir_b)
+    args.dir_a = ps.resolve_metrics_dir(args.dir_a)
+    args.dir_b = ps.resolve_metrics_dir(args.dir_b)
     label_a = os.path.basename(os.path.normpath(args.dir_a))
     label_b = os.path.basename(os.path.normpath(args.dir_b))
 

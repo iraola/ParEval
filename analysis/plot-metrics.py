@@ -8,82 +8,18 @@ import matplotlib.ticker as mticker
 import pandas as pd
 import seaborn as sns
 
-# ── Model filter presets ──────────────────────────────────────────────────────
-# Each entry is a callable: list[str] -> list[str]
+import plotstyle as ps
 
-def _is_reasoning(name: str) -> bool:
-    return bool(re.search(r'R1|Qwen3|Magistral', name, re.IGNORECASE))
+# ── Model filter presets come from plotstyle (shared across all plot scripts) ──
+PRESETS = ps.PRESETS
 
-def _is_instruct(name: str) -> bool:
-    return bool(re.search(r'Instruct|Codestral|Mistral|Mixtral|Magistral|gpt-oss', name, re.IGNORECASE))
-
-PRESETS = {
-    "all":          lambda models: models,
-    "instruct":     lambda models: [m for m in models if _is_instruct(m)],
-    "no-reasoning": lambda models: [m for m in models if not _is_reasoning(m)],
-    "reasoning":    lambda models: [m for m in models if _is_reasoning(m)],
-    "base":         lambda models: [m for m in models if not _is_instruct(m) and not _is_reasoning(m)],
-}
-
-# ── Style ─────────────────────────────────────────────────────────────────────
-
+# Hatches keep the per-problem-type bars distinguishable in grayscale print.
 HATCHES = ['/', '\\', 'x', '-', '+', 'o', '//', '\\\\', '||', '--', '++', 'xx']
-
-def _style(ax, *, xgrid=False, ygrid=True, pct_axis="y"):
-    """Apply consistent styling to an axis."""
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    if ygrid:
-        if pct_axis == "y":          # only force 20%-step ticks on pct axes
-            ax.yaxis.set_major_locator(mticker.MultipleLocator(0.2))
-        ax.grid(axis="y", which="major", color="#cccccc", linewidth=0.6, zorder=0)
-    if xgrid:
-        if pct_axis == "x":
-            ax.xaxis.set_major_locator(mticker.MultipleLocator(0.2))
-        ax.grid(axis="x", which="major", color="#cccccc", linewidth=0.6, zorder=0)
-    ax.set_axisbelow(True)
-    if pct_axis == "y":
-        ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-    elif pct_axis == "x":
-        ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-    ax.tick_params(labelsize=9)
-
-plt.rcParams.update({
-    "font.family": "sans-serif",
-    "font.size": 10,
-    "axes.titlesize": 12,
-    "axes.labelsize": 10,
-    "legend.fontsize": 8,
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-})
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
-def resolve_metrics_dir(value: str) -> str:
-    if os.path.isdir(value):
-        return value
-    candidate = os.path.join(os.path.dirname(__file__), "outputs", value)
-    if os.path.isdir(candidate):
-        return candidate
-    raise FileNotFoundError(
-        f"'{value}' is not a valid directory and was not found under outputs/")
-
-def default_output_dir(metrics_dir: str) -> str:
-    name = os.path.basename(os.path.normpath(metrics_dir))
-    return os.path.join(os.path.dirname(__file__), "plots", name)
-
 def fname_suffix(args) -> str:
-    parts = []
-    if args.models:
-        parts.append("custom")
-    elif args.filter != "all":
-        parts.append(args.filter.replace("-", ""))   # e.g. no-reasoning → noreasoning
-    if args.exclude:
-        parts.append("excl")
-    if args.top and not re.fullmatch(r'top\d+', args.filter):
-        parts.append(f"top{args.top}")
-    return ("_" + "_".join(parts)) if parts else ""
+    return ps.fname_suffix(args)
 
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -107,14 +43,7 @@ def get_args():
 # ── Data loading ──────────────────────────────────────────────────────────────
 
 def load_metrics(metrics_dir: str) -> pd.DataFrame:
-    frames = []
-    for fname in sorted(os.listdir(metrics_dir)):
-        if not fname.startswith("metrics_") or not fname.endswith(".csv"):
-            continue
-        frames.append(pd.read_csv(os.path.join(metrics_dir, fname)))
-    if not frames:
-        raise FileNotFoundError(f"No metrics_*.csv files found in {metrics_dir}")
-    return pd.concat(frames, ignore_index=True)
+    return ps.load_csvs(metrics_dir, "metrics_")
 
 def filter_models(df: pd.DataFrame, args) -> pd.DataFrame:
     all_models = sorted(df["model"].unique())
@@ -144,48 +73,13 @@ def filter_models(df: pd.DataFrame, args) -> pd.DataFrame:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _save_or_show(fig, output_dir, fname):
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, fname)
-        fig.savefig(path, bbox_inches="tight", dpi=150)
-        print(f"Saved: {path}")
-    else:
-        plt.show()
-    plt.close(fig)
-
-def _save_both(fig, output_dir, base_fname):
-    """Save twice: with titles (_with_title suffix) and without titles (no suffix)."""
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, base_fname + "_with_title.png")
-        fig.savefig(path, bbox_inches="tight", dpi=150)
-        print(f"Saved: {path}")
-        for ax in fig.axes:
-            ax.set_title("")
-        if fig._suptitle is not None:
-            fig._suptitle.set_visible(False)
-        fig.tight_layout()
-        path = os.path.join(output_dir, base_fname + ".png")
-        fig.savefig(path, bbox_inches="tight", dpi=150)
-        print(f"Saved: {path}")
-    else:
-        plt.show()
-    plt.close(fig)
-
-def _short_name(name: str) -> str:
-    name = re.sub(r'-Instruct$', '', name)       # Llama-3.3-70B-Instruct → Llama-3.3-70B
-    name = re.sub(r'-v\d+\.\d+$', '', name)      # Codestral-22B-v0.1 → Codestral-22B
-    return name
-
 def _model_order(df: pd.DataFrame, ascending=False) -> list:
-    """Models sorted by mean pass@1. ascending=True puts worst on left."""
+    """Full model names sorted by mean pass@1. ascending=True puts worst first."""
     return (df.groupby("model")["pass@1"].mean()
-              .sort_values(ascending=ascending).index
-              .map(_short_name).tolist())
+              .sort_values(ascending=ascending).index.tolist())
 
 def _problem_type_order(df: pd.DataFrame) -> list:
-    """Problem types sorted by mean pass@1 ascending (hardest on left within each group)."""
+    """Problem types sorted by mean pass@1 ascending (hardest first)."""
     return (df.groupby("problem type")["pass@1"].mean()
               .sort_values(ascending=True).index.tolist())
 
@@ -194,40 +88,37 @@ def _problem_type_order(df: pd.DataFrame) -> list:
 def plot_k_vs_passk(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
     cols = [f"pass@{k}" for k in k_values if f"pass@{k}" in df.columns]
     agg = df.groupby("model")[cols].mean().reset_index()
-    agg["_short"] = agg["model"].map(_short_name)
     agg = agg.sort_values("pass@1", ascending=False)
 
     fig, ax = plt.subplots(figsize=(9, 5))
-    palette = sns.color_palette("tab10" if len(agg) <= 10 else "tab20", n_colors=len(agg))
-    markers = ["o", "s", "^", "D", "v", "P", "X", "*", "h", ">", "<", "p"]
 
-    for i, (_, row) in enumerate(agg.iterrows()):
+    for _, row in agg.iterrows():
+        model = row["model"]
         ys = [row[c] for c in cols]
         ax.plot(k_values[:len(ys)], ys,
-                marker=markers[i % len(markers)],
-                label=row["_short"],
-                color=palette[i],
-                linewidth=1.8, markersize=6)
+                marker=ps.marker_for(model),
+                label=ps.label_for(model),
+                color=ps.color_for(model),
+                **ps.LINE_KW)
 
     ax.set_xlabel("k")
     ax.set_ylabel("pass@k")
     ax.set_title("pass@k vs k  (mean across problem types)")
     ax.set_xticks(k_values)
     ax.set_ylim((0, 1))
-    _style(ax)
+    ps.style_axis(ax)
     ax.legend(bbox_to_anchor=(1.01, 1), loc="upper left", frameon=False)
     fig.tight_layout()
-    _save_both(fig, output_dir, f"k_vs_passk{suffix}")
+    ps.save_both(fig, output_dir, f"k_vs_passk{suffix}")
 
 # ── Plot 2: pass@1 per problem type, grouped by model ────────────────────────
 
 def plot_passk1_by_problem_type(df: pd.DataFrame, output_dir, suffix=""):
     agg = df[["model", "problem type", "pass@1"]].copy()
-    agg["model"] = agg["model"].map(_short_name)
 
-    # Global orderings shared across all models
+    # Global orderings shared across all models (full names → styled per model)
     models        = _model_order(df, ascending=True)   # worst → best, left → right
-    problem_types = _problem_type_order(df)            # hardest → easiest within each group
+    problem_types = _problem_type_order(df)            # hardest → easiest per group
     n_models = len(models)
     n_types  = len(problem_types)
 
@@ -254,56 +145,121 @@ def plot_passk1_by_problem_type(df: pd.DataFrame, output_dir, suffix=""):
                zorder=3)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=35, ha="right", fontsize=9)
+    ax.set_xticklabels([ps.label_for(m) for m in models],
+                       rotation=35, ha="right", fontsize=9)
     ax.set_ylabel("pass@1")
     ax.set_ylim(0, 1.05)
     ax.set_title("pass@1 by problem type  (models sorted by avg pass@1; "
                  "bars sorted hardest → easiest)")
-    ax.legend(title="problem type", bbox_to_anchor=(1.01, 1), loc="upper left", frameon=False)
-    _style(ax)
+    ax.legend(title="problem type", bbox_to_anchor=(1.01, 1), loc="upper left",
+              frameon=False)
+    ps.style_axis(ax)
     fig.tight_layout()
-    _save_both(fig, output_dir, f"pass1_by_problem_type{suffix}")
+    ps.save_both(fig, output_dir, f"pass1_by_problem_type{suffix}")
+
+# ── Plot 1b: k vs pass@k, one panel per model family ─────────────────────────
+
+def plot_k_vs_passk_by_family(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
+    """Small-multiples version of plot 1: few lines per panel stay readable
+    even when all models are plotted at once."""
+    cols = [f"pass@{k}" for k in k_values if f"pass@{k}" in df.columns]
+    agg = df.groupby("model")[cols].mean()
+
+    families: dict[str, list] = {}
+    for model in agg.index:
+        families.setdefault(ps.family_of(model), []).append(model)
+    order = [f for f in ps.FAMILIES if f in families]
+    order += sorted(set(families) - set(order))
+
+    ncols = 4
+    nrows = -(-len(order) // ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.7 * nrows),
+                             sharex=True, sharey=True, squeeze=False)
+
+    for ax, fam in zip(axes.flat, order):
+        models = sorted(families[fam], key=lambda m: agg.loc[m, "pass@1"],
+                        reverse=True)
+        for model in models:
+            ys = [agg.loc[model, c] for c in cols]
+            ax.plot(k_values[:len(ys)], ys,
+                    marker=ps.marker_for(model),
+                    label=ps.label_for(model),
+                    color=ps.color_for(model),
+                    **ps.LINE_KW)
+        ax.set_title(fam, fontsize=10)
+        ax.set_xticks(k_values)
+        ax.set_ylim(0, 1.02)
+        ps.style_axis(ax)
+        ax.legend(fontsize=7, frameon=False, loc="best")
+    for ax in axes.flat[len(order):]:
+        ax.set_visible(False)
+    for ax in axes[-1]:
+        ax.set_xlabel("k")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("pass@k")
+
+    fig.tight_layout()
+    ps.save_both(fig, output_dir, f"k_vs_passk_by_family{suffix}")
+
+# ── Plot 2b: pass@1 heatmap (model × problem type) ───────────────────────────
+
+def plot_passk1_heatmap(df: pd.DataFrame, output_dir, suffix=""):
+    """Same data as plot 2, as a compact heatmap."""
+    models        = _model_order(df, ascending=False)  # best → worst, top → bottom
+    problem_types = _problem_type_order(df)             # hardest → easiest, left → right
+
+    grid = (df.pivot_table(index="model", columns="problem type",
+                           values="pass@1", aggfunc="mean")
+              .reindex(index=models, columns=problem_types))
+
+    fig, ax = plt.subplots(figsize=(max(8, 0.7 * len(problem_types)),
+                                    max(4, 0.5 * len(models))))
+    sns.heatmap(grid, ax=ax, cmap="viridis", vmin=0, vmax=1,
+                annot=True, fmt=".0%", annot_kws={"fontsize": 7},
+                linewidths=0.5, linecolor="white",
+                cbar_kws={"label": "pass@1", "format": mticker.PercentFormatter(xmax=1)})
+    ax.set_yticklabels([ps.label_for(m) for m in grid.index], rotation=0, fontsize=8)
+    ax.set_xticklabels(grid.columns, rotation=35, ha="right", fontsize=8)
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.set_title("pass@1 by model × problem type")
+    fig.tight_layout()
+    ps.save_both(fig, output_dir, f"pass1_heatmap{suffix}")
 
 # ── Plot 3: speedup@1 and efficiency@1 per model ─────────────────────────────
 
 def plot_speedup_efficiency(df: pd.DataFrame, output_dir, suffix=""):
     agg = df.groupby("model")[["speedup@1", "efficiency@1"]].mean().reset_index()
-    agg["model"] = agg["model"].map(_short_name)
     agg = agg.sort_values("speedup@1", ascending=True)
-    n = len(agg)
-    palette = sns.color_palette("Blues_d", n_colors=n)
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, max(4, 0.45 * n)), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(12, max(4, 0.45 * len(agg))), sharey=True)
 
-    for ax, col, title in zip(
-        axes,
-        ["speedup@1", "efficiency@1"],
-        ["speedup@1", "efficiency@1"],
-    ):
-        for j, (_, row) in enumerate(agg.iterrows()):
-            ax.barh(row["model"], row[col],
-                    color=palette[j],
-                    hatch=HATCHES[j % len(HATCHES)],
+    for ax, col in zip(axes, ["speedup@1", "efficiency@1"]):
+        for _, row in agg.iterrows():
+            model = row["model"]
+            ax.barh(ps.label_for(model), row[col],
+                    color=ps.color_for(model),
                     edgecolor="black", linewidth=0.5,
                     height=0.65, zorder=3)
-        ax.set_title(f"{title}  (mean across problem types)")
-        ax.axvline(1.0, color="#555555", linewidth=0.9, linestyle="--", alpha=0.6, zorder=4)
-        _style(ax, xgrid=True, ygrid=False, pct_axis=None)
+        ax.set_title(f"{col}  (mean across problem types)")
+        ax.axvline(1.0, color=ps.REF_COLOR, linewidth=0.9, linestyle="--",
+                   alpha=0.6, zorder=4)
+        ps.style_axis(ax, xgrid=True, ygrid=False, pct_axis=None)
         ax.tick_params(axis="y", labelsize=9)
 
     axes[1].tick_params(axis="y", labelleft=False)
     fig.suptitle("Speedup and efficiency @ k=1  (mean across problem types)", fontsize=12)
     fig.tight_layout()
-    _save_both(fig, output_dir, f"speedup_efficiency_1{suffix}")
+    ps.save_both(fig, output_dir, f"speedup_efficiency_1{suffix}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     args = get_args()
 
-    args.metrics_dir = resolve_metrics_dir(args.metrics_dir)
+    args.metrics_dir = ps.resolve_metrics_dir(args.metrics_dir)
     if args.output_dir is None:
-        args.output_dir = default_output_dir(args.metrics_dir)
+        args.output_dir = ps.default_output_dir(args.metrics_dir)
 
     df = load_metrics(args.metrics_dir)
     df = filter_models(df, args)
@@ -317,7 +273,9 @@ def main():
 
     suffix = fname_suffix(args)
     plot_k_vs_passk(df, args.k, args.output_dir, suffix)
+    plot_k_vs_passk_by_family(df, args.k, args.output_dir, suffix)
     plot_passk1_by_problem_type(df, args.output_dir, suffix)
+    plot_passk1_heatmap(df, args.output_dir, suffix)
     plot_speedup_efficiency(df, args.output_dir, suffix)
 
 
