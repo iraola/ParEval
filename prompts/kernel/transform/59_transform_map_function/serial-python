@@ -1,0 +1,9 @@
+"""Apply the isPowerOfTwo function to every value in x and store the results in mask.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [8, 0, 9, 7, 15, 64, 3]
+   output: [True, False, False, False, False, True, False]
+"""

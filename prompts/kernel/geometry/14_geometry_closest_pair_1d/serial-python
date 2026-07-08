@@ -1,0 +1,9 @@
+"""Return the distance between the closest two elements in the vector x.
+   Provide a main(points) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example: 
+
+   input: [7, 3, 9, 12, 31, 1]
+   output: 2
+"""

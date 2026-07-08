@@ -1,0 +1,9 @@
+"""Compute the prefix sum of the vector x into output.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+   
+   input: [1, 7, 4, 6, 6, 2]
+   output: [1, 8, 12, 18, 24, 26]
+"""

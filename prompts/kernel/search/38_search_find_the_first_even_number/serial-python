@@ -1,0 +1,12 @@
+"""Return the index of the first even number in the vector x.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Examples:
+
+   input: [7, 3, 9, 5, 5, 7, 2, 9, 12, 11]
+   output: 6
+
+   input: [3, 8, 9, 9, 3, 4, 8, 6]
+   output: 1
+"""

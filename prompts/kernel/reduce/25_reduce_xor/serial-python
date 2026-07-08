@@ -1,0 +1,9 @@
+"""Return the logical XOR reduction of the vector of bools x.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [False, False, False, True]
+   output: True
+"""

@@ -1,0 +1,10 @@
+"""Return the product of the vector x with every odd indexed element inverted.
+   i.e. x_0 * 1/x_1 * x_2 * 1/x_3 * x_4 ...
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [4, 2, 10, 4, 5]
+   output: 25
+"""

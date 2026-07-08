@@ -1,0 +1,9 @@
+"""Return the index of the last Book item in the vector books where Book.pages is less than 100.
+   Provide a main(books) entrypoint that takes the input data and returns the result.
+	 Provide your complete solution in a single Python code block.
+	 
+	 Example:
+
+   input: [{"title": "Green Eggs and Ham", "pages": 72}, {"title": "gulliver's travels", "pages": 362}, {"title": "Stories of Your Life", "pages": 54}, {"title": "Hamilton", "pages": 818}]
+   output: 2
+"""

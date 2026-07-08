@@ -1,0 +1,12 @@
+"""Compute the reverse prefix sum of the vector x into output.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Examples:
+   
+   input: [1, 7, 4, 6, 6, 2]
+   output: [2, 8, 14, 18, 25, 26]
+
+   input: [3, 3, 7, 1, -2]
+   output: [-2, -1, 6, 9, 12]
+"""

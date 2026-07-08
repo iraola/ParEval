@@ -1,0 +1,10 @@
+"""Return the index of the value in the vector x that is closest to the math constant PI.
+   Use M_PI for the value of PI.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [9.18, 3.05, 7.24, 11.3, -166.49, 2.1]
+   output: 1
+"""

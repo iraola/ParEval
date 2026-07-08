@@ -1,0 +1,11 @@
+"""Factorize the matrix A into A=LU where L is a lower triangular matrix and U is an upper triangular matrix.
+   Store the results for L and U into the original matrix A. 
+   A is an NxN matrix stored in row-major.
+   Provide a main(A, N) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [[4, 3], [6, 3]]
+   output: [[4, 3], [1.5, -1.5]]
+"""

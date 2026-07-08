@@ -1,0 +1,12 @@
+"""Return the value of the smallest odd number in the vector x.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Examples:
+
+   input: [7, 9, 5, 2, 8, 16, 4, 1]
+   output: 1
+
+   input: [8, 36, 7, 2, 11]
+   output: 7
+"""

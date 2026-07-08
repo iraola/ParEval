@@ -1,0 +1,13 @@
+"""For each value in the vector x compute its index in the sorted vector.
+   Store the results in `ranks`.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Examples:
+
+   input: [3.1, 2.8, 9.1, 0.4, 3.14]
+   output: [2, 1, 4, 0, 3]
+ 
+   input: [100, 7.6, 16.1, 18, 7.6]
+   output: [4, 0, 2, 3, 0]
+"""

@@ -1,0 +1,9 @@
+"""Replace every element of x with the square of its value.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [5, 1, 2, -4, 8]
+   output: [25, 1, 4, 16, 64]
+"""

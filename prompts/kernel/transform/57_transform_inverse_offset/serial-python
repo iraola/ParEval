@@ -1,0 +1,9 @@
+"""Replace every element of the vector x with 1-1/x.
+   Provide a main(x) entrypoint that takes the input data and returns the result.
+   Provide your complete solution in a single Python code block.
+   
+   Example:
+
+   input: [2, 4, 1, 12, -2]
+   output: [0.5, 0.75, 0, 0.91666666, 1.5]
+"""
