@@ -539,6 +539,10 @@ class PythonDriverWrapper(DriverWrapper):
                 n_relaxations = len(self.relaxations)
                 logging.debug("[relaxations] initial run failed — trying %d relaxation(s)", n_relaxations)
                 for k, relaxation in enumerate(self.relaxations):
+                    if self.parallelism_model not in relaxation.applies_to:
+                        logging.debug("── relaxation %d/%d: %s — not for %s, skipping",
+                                      k + 1, n_relaxations, relaxation.name, self.parallelism_model)
+                        continue
                     logging.debug("── relaxation %d/%d: %s ──────────────────────────",
                                   k + 1, n_relaxations, relaxation.name)
                     modified_output = relaxation.apply(output)

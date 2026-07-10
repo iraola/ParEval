@@ -11,6 +11,8 @@ from typing import Optional
 
 class Relaxation:
     name: str
+    # Parallelism models this relaxation is relevant for
+    applies_to: set[str] = {"pycompss"}
 
     def apply(self, source: str) -> Optional[str]:
         """Return modified source, or None if this relaxation does not apply."""
@@ -26,6 +28,7 @@ class RenameMainRelaxation(Relaxation):
     preserving formatting, comments, and docstrings.
     """
     name = "rename_main"
+    applies_to = {"pycompss", "serial"}
 
     def apply(self, source: str) -> Optional[str]:
         try:
@@ -111,6 +114,7 @@ class RemoveFutureImportsRelaxation(Relaxation):
     file.  These imports are cosmetic in this context and are simply dropped.
     """
     name = "remove_future_imports"
+    applies_to = {"pycompss", "serial"}
 
     def apply(self, source: str) -> Optional[str]:
         lines = source.split("\n")

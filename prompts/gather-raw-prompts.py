@@ -205,6 +205,30 @@ class PyCOMPSsPrompt(Prompt):
             "from pycompss.api.api import compss_barrier\n\n"
         )
         return imports + prompt
+    
+
+class SerialPythonPrompt(Prompt):
+    def __init__(self):
+        super().__init__("serial-python")
+    
+    def check_valid(self, prompt: str):
+        if prompt == "":
+            raise ValueError("Prompt is empty")
+        # Serial Python prompts end with a double quote
+        if not prompt.endswith('"'):
+            raise ValueError(f"Serial Python prompt does not end with a double quote (\")")
+
+        self.must_contain_all(prompt, ["Python"])
+    
+    def get_model_name_for_function_suffix(self):
+        return "SerialPython"
+    
+    def add_imports(self, prompt: str) -> str:
+        imports = (
+            "import numpy as np\n"
+            "import time\n\n"
+        )
+        return imports + prompt
 
 
 def get_args():
@@ -213,7 +237,7 @@ def get_args():
     parser.add_argument("-o", "--output", help="path to output json; defaults to stdout if not provided")
     parser.add_argument("--function-suffix", choices=["parallel", "model", "none"], default="none", help="suffix to add to function names")
     parser.add_argument("--add-imports", action="store_true", help="add imports above prompt")
-    parser.add_argument("--models", nargs="+", choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"],
+    parser.add_argument("--models", nargs="+", choices=["serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss", "serial-python"],
                         help="only gather prompts for the specified parallelism models")
     parser.add_argument("--problem-types", nargs="+", choices=["dense_la", "fft", "geometry", "graph", "histogram", "reduce", "scan", "search", "sort", "sparse_la", "stencil", "transform"],
                         help="only gather prompts for the specified problem types")
@@ -237,7 +261,7 @@ def parse_raw_prompt(
     if models:
         prompt_paths = [m for m in prompt_paths if m in models]
 
-    expected = {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss"}
+    expected = {"serial", "omp", "mpi", "mpi+omp", "kokkos", "cuda", "hip", "pycompss", "serial-python"}
     if not set(prompt_paths).issubset(expected):
         raise ValueError(f"{fpath} contains unknown models: {set(prompt_paths) - expected}")
     if not prompt_paths:
@@ -252,6 +276,7 @@ def parse_raw_prompt(
         "cuda": CUDAPrompt(),
         "hip": HIPPrompt(),
         "pycompss": PyCOMPSsPrompt(),
+        "serial-python": SerialPythonPrompt(),
     }
 
     prompts = []
@@ -275,7 +300,7 @@ def parse_raw_prompt(
         if add_imports:
             prompt = parser.add_imports(prompt)
 
-        language = "python" if model == "pycompss" else "cpp"
+        language = "python" if model == "pycompss" or model == "serial-python" else "cpp"
 
         prompts.append({
             "problem_type": type,

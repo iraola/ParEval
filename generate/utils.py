@@ -8,6 +8,10 @@ import torch
 from torch.utils.data import Dataset
 from transformers import StoppingCriteria
 
+def _is_python_prompt(prompt: str) -> bool:
+    p = prompt.lower()
+    return "pycompss" in p or "python" in p
+
 def extract_pycompss_solution(code: str) -> str:
     """
     Extracts Python module code from a model-generated string.
@@ -60,7 +64,7 @@ def clean_output(output: str, prompt: str) -> str:
     else:
         raw_output = output[prompt_loc + len(prompt):].strip()
 
-    if "pycompss" in prompt.lower():
+    if _is_python_prompt(prompt):
         return extract_pycompss_solution(raw_output)
 
     # Prepend '{' to simulate a complete function body and reuse brace-matching logic
@@ -168,7 +172,7 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     if prompt_loc != -1:
         output = output[prompt_loc + len(response_tag):].strip()
 
-    if "pycompss" in prompt.lower():
+    if _is_python_prompt(prompt):
         return extract_pycompss_code(output)
 
     # Extract fenced code blocks (```python, ```c++, plain ```). A lone unclosed
@@ -332,7 +336,7 @@ You are an exceptionally intelligent coding assistant that consistently delivers
         return False
 
     def format_prompt(self, prompt : str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             return self.PROMPT_TEMPLATE.format(instruction=prompt.strip())
 
         function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -406,7 +410,7 @@ class PhindConfig(InferenceConfig):
         prompt_loc = output.find(prompt)
         if prompt_loc != -1:
             output = output[prompt_loc + len(prompt):]
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             return extract_pycompss_code(output)
         return clean_output(output, prompt)
 
@@ -538,7 +542,7 @@ class InstructConfig(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             formatted = f"{self.instruction_tag}\n{prompt.strip()}\n{self.response_tag}\n"
             return formatted
 
@@ -599,7 +603,7 @@ class ChatMLConfig(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             instruction = prompt.strip()
         else:
             function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -632,7 +636,7 @@ class MistralInstructConfig(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             instruction = prompt.strip()
         else:
             function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -676,7 +680,7 @@ class DeepSeekR1Config(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             instruction = prompt.strip()
         else:
             function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -711,7 +715,7 @@ class HarmonyConfig(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             instruction = prompt.strip()
         else:
             function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -754,7 +758,7 @@ class GLM4Config(InferenceConfig):
         return False
 
     def format_prompt(self, prompt: str) -> str:
-        if "pycompss" in prompt.lower():
+        if _is_python_prompt(prompt):
             instruction = prompt.strip()
         else:
             function_name = get_function_name(prompt, "cuda" if "__global__" in prompt else "serial")
@@ -801,7 +805,7 @@ def check_output_integrity(responses: List[dict], extra_counters: dict = None) -
         name = r.get('name', r.get('prompt', '')[:40])
         outputs = r.get('outputs', [])
         raw_outputs = r.get('raw_outputs', [])
-        is_pycompss = 'pycompss' in r.get('prompt', '').lower()
+        is_python = _is_python_prompt(r.get('prompt', ''))
 
         for idx, (raw, out) in enumerate(zip(raw_outputs, outputs)):
             if '<think>' in raw and '</think>' not in raw:
@@ -814,9 +818,9 @@ def check_output_integrity(responses: List[dict], extra_counters: dict = None) -
             elif len(stripped) < SHORT_OUTPUT_THRESHOLD:
                 _record('short_output', name, idx)
             if stripped:
-                if is_pycompss and '@task' not in out and 'def ' not in out:
+                if is_python and '@task' not in out and 'def ' not in out:
                     _record('no_code_structure', name, idx)
-                elif not is_pycompss and '{' not in out:
+                elif not is_python and '{' not in out:
                     _record('no_code_structure', name, idx)
 
         if len(outputs) > 1 and len(set(outputs)) == 1:
