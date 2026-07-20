@@ -52,6 +52,8 @@ def get_args():
         help="Keep only the top-N models by average pass@1 across both sets.")
     parser.add_argument("-k", nargs="+", type=int, default=[1, 5, 10, 20],
         help="K values for the pass@k plot (default: 1 5 10 20).")
+    parser.add_argument("--dump-csv", action="store_true",
+        help="Also write the exact per-model pass@k values plotted (mean across problem types).")
     return parser.parse_args()
 
 # ── Plot ──────────────────────────────────────────────────────────────────────
@@ -89,12 +91,78 @@ def plot_compare_passk(df_a, label_a, df_b, label_b, k_values, output_dir, suffi
 
     ax.set_xlabel("k")
     ax.set_ylabel("pass@k")
-    ax.set_title(f"pass@k  —  {label_a}  vs  {label_b}  (mean across problem types)")
+    ax.set_title(f"pass@k: {label_a} vs {label_b} (mean across problem types)")
     ax.set_xticks(xs)
     ax.set_ylim(bottom=0)
     ps.style_axis(ax)
     fig.tight_layout()
     ps.save_both(fig, output_dir, f"compare_passk_{label_a}_vs_{label_b}{suffix}")
+
+# ── Plot: same comparison, one panel per model family ─────────────────────────
+
+def plot_compare_passk_by_family(df_a, label_a, df_b, label_b, k_values,
+                                 output_dir, suffix=""):
+    """Small-multiples version: few lines per panel stay readable even when
+    all models are compared at once."""
+    cols = [f"pass@{k}" for k in k_values
+            if f"pass@{k}" in df_a.columns and f"pass@{k}" in df_b.columns]
+
+    agg_a = df_a.groupby("model")[cols].mean()
+    agg_b = df_b.groupby("model")[cols].mean()
+    xs = k_values[:len(cols)]
+
+    fig, axes, groups = ps.family_grid(agg_a.index)
+    for ax, (fam, models) in zip(axes.flat, groups):
+        models = sorted(models, key=lambda m: agg_a.loc[m, "pass@1"], reverse=True)
+        for model in models:
+            color, marker = ps.color_for(model), ps.marker_for(model)
+            ax.plot(xs, agg_a.loc[model, cols].tolist(),
+                    marker=marker, color=color, linestyle="-",
+                    label=ps.label_for(model), **ps.LINE_KW)
+            ax.plot(xs, agg_b.loc[model, cols].tolist(),
+                    marker=marker, color=color, linestyle="--",
+                    label="_nolegend_", **ps.LINE_KW)
+        ax.set_title(fam, fontsize=10)
+        ax.set_xticks(xs)
+        ax.set_ylim(0, 1.02)
+        ps.style_axis(ax)
+        ax.legend(**ps.PANEL_LEGEND_KW)
+    for ax in axes[-1]:
+        ax.set_xlabel("k")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("pass@k")
+
+    style_handles = [
+        Line2D([0], [0], color="black", linestyle="-",  linewidth=1.8, label=label_a),
+        Line2D([0], [0], color="black", linestyle="--", linewidth=1.8, label=label_b),
+    ]
+    fig.legend(handles=style_handles, loc="outside lower center", ncols=2,
+               frameon=False)
+
+    fig.suptitle(f"pass@k: {label_a} vs {label_b} (mean across problem types)")
+    ps.save_both(fig, output_dir,
+                 f"compare_passk_by_family_{label_a}_vs_{label_b}{suffix}")
+
+# ── CSV dump ──────────────────────────────────────────────────────────────────
+
+def dump_passk_csv(df_a, label_a, df_b, label_b, k_values, output_dir, suffix=""):
+    """Write the exact per-model values the plots draw: pass@k averaged over problem types.
+
+    One row per model, with a column per k for each set (pass@k_<label_a>,
+    pass@k_<label_b>), so the numbers behind the by-family figure are inspectable.
+    """
+    cols = [f"pass@{k}" for k in k_values
+            if f"pass@{k}" in df_a.columns and f"pass@{k}" in df_b.columns]
+    agg_a = df_a.groupby("model")[cols].mean().add_suffix(f"_{label_a}")
+    agg_b = df_b.groupby("model")[cols].mean().add_suffix(f"_{label_b}")
+    out = agg_a.join(agg_b, how="outer").round(6)
+    out = out.reindex(sorted(out.index)).reset_index()
+
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir,
+                        f"compare_passk_by_family_{label_a}_vs_{label_b}{suffix}.csv")
+    out.to_csv(path, index=False)
+    print(f"Wrote aggregated pass@k values: {path}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -140,6 +208,10 @@ def main():
 
     suffix = fname_suffix(args)
     plot_compare_passk(df_a, label_a, df_b, label_b, args.k, args.output_dir, suffix)
+    plot_compare_passk_by_family(df_a, label_a, df_b, label_b, args.k,
+                                 args.output_dir, suffix)
+    if args.dump_csv:
+        dump_passk_csv(df_a, label_a, df_b, label_b, args.k, args.output_dir, suffix)
 
 
 if __name__ == "__main__":

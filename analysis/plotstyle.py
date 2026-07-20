@@ -45,6 +45,16 @@ FAMILIES: dict[str, dict] = {
     "StarCoder":{"base": "#A81070", "models": ["starcoder2-15b"]},
 }
 
+# Panel grouping for the family-grid (small-multiples) plots only
+PANEL_MERGES = {
+    "StarCoder": "CodeLlama",
+    "Gemini":    "OpenAI",
+}
+PANEL_TITLES = {
+    "CodeLlama": "CodeLlama / StarCoder",
+    "OpenAI":    "OpenAI / Gemini",
+}
+
 # Markers restart per family; combined with the shade ramp they keep
 # same-family lines distinguishable.
 _MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "h", ">", "<", "p"]
@@ -52,7 +62,7 @@ _MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "h", ">", "<", "p"]
 LABEL_OVERRIDES = {
     "openai-gpt-5.5-2026-04-23":  "GPT-5.5",
     "openai-gpt-4-turbo-2024-04-09": "GPT-4-turbo",
-    "gemini-gemini-3.5-flash":    "Gemini-3.5-flash",
+    "gemini-gemini-3.5-flash":    "Gemini-3.5-Flash",
     "deepseek-coder-6.7b-base":   "DeepSeek-Coder-6.7B-base",
     "deepseek-coder-6.7b-instruct": "DeepSeek-Coder-6.7B",
     "starcoder2-15b":             "StarCoder2-15B",
@@ -134,7 +144,7 @@ _FALLBACK_COLORS = ["#b3b3b3", "#8d8d8d", "#c9c9c9", "#9e9e9e", "#bcbcbc"]
 
 def _fallback(model: str) -> dict:
     if model not in _UNKNOWN_WARNED:
-        print(f"[plotstyle] WARNING: '{model}' not in registry — using grey. "
+        print(f"[plotstyle] WARNING: '{model}' not in registry, using grey. "
               f"Add it to FAMILIES in plotstyle.py for a stable colour.")
         _UNKNOWN_WARNED.add(model)
     idx = len(_UNKNOWN_WARNED) - 1
@@ -166,6 +176,13 @@ def family_of(model: str) -> str:
 def _auto_short(name: str) -> str:
     name = re.sub(r"-Instruct(?:-\d{4})?$", "", name)
     name = re.sub(r"-v\d+\.\d+$", "", name)
+    name = name.replace("-Distill", "")     # DeepSeek-R1-Distill-Qwen-32B -> DeepSeek-R1-Qwen-32B
+    name = re.sub(r"-Base$", "", name)       # DeepSeek-Coder-V2-Lite-Base -> DeepSeek-Coder-V2-Lite
+    name = re.sub(r"-Lite$", "", name)       # DeepSeek-Coder-V2-Lite -> DeepSeek-Coder-V2
+    name = re.sub(r"-v\d+$", "", name)       # Phind-CodeLlama-34B-v2 -> Phind-CodeLlama-34B
+    name = re.sub(r"-hf$", "", name)         # CodeLlama-70b-hf -> CodeLlama-70b
+    if "R1" in name:                         # DeepSeek-R1-Qwen-32B -> DeepSeek-R1-Qwen
+        name = re.sub(r"-\d+[Bb]$", "", name)
     return name
 
 
@@ -204,6 +221,10 @@ REF_COLOR = "#909090"   # ideal / reference lines (lighter than the charcoal ser
 LINE_KW = dict(linewidth=1.5, markersize=6,
                markeredgecolor="white", markeredgewidth=0.7)
 
+# Add translucent white backing to legend
+PANEL_LEGEND_KW = dict(fontsize=7, loc="best", frameon=True, framealpha=0.65,
+                       facecolor="white", edgecolor="none")
+
 
 def style_axis(ax, *, xgrid=False, ygrid=True, pct_axis="y"):
     """Consistent spines, grid, and optional percentage-formatted axis.
@@ -227,6 +248,36 @@ def style_axis(ax, *, xgrid=False, ygrid=True, pct_axis="y"):
     elif pct_axis == "x":
         ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
     ax.tick_params(labelsize=9)
+
+
+def family_grid(models, ncols=3, panel_w=3.4, panel_h=2.85):
+    """Small-multiples layout: one panel per model family (some merged).
+
+    Groups `models` into panels per PANEL_MERGES (registry order first, unknowns
+    last) and builds a constrained-layout grid with shared axes; surplus panels
+    are hidden. Returns (fig, axes, groups) where axes is the 2-D array and
+    groups is a list of (panel_title, members) pairs, members in input order.
+    """
+    grouped: dict[str, list] = {}
+    for m in models:
+        panel = PANEL_MERGES.get(family_of(m), family_of(m))
+        grouped.setdefault(panel, []).append(m)
+
+    order: list[str] = []
+    for fam in FAMILIES:
+        panel = PANEL_MERGES.get(fam, fam)
+        if panel in grouped and panel not in order:
+            order.append(panel)
+    order += sorted(set(grouped) - set(order))
+
+    nrows = -(-len(order) // ncols)
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(panel_w * ncols, panel_h * nrows),
+                             sharex=True, sharey=True, squeeze=False,
+                             layout="constrained")
+    for ax in axes.flat[len(order):]:
+        ax.set_visible(False)
+    return fig, axes, [(PANEL_TITLES.get(p, p), grouped[p]) for p in order]
 
 
 # ── Saving ────────────────────────────────────────────────────────────────────
@@ -264,7 +315,8 @@ def save_both(fig, output_dir, base_fname, formats=FORMATS):
         ax.set_title("")
     if fig._suptitle is not None:
         fig._suptitle.set_visible(False)
-    fig.tight_layout()
+    if fig.get_layout_engine() is None:
+        fig.tight_layout()
     for ext in formats:
         path = os.path.join(output_dir, f"{base_fname}.{ext}")
         fig.savefig(path, dpi=_DPI)

@@ -73,6 +73,7 @@ process_set() {
         fi
 
         if [ "$run_scaling_curves" = "true" ]; then
+            CURVE_RELAX_FILE="${outputs_relax_dir}/curve_${MODEL_NAME}.csv"
             echo "  Scaling curve:  $CURVE_FILE"
             if [ -f "$CURVE_FILE" ]; then
                 echo "  (scaling curve already exists, skipping metrics-scaling.py)"
@@ -81,6 +82,13 @@ process_set() {
                     --execution-model pycompss -k 1 -n $SCALING_N \
                     --model-name "$MODEL_NAME" -o "$CURVE_FILE"
             fi
+            if [ -f "$CURVE_RELAX_FILE" ]; then
+                echo "  (scaling curve (relax) already exists, skipping metrics-scaling.py --relaxations)"
+            else
+                ../.venv/bin/python metrics-scaling.py "$DATAFRAME_FILE" \
+                    --execution-model pycompss -k 1 -n $SCALING_N \
+                    --model-name "$MODEL_NAME" -o "$CURVE_RELAX_FILE" --relaxations
+            fi
         fi
 
         echo "Done: $MODEL_NAME"
@@ -88,13 +96,13 @@ process_set() {
     done
 
     if [ "$found" -eq 0 ]; then
-        echo "No ${prefix}*.json files in $DRIVER_OUTPUTS_DIR — skipping."
+        echo "No ${prefix}*.json files in $DRIVER_OUTPUTS_DIR, skipping."
         return
     fi
 
     echo "Plotting metrics for ${outputs_dir} ..."
-    ../.venv/bin/python plot-metrics.py "$outputs_dir"
-    ../.venv/bin/python plot-metrics.py "$outputs_relax_dir"
+    ../.venv/bin/python plot-metrics.py "$outputs_dir" --dump-csv
+    ../.venv/bin/python plot-metrics.py "$outputs_relax_dir" --dump-csv
     echo "Plotting metrics (top 5) ..."
     ../.venv/bin/python plot-metrics.py "$outputs_dir" --top 5
     ../.venv/bin/python plot-metrics.py "$outputs_relax_dir" --top 5
@@ -103,11 +111,25 @@ process_set() {
         echo "Plotting scaling curves for ${outputs_dir} ..."
         ../.venv/bin/python plot-scaling.py "$outputs_dir"
         ../.venv/bin/python plot-scaling.py "$outputs_dir" --top 5
+        ../.venv/bin/python plot-scaling.py "$outputs_relax_dir"
+        ../.venv/bin/python plot-scaling.py "$outputs_relax_dir" --top 5
     fi
 }
 
 # correctness
 process_set "output_drivers_" "outputs/${DIR}"          "outputs/${DIR}-relaxations"          "false"
+
+# failure-mode taxonomy + relaxation effect (correctness only)
+if ls "$DRIVER_OUTPUTS_DIR"/output_drivers_*.json >/dev/null 2>&1; then
+    echo "Classifying errors for ${DIR} ..."
+    ../.venv/bin/python classify-errors.py "$DIR" --include-success --summarize --digest
+    echo "Computing relaxation effect for ${DIR} ..."
+    ../.venv/bin/python relaxation-effect.py "$DIR" --digest
+    echo "Plotting failure modes for ${DIR} ..."
+    ../.venv/bin/python plot-failure-modes.py "outputs/${DIR}"
+    ../.venv/bin/python plot-failure-modes.py "outputs/${DIR}" --fine
+fi
+
 # scaling
 process_set "output_scaling_" "outputs/${DIR}-scaling"  "outputs/${DIR}-scaling-relaxations"  "true"
 

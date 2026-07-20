@@ -1,8 +1,12 @@
 """Classify run-level errors from driver output JSONs into a structured CSV,
 and optionally summarise results into pivot tables and top-K breakdowns.
 
-One row per run attempt (including successes).  Add/remove/reorder entries in
-MATCHERS to extend the taxonomy — first match wins.
+One row per run attempt (including successes). Matchers are selected per
+(language, parallelism_model) pair: GENERIC_MATCHERS (language-agnostic outcomes)
+apply to every pair, and each pair's own content matchers live in MATCHER_SETS.
+Currently only ('python', 'pycompss') is populated; other pairs fall back to the
+generic outcomes plus a catch-all. To support another pair (e.g. ('cpp', 'cuda')),
+write its matchers and register them under that key. First match wins.
 
 Usage:
     python classify-errors.py kernel-20
@@ -76,7 +80,7 @@ def _first_exception_line(text: str) -> str:
     return hits[-1].strip() if hits else ''
 
 def _first_meaningful_line(text: str) -> str:
-    """First non-boilerplate, non-empty line — used for 'other' details."""
+    """First non-boilerplate, non-empty line, used for 'other' details."""
     skip = {
         'Picked up JAVA_TOOL_OPTIONS',
         'WARNING: Runtime environment',
@@ -99,9 +103,10 @@ class Matcher:
     match:  Callable[[str, dict], bool]   # (cleaned_stderr, run_dict) -> bool
     detail: Callable[[str, dict], str]    # (cleaned_stderr, run_dict) -> str
 
-def classify(stderr: str, run: dict) -> tuple[str, str]:
+def classify(stderr: str, run: dict,
+             language: str = '', parallelism_model: str = '') -> tuple[str, str]:
     s = _clean(stderr)
-    for m in MATCHERS:
+    for m in matchers_for(language, parallelism_model):
         try:
             if m.match(s, run):
                 return m.category, m.detail(s, run)
@@ -149,7 +154,10 @@ def _syntax_detail(s, run):
 def _import_detail(s, run):
     m = re.search(r"cannot import name '([^']+)' from '([^']+)'", s)
     if m:
-        return f"'{m.group(1)}' from '{m.group(2)}'"
+        name, module = m.group(1), m.group(2)
+        # Real symbol under the wrong module vs a name that exists nowhere.
+        kind = 'wrong module path' if name in _PYCOMPSS_API_SYMBOLS else 'hallucinated symbol'
+        return f"{kind}: '{name}' from '{module}'"
     m = re.search(r"No module named '([^']+)'", s)
     if m:
         return f"no module '{m.group(1)}'"
@@ -164,6 +172,15 @@ def _api_namespace_detail(s, run):
         m2 = re.search(r'@([\w.]+)\(', s)
         return f"module as callable: @{m2.group(1)}" if m2 else 'module as callable'
     return ''
+
+def _is_future_misuse(s):
+    """True when the traceback blames the pycompss Future class or a hallucinated resolver.
+
+    Capital-F 'Future' is the pycompss class (won't match '__future__' or a
+    'future_x' variable); '.result()'/'.get()' are the invented resolution calls
+    models write instead of compss_wait_on().
+    """
+    return bool(re.search(r"\bFuture\b", s) or re.search(r"\.result\(\)|\.get\(\)", s))
 
 def _future_detail(s, run):
     for pat, label in [
@@ -212,7 +229,7 @@ def _pycompss_runtime_detail(s, run):
     m = re.search(r'COMPSs Exception[:\s]+(.+)', s)
     if m:
         return f'COMPSs: {m.group(1).strip()[:80]}'
-    # ERRMGR task failure — extract task name if present
+    # ERRMGR task failure: extract task name if present
     m = re.search(r"Task '([^']+)' TOTALLY FAILED", s)
     if m:
         return f'task totally failed: {m.group(1)}'
@@ -267,23 +284,32 @@ _PYCOMPSS_API_SYMBOLS = {
     'stream_array', 'compss', 'ON_FAILURE', 'returns',
 }
 
-# ── MATCHERS registry ─────────────────────────────────────────────────────────
-# First match wins. Reorder, add, or remove entries freely.
+# ── MATCHERS registries ───────────────────────────────────────────────────────
 
-MATCHERS: list[Matcher] = [
-
+# Language-agnostic outcomes (run flags / [Timeout] prefix); shared by every pair.
+GENERIC_MATCHERS: list[Matcher] = [
     # ── Outcome-based (must come before content-based) ────────────────────────
     Matcher('success',
             match=lambda s, r: bool(r.get('did_run') and r.get('is_valid')),
             detail=lambda s, r: ''),
-    Matcher('wrong_answer',
+    # ran to completion but the result failed the driver's output validation
+    Matcher('validation',
             match=lambda s, r: bool(r.get('did_run') and r.get('is_valid') is False),
             detail=lambda s, r: ''),
 
-    # ── Timeout (before content matchers — [Timeout] prefix is unambiguous) ───
+    # ── Timeout (before content matchers; [Timeout] prefix is unambiguous) ───
     Matcher('timeout',
-            match=lambda s, r: s.startswith('[Timeout]'),
+            match=lambda s, r: s.startswith('[Timeout]') and not _is_future_misuse(s),
             detail=_timeout_detail),
+]
+
+# Catch-all, appended last for every pair.
+OTHER_MATCHER = Matcher('other',
+                        match=lambda s, r: True,
+                        detail=lambda s, r: _first_meaningful_line(s))
+
+# Python + PyCOMPSs content matchers, in specificity order (order is load-bearing).
+PYCOMPSS_MATCHERS: list[Matcher] = [
 
     # ── Python / PyCOMPSs import layer ────────────────────────────────────────
     Matcher('import_error',
@@ -295,16 +321,16 @@ MATCHERS: list[Matcher] = [
                 "'module' object is not callable" in s
                 or re.search(r"module '[\w.]+' has no attribute", s)),
             detail=_api_namespace_detail),
+    # ── Future / async misuse ─────────────────────────────────────────────────
+    # Above unexpected_task_param: a hung future misuse carries COMPSs boilerplate
+    # ('Unexpected argument') in its tail that would otherwise steal it.
+    Matcher('unresolved_future',
+            match=lambda s, r: _is_future_misuse(s),
+            detail=_future_detail),
+
     Matcher('unexpected_task_param',       # @task(in_collection=...) etc.
             match=lambda s, r: 'Unexpected argument' in s and '@task' not in s,
             detail=_unexpected_arg_detail),
-
-    # ── Future / async misuse ─────────────────────────────────────────────────
-    Matcher('unresolved_future',
-            match=lambda s, r: bool(
-                re.search(r"Future|\.result\(\)|\.get\(\)", s)
-                and re.search(r"TypeError|AttributeError", s)),
-            detail=_future_detail),
 
     # ── Entry point: main() not found at all ──────────────────────────────────
     Matcher('wrong_entrypoint',
@@ -326,8 +352,8 @@ MATCHERS: list[Matcher] = [
                 )),
             detail=_missing_api_symbol_detail),
 
-    # ── None / uninitialized ──────────────────────────────────────────────────
-    Matcher('nonetype_error',
+    # ── None / uninitialized (a plain Python exception) ───────────────────────
+    Matcher('python_exception',
             match=lambda s, r: "'NoneType' object" in s,
             detail=_nonetype_detail),
 
@@ -337,7 +363,7 @@ MATCHERS: list[Matcher] = [
             detail=_syntax_detail),
 
     # ── PyCOMPSs / COMPSs runtime ─────────────────────────────────────────────
-    Matcher('pycompss_runtime',
+    Matcher('compss_error',
             match=lambda s, r: bool(
                 'COMPSs Exception' in s
                 or ('ERRMGR' in s and 'TOTALLY FAILED' in s)),
@@ -350,17 +376,19 @@ MATCHERS: list[Matcher] = [
                 or 'Exception in thread' in s),
             detail=_java_detail),
 
-    # ── General Python exceptions — colon omitted to survive stderr truncation ─
-    Matcher('type_error',
+    # ── General Python exceptions; colon omitted to survive stderr truncation ─
+    # Future misuse is caught earlier (unresolved_future), so these are the plain,
+    # non-future Python faults, folded under one category.
+    Matcher('python_exception',
             match=lambda s, r: 'TypeError' in s,
             detail=_type_error_detail),
-    Matcher('name_error',           # remaining undefined names (not main, not API)
+    Matcher('python_exception',     # remaining undefined names (not main, not API)
             match=lambda s, r: 'NameError' in s or 'is not defined' in s,
             detail=_name_error_detail),
-    Matcher('attribute_error',
+    Matcher('python_exception',
             match=lambda s, r: 'AttributeError' in s,
             detail=_attribute_error_detail),
-    Matcher('value_error',
+    Matcher('python_exception',
             match=lambda s, r: 'ValueError' in s,
             detail=_value_error_detail),
     Matcher('runtime_error',
@@ -368,15 +396,74 @@ MATCHERS: list[Matcher] = [
             detail=_runtime_error_detail),
 
     # ── Generic COMPSs failure with no identifiable Python exception ──────────
-    Matcher('pycompss_unknown_failure',
+    Matcher('compss_error',
             match=lambda s, r: 'Error running application' in s,
             detail=lambda s, r: 'COMPSs terminated with no traceable Python exception'),
-
-    # ── Catch-all ─────────────────────────────────────────────────────────────
-    Matcher('other',
-            match=lambda s, r: True,
-            detail=lambda s, r: _first_meaningful_line(s)),
 ]
+
+# Content matchers keyed by (language, parallelism_model). Add new pairs here.
+MATCHER_SETS: dict[tuple[str, str], list[Matcher]] = {
+    ('python', 'pycompss'): PYCOMPSS_MATCHERS,
+    # ('cpp', 'cuda'): CUDA_MATCHERS,   # write these when such results exist
+}
+
+
+def matchers_for(language: str, parallelism_model: str) -> list[Matcher]:
+    """Matchers for a (language, parallelism_model) pair: shared + pair-specific + catch-all.
+
+    Pairs absent from MATCHER_SETS fall back to the shared outcomes plus the
+    catch-all, so an unsupported language is still split by outcome, not diagnosed.
+    """
+    specific = MATCHER_SETS.get((language, parallelism_model), [])
+    return GENERIC_MATCHERS + specific + [OTHER_MATCHER]
+
+# ── Category grouping ─────────────────────────────────────────────────────────
+
+CATEGORY_GROUP: dict[str, str] = {
+    'success':                 'success',
+    # a relaxation actually rescued this output (grounded in relaxations_applied)
+    'recoverable':             'recoverable',
+    # ran but produced an incorrect result (own coarse outcome)
+    'validation':              'validation',
+    # runtime: any failed run; unfixed import/api faults land here, not recoverable.
+    'import_error':            'runtime',
+    'api_namespace_misuse':    'runtime',
+    'unexpected_task_param':   'runtime',
+    'missing_api_symbol':      'runtime',
+    'wrong_entrypoint':        'runtime',
+    'unresolved_future':       'runtime',
+    'syntax_error':            'runtime',
+    'wrong_signature':         'runtime',
+    'python_exception':        'runtime',
+    'runtime_error':           'runtime',
+    'timeout':                 'runtime',
+    'compss_error':            'runtime',
+    'java_exception':          'runtime',
+    # rejected before running (no @task decorator); see category_group() docstring
+    'build_failure':           'build',
+    'no_runs':                 'other',
+    'not_evaluated':           'other',
+    'other':                   'other',
+}
+
+def category_group(category: str) -> str:
+    """Coarse outcome group for a fine category.
+
+    - success:     ran and passed validation natively (no relaxation applied).
+    - recoverable: failed natively but a relaxation in drivers/python/relaxations.py
+                   actually rescued it (the output carries a non-empty
+                   relaxations_applied). The reported pass@k does not count these as
+                   passes. This is the demonstrated fix set, not a guess: an unfixed
+                   import/api fault stays under 'runtime', not here.
+    - validation:  ran to completion but the result was wrong (failed validation).
+    - build:       for pycompss, the generated code had no @task decorator, so the
+                   harness rejected it before assembling/running it (python is not
+                   compiled; the "build" step is a file merge gated by that check).
+    - runtime: any other failed run (crash, syntax fault, or an unfixed
+                   import/namespace/future error no relaxation cleared here).
+    - other:       unevaluated, or a failure with no traceable error text.
+    """
+    return CATEGORY_GROUP.get(category, 'other')
 
 # ── I/O helpers ──────────────────────────────────────────────────────────────
 
@@ -412,15 +499,19 @@ def process_file(json_path: str, include_success: bool, snippet_lines: int = 20)
     for entry in data:
         if not isinstance(entry.get('outputs'), list):
             continue
+        language = entry.get('language', '')
+        parallelism_model = entry.get('parallelism_model', '')
         meta = {
-            'model':        model,
-            'problem_name': entry.get('name', ''),
-            'problem_type': entry.get('problem_type', ''),
+            'model':             model,
+            'problem_name':      entry.get('name', ''),
+            'problem_type':      entry.get('problem_type', ''),
+            'language':          language,
+            'parallelism_model': parallelism_model,
         }
 
         for oi, out in enumerate(entry['outputs']):
             if not isinstance(out, dict):
-                # Bare string — not yet evaluated
+                # Bare string, not yet evaluated
                 rows.append({**meta, 'output_idx': oi, 'run_idx': None,
                              'did_build': None, 'did_run': None, 'is_valid': None,
                              'error_category': 'not_evaluated', 'error_detail': '',
@@ -446,10 +537,15 @@ def process_file(json_path: str, include_success: bool, snippet_lines: int = 20)
                              'stderr_snippet': ''})
                 continue
 
+            relaxations = out.get('relaxations_applied') or []
             for ri, run in enumerate(runs):
                 stderr = run.get('stderr', '') or ''
-                category, detail = classify(stderr, run)
-                if category == 'success' and not include_success:
+                category, detail = classify(stderr, run, language, parallelism_model)
+                # Relaxation-rescued pass: not a native pass, attributed to the fix.
+                if category == 'success' and relaxations:
+                    category = 'recoverable'
+                    detail = ', '.join(relaxations)
+                if category in ('success', 'recoverable') and not include_success:
                     continue
                 rows.append({
                     **meta,
@@ -470,9 +566,9 @@ def process_file(json_path: str, include_success: bool, snippet_lines: int = 20)
 def _topk_pivot(df: pd.DataFrame, group_col: str, k: int) -> pd.DataFrame:
     """For each value of group_col, return the top-k error categories by count,
     with count and percentage of that group's total runs."""
-    # Exclude success from error analysis (but count total including success)
+    # success and recoverable are passing outcomes, not failure modes.
     total = df.groupby(group_col).size().rename('total_runs')
-    errors = df[df['error_category'] != 'success']
+    errors = df[~df['error_category'].isin(['success', 'recoverable'])]
     counts = (errors.groupby([group_col, 'error_category'])
                     .size()
                     .reset_index(name='count'))
@@ -492,15 +588,62 @@ def _category_pivot(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
     counts = (df.groupby([group_col, 'error_category'])
                 .size()
                 .unstack(fill_value=0))
-    # Add total and sort by total errors (excluding success)
-    error_cols = [c for c in counts.columns if c != 'success']
+    # Add total and sort by total errors (success and recoverable are not failures)
+    error_cols = [c for c in counts.columns if c not in ('success', 'recoverable')]
     counts['total_errors'] = counts[error_cols].sum(axis=1)
     counts['total_runs']   = counts.sum(axis=1) - counts.get('total_errors', 0)
     return counts.sort_values('total_errors', ascending=False).reset_index()
 
 
-def summarize(errors_csv: str, out_dir: str, top_k: int) -> None:
+def _group_composition(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    """Per group_col value: run count and share of runs in each category_group."""
+    total = df.groupby(group_col).size().rename('total_runs')
+    comp = (df.groupby([group_col, 'category_group']).size()
+              .unstack(fill_value=0))
+    comp = comp.div(comp.sum(axis=1), axis=0)          # row-normalised shares
+    comp = comp.merge(total, left_index=True, right_index=True)
+    return comp.sort_values('recoverable', ascending=False).reset_index() \
+        if 'recoverable' in comp.columns else comp.reset_index()
+
+
+def _digest_md(df: pd.DataFrame, run_name: str, top_k: int = 3) -> str:
+    """Markdown summary: per-model outcome split plus dominant failure modes."""
+    lines = [f'# Failure-mode summary: {run_name}', '']
+    comp = _group_composition(df, 'model')
+    top = _topk_pivot(df, 'model', top_k)
+
+    def pct(row, col):
+        return f'{100 * row[col]:.0f}%' if col in row and pd.notna(row[col]) else '0%'
+
+    lines += ['## Per-model outcome composition (share of run attempts)', '',
+              '| model | runs | success | recoverable | runtime | build | top failure modes |',
+              '|---|---:|---:|---:|---:|---:|---|']
+    for _, row in comp.iterrows():
+        model = row['model']
+        modes = top[top['model'] == model].head(top_k)
+        modes_str = '; '.join(
+            f"{m['error_category']} ({m['pct_of_runs']:.0f}%)" for _, m in modes.iterrows())
+        lines.append(
+            f"| {model} | {int(row['total_runs'])} | {pct(row, 'success')} | "
+            f"{pct(row, 'recoverable')} | {pct(row, 'runtime')} | "
+            f"{pct(row, 'build')} | {modes_str} |")
+
+    lines += ['', '## Dominant failure mode per problem type', '',
+              '| problem type | top failure modes |', '|---|---|']
+    tp = _topk_pivot(df, 'problem_type', top_k)
+    for ptype, grp in tp.groupby('problem_type'):
+        modes_str = '; '.join(
+            f"{m['error_category']} ({m['pct_of_runs']:.0f}%)"
+            for _, m in grp.head(top_k).iterrows())
+        lines.append(f'| {ptype} | {modes_str} |')
+    lines.append('')
+    return '\n'.join(lines)
+
+
+def summarize(errors_csv: str, out_dir: str, top_k: int, write_digest: bool = False) -> None:
     df = pd.read_csv(errors_csv)
+    if 'category_group' not in df.columns:
+        df['category_group'] = df['error_category'].map(category_group)
 
     tables = {
         'topk_by_model':        (_topk_pivot(df, 'model', top_k),
@@ -510,9 +653,13 @@ def summarize(errors_csv: str, out_dir: str, top_k: int) -> None:
         'topk_by_problem':      (_topk_pivot(df, 'problem_name', top_k),
                                  f'Top-{top_k} error categories per problem'),
         'pivot_model':          (_category_pivot(df, 'model'),
-                                 'Error category counts — model × category'),
+                                 'Error category counts by model × category'),
         'pivot_problem_type':   (_category_pivot(df, 'problem_type'),
-                                 'Error category counts — problem_type × category'),
+                                 'Error category counts by problem_type × category'),
+        'group_by_model':       (_group_composition(df, 'model'),
+                                 'Category-group shares by model'),
+        'group_by_problem_type':(_group_composition(df, 'problem_type'),
+                                 'Category-group shares by problem_type'),
     }
 
     os.makedirs(out_dir, exist_ok=True)
@@ -520,6 +667,12 @@ def summarize(errors_csv: str, out_dir: str, top_k: int) -> None:
         path = os.path.join(out_dir, f'errors_{key}.csv')
         table.to_csv(path, index=False)
         print(f'  [{desc}] → {path}')
+
+    if write_digest:
+        digest_path = os.path.join(out_dir, f'errors_{run_name(out_dir)}_digest.md')
+        with open(digest_path, 'w') as f:
+            f.write(_digest_md(df, run_name(out_dir), top_k))
+        print(f'  [Markdown digest] → {digest_path}')
 
     # Print the two most useful tables to stdout for a quick overview
     print('\n── Top errors by model ──')
@@ -545,6 +698,8 @@ def get_args():
         help='After classification, also write summary pivot tables.')
     parser.add_argument('--only-summarize', action='store_true',
         help='Skip classification; read existing errors CSV and write summaries only.')
+    parser.add_argument('--digest', action='store_true',
+        help='With --summarize, also write a Markdown digest (errors_<dir>_digest.md).')
     parser.add_argument('--top-k', type=int, default=5, metavar='K',
         help='Number of top error categories to show in per-model/type summaries (default: 5).')
     return parser.parse_args()
@@ -573,6 +728,7 @@ def main():
             print(f'  {model}: {len(rows)} rows')
 
         df = pd.DataFrame(all_rows)
+        df['category_group'] = df['error_category'].map(category_group)
         os.makedirs(out_dir, exist_ok=True)
         df.to_csv(out_path, index=False)
         print(f'\nSaved {len(df)} rows → {out_path}')
@@ -586,7 +742,7 @@ def main():
                 f'Errors CSV not found: {out_path}\n'
                 f'Run without --only-summarize first to generate it.')
         print(f'\nSummarizing {out_path} ...')
-        summarize(out_path, out_dir, args.top_k)
+        summarize(out_path, out_dir, args.top_k, write_digest=args.digest)
 
 
 if __name__ == '__main__':

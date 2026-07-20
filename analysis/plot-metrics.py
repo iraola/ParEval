@@ -16,6 +16,10 @@ PRESETS = ps.PRESETS
 # Hatches keep the per-problem-type bars distinguishable in grayscale print.
 HATCHES = ['/', '\\', 'x', '-', '+', 'o', '//', '\\\\', '||', '--', '++', 'xx']
 
+# Bump every text element on the by-problem-type plots this many points above the
+# plotstyle default. Tune per figure as needed.
+FONT_BUMP = 6
+
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
 def fname_suffix(args) -> str:
@@ -38,6 +42,8 @@ def get_args():
         help="Keep only the top-N models by overall pass@1 (applied last).")
     parser.add_argument("-k", nargs="+", type=int, default=[1, 5, 10, 20],
         help="K values for the k-vs-pass@k plot (default: 1 5 10 20).")
+    parser.add_argument("--dump-csv", action="store_true",
+        help="Also write the exact per-model pass@k values plotted (mean across problem types).")
     return parser.parse_args()
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -146,39 +152,34 @@ def plot_passk1_by_problem_type(df: pd.DataFrame, output_dir, suffix=""):
 
     ax.set_xticks(x)
     ax.set_xticklabels([ps.label_for(m) for m in models],
-                       rotation=35, ha="right", fontsize=9)
-    ax.set_ylabel("pass@1")
+                       rotation=35, ha="right", fontsize=9 + FONT_BUMP)
+    ax.set_ylabel("pass@1", fontsize=10 + FONT_BUMP)
     ax.set_ylim(0, 1.05)
     ax.set_title("pass@1 by problem type  (models sorted by avg pass@1; "
-                 "bars sorted hardest → easiest)")
+                 "bars sorted hardest → easiest)", fontsize=12 + FONT_BUMP)
     ax.legend(title="problem type", bbox_to_anchor=(1.01, 1), loc="upper left",
-              frameon=False)
+              frameon=False, fontsize=8 + FONT_BUMP, title_fontsize=8 + FONT_BUMP)
     ps.style_axis(ax)
+    # style_axis resets both axes to labelsize 9; re-bump both (model names on x too).
+    ax.tick_params(labelsize=9 + FONT_BUMP)
     fig.tight_layout()
     ps.save_both(fig, output_dir, f"pass1_by_problem_type{suffix}")
 
 # ── Plot 1b: k vs pass@k, one panel per model family ─────────────────────────
 
-def plot_k_vs_passk_by_family(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
+def plot_k_vs_passk_by_family(df: pd.DataFrame, k_values: list, output_dir, suffix="", ncols=3):
     """Small-multiples version of plot 1: few lines per panel stay readable
-    even when all models are plotted at once."""
+    even when all models are plotted at once.
+
+    ncols=3 gives the wide 2x3 layout; ncols=2 gives the tall 3x2 ("vertical")
+    layout that fits a two-column-paper column better.
+    """
     cols = [f"pass@{k}" for k in k_values if f"pass@{k}" in df.columns]
     agg = df.groupby("model")[cols].mean()
 
-    families: dict[str, list] = {}
-    for model in agg.index:
-        families.setdefault(ps.family_of(model), []).append(model)
-    order = [f for f in ps.FAMILIES if f in families]
-    order += sorted(set(families) - set(order))
-
-    ncols = 4
-    nrows = -(-len(order) // ncols)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.7 * nrows),
-                             sharex=True, sharey=True, squeeze=False)
-
-    for ax, fam in zip(axes.flat, order):
-        models = sorted(families[fam], key=lambda m: agg.loc[m, "pass@1"],
-                        reverse=True)
+    fig, axes, groups = ps.family_grid(agg.index, ncols=ncols)
+    for ax, (fam, models) in zip(axes.flat, groups):
+        models = sorted(models, key=lambda m: agg.loc[m, "pass@1"], reverse=True)
         for model in models:
             ys = [agg.loc[model, c] for c in cols]
             ax.plot(k_values[:len(ys)], ys,
@@ -190,16 +191,29 @@ def plot_k_vs_passk_by_family(df: pd.DataFrame, k_values: list, output_dir, suff
         ax.set_xticks(k_values)
         ax.set_ylim(0, 1.02)
         ps.style_axis(ax)
-        ax.legend(fontsize=7, frameon=False, loc="best")
-    for ax in axes.flat[len(order):]:
-        ax.set_visible(False)
+        ax.legend(**ps.PANEL_LEGEND_KW)
     for ax in axes[-1]:
         ax.set_xlabel("k")
     for ax in axes[:, 0]:
         ax.set_ylabel("pass@k")
 
-    fig.tight_layout()
-    ps.save_both(fig, output_dir, f"k_vs_passk_by_family{suffix}")
+    layout = "_vertical" if ncols == 2 else ""
+    ps.save_both(fig, output_dir, f"k_vs_passk_by_family{layout}{suffix}")
+
+def dump_passk_csv(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
+    """Write the exact per-model values the k-vs-pass@k plots draw.
+
+    Each point in k_vs_passk / k_vs_passk_by_family is pass@k averaged over the
+    problem types; this saves that table (one row per model) so it is inspectable.
+    """
+    cols = [f"pass@{k}" for k in k_values if f"pass@{k}" in df.columns]
+    agg = df.groupby("model")[cols].mean().round(6)
+    agg = agg.reindex(_model_order(df)).reset_index()
+
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, f"k_vs_passk{suffix}.csv")
+    agg.to_csv(path, index=False)
+    print(f"Wrote aggregated pass@k values: {path}")
 
 # ── Plot 2b: pass@1 heatmap (model × problem type) ───────────────────────────
 
@@ -215,42 +229,74 @@ def plot_passk1_heatmap(df: pd.DataFrame, output_dir, suffix=""):
     fig, ax = plt.subplots(figsize=(max(8, 0.7 * len(problem_types)),
                                     max(4, 0.5 * len(models))))
     sns.heatmap(grid, ax=ax, cmap="viridis", vmin=0, vmax=1,
-                annot=True, fmt=".0%", annot_kws={"fontsize": 7},
+                annot=True, fmt=".0%", annot_kws={"fontsize": 7 + FONT_BUMP},
                 linewidths=0.5, linecolor="white",
                 cbar_kws={"label": "pass@1", "format": mticker.PercentFormatter(xmax=1)})
-    ax.set_yticklabels([ps.label_for(m) for m in grid.index], rotation=0, fontsize=8)
-    ax.set_xticklabels(grid.columns, rotation=35, ha="right", fontsize=8)
+    ax.set_yticklabels([ps.label_for(m) for m in grid.index], rotation=0, fontsize=8 + FONT_BUMP)
+    ax.set_xticklabels(grid.columns, rotation=35, ha="right", fontsize=8 + FONT_BUMP)
     ax.set_xlabel("")
     ax.set_ylabel("")
-    ax.set_title("pass@1 by model × problem type")
+    ax.set_title("pass@1 by model × problem type", fontsize=12 + FONT_BUMP)
     fig.tight_layout()
     ps.save_both(fig, output_dir, f"pass1_heatmap{suffix}")
 
 # ── Plot 3: speedup@1 and efficiency@1 per model ─────────────────────────────
 
-def plot_speedup_efficiency(df: pd.DataFrame, output_dir, suffix=""):
+_BAR_FMT = {"speedup@1": "{:.1f}", "efficiency@1": "{:.2f}"}
+
+
+def _barh_metric(ax, agg: pd.DataFrame, col: str) -> None:
+    """Draw one horizontal bar-per-model panel with end-of-bar value labels."""
+    for _, row in agg.iterrows():
+        model = row["model"]
+        bar = ax.barh(ps.label_for(model), row[col],
+                      color=ps.color_for(model),
+                      edgecolor="black", linewidth=0.5,
+                      height=0.65, zorder=3)
+        w = bar[0].get_width()
+        ax.annotate(_BAR_FMT[col].format(w), (w, bar[0].get_y() + bar[0].get_height() / 2),
+                    textcoords="offset points", xytext=(3, 0),
+                    ha="left", va="center", fontsize=8 + FONT_BUMP)
+    ax.set_title(f"{col}", fontsize=12 + FONT_BUMP)
+    ax.axvline(1.0, color=ps.REF_COLOR, linewidth=0.9, linestyle="--",
+               alpha=0.6, zorder=4)
+    # headroom so the value labels do not clip the right spine
+    ax.set_xlim(0, ax.get_xlim()[1] * 1.08)
+    ps.style_axis(ax, xgrid=True, ygrid=False, pct_axis=None)
+    ax.tick_params(labelsize=9 + FONT_BUMP)   # override style_axis default (both axes)
+
+
+def _speedup_efficiency_agg(df: pd.DataFrame) -> pd.DataFrame:
     agg = df.groupby("model")[["speedup@1", "efficiency@1"]].mean().reset_index()
-    agg = agg.sort_values("speedup@1", ascending=True)
+    # Drop models with negligible scaling (near-zero: at most a stray correct run).
+    agg = agg[agg["efficiency@1"] >= 0.01]
+    return agg.sort_values("speedup@1", ascending=True)
+
+
+def plot_speedup_efficiency(df: pd.DataFrame, output_dir, suffix=""):
+    agg = _speedup_efficiency_agg(df)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, max(4, 0.45 * len(agg))), sharey=True)
-
     for ax, col in zip(axes, ["speedup@1", "efficiency@1"]):
-        for _, row in agg.iterrows():
-            model = row["model"]
-            ax.barh(ps.label_for(model), row[col],
-                    color=ps.color_for(model),
-                    edgecolor="black", linewidth=0.5,
-                    height=0.65, zorder=3)
-        ax.set_title(f"{col}  (mean across problem types)")
-        ax.axvline(1.0, color=ps.REF_COLOR, linewidth=0.9, linestyle="--",
-                   alpha=0.6, zorder=4)
-        ps.style_axis(ax, xgrid=True, ygrid=False, pct_axis=None)
-        ax.tick_params(axis="y", labelsize=9)
-
+        _barh_metric(ax, agg, col)
     axes[1].tick_params(axis="y", labelleft=False)
-    fig.suptitle("Speedup and efficiency @ k=1  (mean across problem types)", fontsize=12)
     fig.tight_layout()
     ps.save_both(fig, output_dir, f"speedup_efficiency_1{suffix}")
+
+
+def plot_efficiency_only(df: pd.DataFrame, output_dir, suffix=""):
+    """The efficiency@1 panel on its own; same model order as the right half of
+    plot_speedup_efficiency (models sorted by speedup@1).
+
+    Wide and short so it fills a two-column-paper column at a small height,
+    keeping the bumped text large relative to the figure.
+    """
+    agg = _speedup_efficiency_agg(df)
+
+    fig, ax = plt.subplots(figsize=(8, max(2.2, 0.4 * len(agg))))
+    _barh_metric(ax, agg, "efficiency@1")
+    fig.tight_layout()
+    ps.save_both(fig, output_dir, f"efficiency_1{suffix}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -274,9 +320,18 @@ def main():
     suffix = fname_suffix(args)
     plot_k_vs_passk(df, args.k, args.output_dir, suffix)
     plot_k_vs_passk_by_family(df, args.k, args.output_dir, suffix)
+    plot_k_vs_passk_by_family(df, args.k, args.output_dir, suffix, ncols=2)
     plot_passk1_by_problem_type(df, args.output_dir, suffix)
     plot_passk1_heatmap(df, args.output_dir, suffix)
-    plot_speedup_efficiency(df, args.output_dir, suffix)
+    # speedup/efficiency only exist in the -scaling runs; the correctness dirs
+    # carry all-zero columns, so skip those plots there.
+    if df[["speedup@1", "efficiency@1"]].to_numpy().max() > 0:
+        plot_speedup_efficiency(df, args.output_dir, suffix)
+        plot_efficiency_only(df, args.output_dir, suffix)
+    else:
+        print("Skipping speedup/efficiency plots: no scaling data (all zero).")
+    if args.dump_csv:
+        dump_passk_csv(df, args.k, args.output_dir, suffix)
 
 
 if __name__ == "__main__":

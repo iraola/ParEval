@@ -44,8 +44,6 @@ def get_correctness_df(df: pd.DataFrame) -> pd.DataFrame:
     return agg
 
 def nCr(n: int, r: int) -> int:
-    if n < r:
-        return 1
     return comb(n, r)
 
 def buildk(df: pd.DataFrame, k: int) -> pd.DataFrame:
@@ -57,6 +55,8 @@ def buildk(df: pd.DataFrame, k: int) -> pd.DataFrame:
     return agg.groupby(["parallelism_model", "problem_type"]).agg({f"build@{k}": "mean"})
 
 def _passk(num_samples: int, num_correct: int, k: int) -> float:
+    if num_samples < k:
+        return float("nan")   # estimator undefined with fewer than k samples
     if num_samples - num_correct < k:
         return 1.0
     return 1.0 - np.prod(1.0 - k / np.arange(num_samples - num_correct + 1, num_samples + 1))
@@ -80,9 +80,12 @@ def _speedupk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float, k
     # sort the runtimes
     runtimes.sort()
 
+    num_samples = runtimes.shape[0]
+    if num_samples < k:
+        return pd.Series({col_name.format(k): float("nan")})
+
     # compute expected value
     sum = 0.0
-    num_samples = runtimes.shape[0]
     for j in range(1, num_samples+1):
         num = nCr(j-1, k-1) * baseline_runtime
         den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8)
@@ -178,9 +181,12 @@ def _efficiencyk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float
     # sort the runtimes
     runtimes.sort()
 
+    num_samples = runtimes.shape[0]
+    if num_samples < k:
+        return pd.Series({col_name.format(k): float("nan")})
+
     # compute expected value
     sum = 0.0
-    num_samples = runtimes.shape[0]
     for j in range(1, num_samples+1):
         num = nCr(j-1, k-1) * baseline_runtime
         den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8) * n_resources[j-1]
@@ -280,10 +286,13 @@ def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
     PyCOMPSs carries inherent scheduling overhead that makes comparison against a purely
     sequential baseline reflect overhead rather than scaling. Using n=1 as the reference
     isolates how well the code scales with additional resources.
-    Requires df["n"] to be populated before calling.
+
+    Only applies to scaling runs, i.e. pycompss rows with a populated df["n"]
+    (num_procs). Correctness runs don't record num_procs, so those rows are
+    left untouched.
     """
     df = df.copy()
-    mask = df["parallelism_model"] == "pycompss"
+    mask = (df["parallelism_model"] == "pycompss") & df["n"].notna()
     if not mask.any():
         return df
 
@@ -298,6 +307,9 @@ def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
     df = df.merge(n1_baselines, on=["name", "output_idx"], how="left")
     updated = mask & df["n1_baseline"].notna()
     df.loc[updated, "best_sequential_runtime"] = df.loc[updated, "n1_baseline"]
+    # No valid n=1 run: exclude the output from metrics rather than
+    # silently falling back to the sequential baseline
+    df.loc[mask & df["n1_baseline"].isna(), "is_valid"] = False
     return df.drop(columns=["n1_baseline"])
 
 

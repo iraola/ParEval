@@ -20,11 +20,12 @@ def get_args():
     parser.add_argument("-o", "--output", type=str, help="Output csv file containing the results.")
     parser.add_argument("--problem-sizes", type=str, default='../drivers/problem-sizes.json', help="Json with problem sizes. Used for calculating GPU efficiency.")
     parser.add_argument("--model-name", type=str, help="Add model name column with this value")
+    parser.add_argument("--relaxations", action="store_true",
+        help="Count outputs that passed only after a relaxation as correct. "
+             "Default: treat relaxed passes as failures.")
     return parser.parse_args()
 
 def nCr(n: int, r: int) -> int:
-    if n < r:
-        return 1
     return comb(n, r)
 
 def _speedupk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float, k: int, n: int) -> float:
@@ -38,9 +39,12 @@ def _speedupk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float, k
     # sort the runtimes
     runtimes.sort()
 
+    num_samples = runtimes.shape[0]
+    if num_samples < k:
+        return pd.Series({f"speedup_{n}@{k}": float("nan")})
+
     # compute expected value
     sum = 0.0
-    num_samples = runtimes.shape[0]
     for j in range(1, num_samples+1):
         num = nCr(j-1, k-1) * baseline_runtime
         den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8)
@@ -57,6 +61,11 @@ def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     # choose processor count; hardcoded right now
     df = df[df["n"] == n]
     df = df.copy()
+
+    col = f"speedup_{n}@{k}"
+    if df.empty:
+        idx = pd.MultiIndex.from_arrays([[], []], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame({col: pd.Series(dtype=float)}, index=idx)
 
     # use min best_sequential_runtime
     df["best_sequential_runtime"] = df.groupby(["name", "parallelism_model", "output_idx"])["best_sequential_runtime"].transform("min")
@@ -91,9 +100,12 @@ def _efficiencyk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float
     assert np.all(n_resources == n_resources[0])
     n = int(n_resources[0])
 
+    num_samples = runtimes.shape[0]
+    if num_samples < k:
+        return pd.Series({f"efficiency_{n}@{k}": float("nan")})
+
     # compute expected value
     sum = 0.0
-    num_samples = runtimes.shape[0]
     for j in range(1, num_samples+1):
         num = nCr(j-1, k-1) * baseline_runtime
         den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8) * n_resources[j-1]
@@ -110,6 +122,11 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     # choose processor count; hardcoded right now
     df = df[df["n"] == n]
     df = df.copy()
+
+    col = f"efficiency_{n}@{k}"
+    if df.empty:
+        idx = pd.MultiIndex.from_arrays([[], []], names=["parallelism_model", "problem_type"])
+        return pd.DataFrame({col: pd.Series(dtype=float)}, index=idx)
 
     # use min best_sequential_runtime
     df["best_sequential_runtime"] = df.groupby(["name", "parallelism_model", "output_idx"])["best_sequential_runtime"].transform("min")
@@ -178,6 +195,10 @@ def main():
     # filter/aggregate
     df["did_run"] = df["did_run"].fillna(False)     # if it didn't build, then this will be nan; overwrite
     df["is_valid"] = df["is_valid"].fillna(False)   # if it didn't build, then this will be nan; overwrite
+
+    # without --relaxations, relaxed passes are treated as failures
+    if not args.relaxations and "relaxation_used" in df.columns:
+        df.loc[df["relaxation_used"] == True, "is_valid"] = False
 
     if args.execution_model == "mpi":
         df = df[df["parallelism_model"] == "mpi"]
