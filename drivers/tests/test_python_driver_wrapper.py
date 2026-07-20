@@ -145,7 +145,7 @@ class TestInScalingMode:
         assert not d._in_scaling_mode([{}])
 
     def test_false_with_single_config_even_if_num_procs_present(self):
-        # [{"num_procs": 5}] — one entry, should NOT trigger scaling
+        # [{"num_procs": 5}]: one entry, should NOT trigger scaling
         d = make_driver(resource_slot=SLOT_8)
         assert not d._in_scaling_mode([{"num_procs": 5}])
 
@@ -729,7 +729,7 @@ class TestTryToFindPath:
         assert try_to_find_path(Path("some/other/path/file.py")) is None
 
     def test_returns_none_when_regex_no_match(self):
-        # Only two path components after python/benchmarks/ — regex needs three
+        # Only two path components after python/benchmarks/, so the regex needs three
         assert try_to_find_path(Path("python/benchmarks/kernel/file.py")) is None
 
     def test_returns_none_when_problem_types_dont_match(self):
@@ -770,7 +770,7 @@ class TestTryToFindPath:
         bmark_dir.mkdir(parents=True)
         (bmark_dir / "pycompss.py").write_text("# driver")
 
-        # Query uses underscore; directory uses hyphen — both normalise to the same key.
+        # Query uses underscore; directory uses hyphen, but both normalize to the same key.
         result = try_to_find_path(
             Path("python/benchmarks/histogram/22_histogram_my_example/pycompss.py")
         )
@@ -1034,7 +1034,7 @@ class TestNoTaskGate:
 
     def test_returns_did_build_false(self, tmp_path):
         d = make_driver(resource_slot=None, launch_format=SIMPLE_FMT)
-        # Use a nonexistent driver path — early exit must happen before the path is checked
+        # Use a nonexistent driver path, so early exit must happen before the path is checked
         result = d.test_single_output("# prompt", self._SEQUENTIAL,
                                       str(tmp_path / "nonexistent.py"), "100")
         assert not result.did_build()

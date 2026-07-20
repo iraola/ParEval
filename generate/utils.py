@@ -143,14 +143,14 @@ def extract_pycompss_code(text: str) -> str:
 
     For instruct/chat models whose answer is Markdown prose wrapping fenced code.
     Note this is the wrong primitive for base-completion models, where the real
-    solution is the unfenced continuation and any later fence is usually junk —
+    solution is the unfenced continuation and any later fence is usually junk, so
     those use `extract_pycompss_solution` directly.
     """
     code_blocks = extract_code_blocks(text)
     # Prefer blocks that contain Python code markers
     python_blocks = [b for b in code_blocks if re.search(r'(@task|^\s*import\s|^\s*from\s|^\s*def\s)', b, flags=re.MULTILINE)]
     if python_blocks:
-        # If block 0 already has def main it's self-contained; else concatenate fragments - Applies to reasoning models with interleaved code and prose
+        # If block 0 already has def main it's self-contained; else concatenate fragments (applies to reasoning models with interleaved code and prose)
         if re.search(r'^def main\b', python_blocks[0], re.MULTILINE):
             return extract_pycompss_solution(python_blocks[0])
         return extract_pycompss_solution("\n\n".join(python_blocks))
@@ -165,7 +165,7 @@ def clean_instruct_output(output: str, prompt: str, response_tag: str) -> str:
     if think_end != -1:
         output = output[think_end + len('</think>'):].strip()
     elif '<think>' in output:
-        # Thinking block was not closed (generation truncated mid-thought) — no usable output
+        # Thinking block was not closed (generation truncated mid-thought), no usable output
         return ''
 
     prompt_loc = output.find(response_tag)
@@ -916,14 +916,14 @@ def get_inference_config(model_name : str, **kwargs) -> InferenceConfig:
     elif model_name.startswith('Qwen2.5/'):
         return QwenConfig(**kwargs)
     elif model_name.startswith('microsoft/bitnet'):
-        # Base completion model — no chat template
+        # Base completion model, no chat template
         return StarCoderConfig(**kwargs)
     elif model_name.startswith('zai-org/GLM'):
         return GLM4Config(**kwargs)
     elif model_name.startswith('moonshotai/Kimi'):
         return ChatMLConfig(**kwargs)
     elif model_name.startswith('ByteDance-Seed/Seed-OSS'):
-        # NOTE: chat template not officially documented; ChatML assumed — verify if wrong
+        # NOTE: chat template not officially documented; ChatML assumed, verify if wrong
         return ChatMLConfig(**kwargs)
     else:
         raise ValueError(f"Unknown model name: {model_name}")

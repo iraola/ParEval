@@ -561,8 +561,7 @@ class TestRegistry(unittest.TestCase):
         for r in ALL_RELAXATIONS:
             with self.subTest(relaxation=r.name):
                 out = r.apply(correct)
-                # fix_pycompss_imports replaces all pycompss imports by design —
-                # it applies even to correct code (broad sweep, last resort).
+                # fix_pycompss_imports replaces all pycompss imports by design
                 if r.name == "fix_pycompss_imports":
                     continue
                 self.assertIsNone(

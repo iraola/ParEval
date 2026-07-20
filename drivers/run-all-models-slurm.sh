@@ -9,7 +9,7 @@
 #SBATCH --output=logs/slurm-%A_%a.out
 #SBATCH --error=logs/slurm-%A_%a.err
 
-# Run driver evaluation as a SLURM job array — one task per model.
+# Run driver evaluation as a SLURM job array, one task per model.
 # Each task picks its model by index from the sorted list of generate output files.
 #
 # Usage:

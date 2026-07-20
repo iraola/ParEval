@@ -251,7 +251,7 @@ class RemoveInteractiveImportRelaxation(Relaxation):
 
         for alias in aliases:
             if re.search(r"\b" + re.escape(alias) + r"\s*\.", remaining):
-                return None  # alias is actually used — leave it
+                return None  # alias is actually used, leave it
 
         return remaining
 
@@ -278,7 +278,7 @@ class RemoveHallucinatedImportsRelaxation(Relaxation):
 
     Three categories of hallucinated imports are handled:
 
-    1.  Top-level 'compss.*' package — does not exist; pycompss is the real
+    1.  Top-level 'compss.*' package does not exist; pycompss is the real
         package.  All imports from 'compss.*' are dropped unconditionally.
 
         Most frequent (from kernel-20 outputs):
@@ -289,14 +289,14 @@ class RemoveHallucinatedImportsRelaxation(Relaxation):
           from compss.ons.ons import ONs                  1 472 lines
           from compss.constants import {DISK,MEMORY}_SCOPE  644 lines each
 
-    2.  Non-existent pycompss submodule paths — lines are dropped entirely.
+    2.  Non-existent pycompss submodule paths: lines are dropped entirely.
         Includes: pycompss.api.parallel, pycompss.api.decos, pycompss.api.data,
         pycompss.api.shared, pycompss.api.constants, pycompss.api.main,
         pycompss.api.operators, pycompss.api.COMPSs, pycompss.decorators,
         pycompss.api.compss, pycompss.task, pycompss.interactive, exaqute,
         pycomps (typo).
 
-    3.  Known hallucinated symbol names imported from real module paths — the
+    3.  Known hallucinated symbol names imported from real module paths: the
         module path is valid but the symbol does not exist.  Lines importing
         only bad names are dropped; lines mixing valid and hallucinated names
         are rewritten to keep only the valid names.
@@ -316,7 +316,7 @@ class RemoveHallucinatedImportsRelaxation(Relaxation):
         Hallucinated pycompss.api / pycompss.api direct imports:
           get_current_task_group_* (many variants), get_current_task_graph_*,
           parallel, comp, compss (re-import of package), task (wrong path),
-          compss_wait_on (wrong path — correct is from pycompss.api.api)
+          compss_wait_on (wrong path, correct is from pycompss.api.api)
 
         Hallucinated pycompss.api.parameter names:
           Input, Range, DIRECTORY_FILE_STREAM_INOUT, auto, data

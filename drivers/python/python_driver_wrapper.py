@@ -1,4 +1,4 @@
-"""PyCOMPSs driver wrapper — builds, runs, and evaluates generated Python/PyCOMPSs code.
+"""PyCOMPSs driver wrapper: builds, runs, and evaluates generated Python/PyCOMPSs code.
 
 Two operating modes
 -------------------
@@ -246,7 +246,7 @@ class PythonDriverWrapper(DriverWrapper):
         COMPSs error messages look like:
             Check files '/home/.../.COMPSs/a_out.py_40/jobs/job[1|2]' to find out the error.
 
-        The bracket notation job[1|2] names the specific job IDs to inspect —
+        The bracket notation job[1|2] names the specific job IDs to inspect, since
         there can be hundreds of other job files in the same directory, so we
         only open the ones explicitly named.  For each ID we glob
         job<id>*.out / job<id>*.err in the jobs directory.
@@ -618,7 +618,7 @@ class PythonDriverWrapper(DriverWrapper):
             elif run_results is not None and not any(r.is_valid for r in run_results if r.exit_code == 0):
                 logging.info("output %d: FAIL  validation error", output_index)
             else:
-                relax_note = " — all relaxations exhausted" if self.relaxations else ""
+                relax_note = ", all relaxations exhausted" if self.relaxations else ""
                 logging.info("output %d: FAIL%s", output_index, relax_note)
 
             return GeneratedTextResult(write_success, build_result, run_results, relaxations_applied=applied_relaxations, parallelism_model=self.parallelism_model)

@@ -500,7 +500,7 @@ class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
         self.assertIn("@task", result)
         self.assertIn("def main", result)
         self.assertIn("print(results)", result)
-        # if __name__ block is outside main — must be excluded
+        # if __name__ block is outside main, must be excluded
         self.assertNotIn("if __name__", result)
 
     def test_full_realistic_magicoder_pycompss_output(self):
@@ -530,7 +530,7 @@ class TestCleanInstructOutputPycompssDetection(unittest.TestCase):
 
 
 class TestExtractCodeBlocks(unittest.TestCase):
-    """Line-based fence scanner — the fundamental fence-parsing primitive."""
+    """Line-based fence scanner: the fundamental fence-parsing primitive."""
 
     def test_single_block(self):
         text = "before\n```python\nimport os\n```\nafter"
