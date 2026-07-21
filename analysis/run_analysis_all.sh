@@ -63,13 +63,13 @@ process_set() {
         if [ -f "$METRICS_FILE" ]; then
             echo "  (metrics already exists, skipping metrics.py)"
         else
-            ../.venv/bin/python metrics.py "$DATAFRAME_FILE" -o "$METRICS_FILE" --model-name "$MODEL_NAME"
+            ../.venv/bin/python metrics.py "$DATAFRAME_FILE" -o "$METRICS_FILE" --model-name "$MODEL_NAME" --baseline n1
         fi
 
         if [ -f "$METRICS_RELAX_FILE" ]; then
             echo "  (metrics (relax) already exists, skipping metrics.py --relaxations)"
         else
-            ../.venv/bin/python metrics.py "$DATAFRAME_FILE" -o "$METRICS_RELAX_FILE" --model-name "$MODEL_NAME" --relaxations
+            ../.venv/bin/python metrics.py "$DATAFRAME_FILE" -o "$METRICS_RELAX_FILE" --model-name "$MODEL_NAME" --relaxations --baseline n1
         fi
 
         if [ "$run_scaling_curves" = "true" ]; then
@@ -80,14 +80,14 @@ process_set() {
             else
                 ../.venv/bin/python metrics-scaling.py "$DATAFRAME_FILE" \
                     --execution-model pycompss -k 1 -n $SCALING_N \
-                    --model-name "$MODEL_NAME" -o "$CURVE_FILE"
+                    --model-name "$MODEL_NAME" --baseline n1 -o "$CURVE_FILE"
             fi
             if [ -f "$CURVE_RELAX_FILE" ]; then
                 echo "  (scaling curve (relax) already exists, skipping metrics-scaling.py --relaxations)"
             else
                 ../.venv/bin/python metrics-scaling.py "$DATAFRAME_FILE" \
                     --execution-model pycompss -k 1 -n $SCALING_N \
-                    --model-name "$MODEL_NAME" -o "$CURVE_RELAX_FILE" --relaxations
+                    --model-name "$MODEL_NAME" --baseline n1 -o "$CURVE_RELAX_FILE" --relaxations
             fi
         fi
 

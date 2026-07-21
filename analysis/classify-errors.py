@@ -595,12 +595,22 @@ def _category_pivot(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
     return counts.sort_values('total_errors', ascending=False).reset_index()
 
 
+def group_share_matrix(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    """Row-normalised category_group shares per group_col value (each row sums to 1).
+
+    Index is group_col; columns are whatever category_group values are present.
+    Callers impose a fixed column order or add a totals column as needed. Shared
+    with plot-failure-modes.py so the share computation lives in one place.
+    """
+    counts = (df.groupby([group_col, 'category_group']).size()
+                .unstack(fill_value=0))
+    return counts.div(counts.sum(axis=1), axis=0)
+
+
 def _group_composition(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
     """Per group_col value: run count and share of runs in each category_group."""
     total = df.groupby(group_col).size().rename('total_runs')
-    comp = (df.groupby([group_col, 'category_group']).size()
-              .unstack(fill_value=0))
-    comp = comp.div(comp.sum(axis=1), axis=0)          # row-normalised shares
+    comp = group_share_matrix(df, group_col)
     comp = comp.merge(total, left_index=True, right_index=True)
     return comp.sort_values('recoverable', ascending=False).reset_index() \
         if 'recoverable' in comp.columns else comp.reset_index()

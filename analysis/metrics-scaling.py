@@ -3,12 +3,12 @@
 # std imports
 import argparse
 import json
-from math import comb
-from typing import Union
 
 # tpl imports
 import numpy as np
 import pandas as pd
+
+import metrics
 
 
 def get_args():
@@ -23,33 +23,10 @@ def get_args():
     parser.add_argument("--relaxations", action="store_true",
         help="Count outputs that passed only after a relaxation as correct. "
              "Default: treat relaxed passes as failures.")
+    parser.add_argument("--baseline", choices=["serial", "n1"], default="serial",
+        help="Speedup baseline: 'serial' (purely sequential) or 'n1' (the single-resource "
+             "run, factoring out fixed runtime overhead). Default: serial.")
     return parser.parse_args()
-
-def nCr(n: int, r: int) -> int:
-    return comb(n, r)
-
-def _speedupk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float, k: int, n: int) -> float:
-    """ Compute the speedup@k metric """
-    # create a copy of the runtimes
-    if isinstance(runtimes, pd.Series):
-        runtimes = runtimes.values.copy()
-    else:
-        runtimes = runtimes.copy()
-
-    # sort the runtimes
-    runtimes.sort()
-
-    num_samples = runtimes.shape[0]
-    if num_samples < k:
-        return pd.Series({f"speedup_{n}@{k}": float("nan")})
-
-    # compute expected value
-    sum = 0.0
-    for j in range(1, num_samples+1):
-        num = nCr(j-1, k-1) * baseline_runtime
-        den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8)
-        sum += num / den
-    return pd.Series({f"speedup_{n}@{k}": sum})
 
 def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     """ Compute the speedup@k metric """
@@ -72,45 +49,14 @@ def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
 
     # group by name, parallelism_model, and output_idx and call _speedupk
     df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
-            lambda row: _speedupk(row["runtime"], np.min(row["best_sequential_runtime"]), k, n)
+            lambda row: metrics._speedupk(row["runtime"], np.min(row["best_sequential_runtime"]),
+                                          k, col_name=f"speedup_{n}@{{}}")
         ).reset_index()
 
     # compute the mean speedup@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"speedup_{n}@{k}": "mean"})
 
     return df
-
-def _efficiencyk(runtimes: Union[pd.Series, np.ndarray], baseline_runtime: float, k: int, n_resources: Union[pd.Series, np.ndarray]) -> float:
-    """ Compute the efficiency@k metric """
-    # create a copy of the runtimes
-    if isinstance(runtimes, pd.Series):
-        runtimes = runtimes.values.copy()
-    else:
-        runtimes = runtimes.copy()
-
-    if isinstance(n_resources, pd.Series):
-        n_resources = n_resources.values.copy()
-    else:
-        n_resources = n_resources.copy()
-
-    # sort the runtimes
-    runtimes.sort()
-
-    # make sure n_resources is all the same value and get that value
-    assert np.all(n_resources == n_resources[0])
-    n = int(n_resources[0])
-
-    num_samples = runtimes.shape[0]
-    if num_samples < k:
-        return pd.Series({f"efficiency_{n}@{k}": float("nan")})
-
-    # compute expected value
-    sum = 0.0
-    for j in range(1, num_samples+1):
-        num = nCr(j-1, k-1) * baseline_runtime
-        den = nCr(num_samples, k) * max(runtimes[j-1], 1e-8) * n_resources[j-1]
-        sum += num / den
-    return pd.Series({f"efficiency_{n}@{k}": sum})
 
 def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     """ Compute the efficiency@k metric """
@@ -133,48 +79,14 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
 
     # group by name, parallelism_model, and output_idx and call _efficiencyk
     df = df.groupby(["name", "parallelism_model", "problem_type"]).apply(
-            lambda row: _efficiencyk(row["runtime"], np.min(row["best_sequential_runtime"]), k, row["n"])
+            lambda row: metrics._efficiencyk(row["runtime"], np.min(row["best_sequential_runtime"]),
+                                             k, row["n"], col_name=f"efficiency_{n}@{{}}")
         ).reset_index()
-    
+
     # compute the mean efficiency@k
     df = df.groupby(["parallelism_model", "problem_type"]).agg({f"efficiency_{n}@{k}": "mean"})
 
     return df
-
-def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
-    """For PyCOMPSs, replace best_sequential_runtime with the n=1 (single-worker) runtime.
-
-    PyCOMPSs carries inherent scheduling overhead that makes comparison against a purely
-    sequential baseline reflect overhead rather than scaling. Using n=1 as the reference
-    isolates how well the code scales with additional resources.
-    Requires df["n"] to be populated before calling.
-    """
-    df = df.copy()
-    mask = df["parallelism_model"] == "pycompss"
-    if not mask.any():
-        return df
-
-    n1_baselines = (
-        df[mask & (df["n"] == 1) & df["is_valid"]]
-        .groupby(["name", "output_idx"])["runtime"]
-        .min()
-        .reset_index()
-        .rename(columns={"runtime": "n1_baseline"})
-    )
-
-    df = df.merge(n1_baselines, on=["name", "output_idx"], how="left")
-    updated = mask & df["n1_baseline"].notna()
-    df.loc[updated, "best_sequential_runtime"] = df.loc[updated, "n1_baseline"]
-    return df.drop(columns=["n1_baseline"])
-
-
-def parse_problem_size(problem_size: str) -> int:
-    """ problem size is of format '(1<<n)' or a plain integer """
-    if "<<" in problem_size:
-        num = problem_size.split("<<")[1][:-1]
-        return 2 ** int(num)
-    else:
-        return int(problem_size)
 
 def main():
     args = get_args()
@@ -187,39 +99,24 @@ def main():
         problem_sizes = json.load(f)
         for problem in problem_sizes:
             for parallelism_model, problem_size in problem_sizes[problem].items():
-                df.loc[(df["name"] == problem) & (df["parallelism_model"] == parallelism_model), "problem_size"] = parse_problem_size(problem_size)
+                df.loc[(df["name"] == problem) & (df["parallelism_model"] == parallelism_model), "problem_size"] = metrics.parse_problem_size(problem_size)
 
     # remove rows where parallelism_model is kokkos and num_threads is 64
     #df = df[~((df["parallelism_model"] == "kokkos") & (df["num_threads"] == 64))]
 
-    # filter/aggregate
-    df["did_run"] = df["did_run"].fillna(False)     # if it didn't build, then this will be nan; overwrite
-    df["is_valid"] = df["is_valid"].fillna(False)   # if it didn't build, then this will be nan; overwrite
+    # fill missing run flags; without --relaxations, void relaxed passes
+    df = metrics.prepare_run_flags(df, count_relaxed=args.relaxations)
 
-    # without --relaxations, relaxed passes are treated as failures
-    if not args.relaxations and "relaxation_used" in df.columns:
-        df.loc[df["relaxation_used"] == True, "is_valid"] = False
+    model = args.execution_model
+    if model not in metrics.MODELS:
+        raise NotImplementedError(f"Unsupported execution model {model}")
+    # select the model and set its resource count as n (see metrics.MODELS)
+    df = df[df["parallelism_model"] == model].copy()
+    df["n"] = metrics.resource_count(df)
 
-    if args.execution_model == "mpi":
-        df = df[df["parallelism_model"] == "mpi"]
-        df["n"] = df["num_procs"]
-    elif args.execution_model == "mpi+omp":
-        df = df[df["parallelism_model"] == "mpi+omp"]
-        df["n"] = df["num_procs"] * df["num_threads"]
-    elif args.execution_model == "omp":
-        df = df[df["parallelism_model"] == "omp"]
-        df["n"] = df["num_threads"]
-    elif args.execution_model == "kokkos":
-        df = df[df["parallelism_model"] == "kokkos"]
-        df["n"] = df["num_threads"]
-    elif args.execution_model == "pycompss":
-        df = df[df["parallelism_model"] == "pycompss"]
-        df["n"] = df["num_procs"]
-    else:
-        raise NotImplementedError(f"Unsupported execution model {args.execution_model}")
-
-    # For PyCOMPSs, scale relative to n=1 instead of the purely sequential baseline
-    df = apply_n1_baseline(df)
+    if args.baseline == "n1":
+        # void_unmatched=False: keep n>1 points even when n=1 failed (each n is a point)
+        df = metrics.apply_n1_baseline(df, void_unmatched=False)
 
     # get values for each k
     all_results = []

@@ -151,18 +151,13 @@ def dump_passk_csv(df_a, label_a, df_b, label_b, k_values, output_dir, suffix=""
     One row per model, with a column per k for each set (pass@k_<label_a>,
     pass@k_<label_b>), so the numbers behind the by-family figure are inspectable.
     """
-    cols = [f"pass@{k}" for k in k_values
-            if f"pass@{k}" in df_a.columns and f"pass@{k}" in df_b.columns]
-    agg_a = df_a.groupby("model")[cols].mean().add_suffix(f"_{label_a}")
-    agg_b = df_b.groupby("model")[cols].mean().add_suffix(f"_{label_b}")
+    cols = ps.passk_columns(k_values, df_a, df_b)
+    agg_a = ps.mean_passk_by_model(df_a, cols).add_suffix(f"_{label_a}")
+    agg_b = ps.mean_passk_by_model(df_b, cols).add_suffix(f"_{label_b}")
     out = agg_a.join(agg_b, how="outer").round(6)
     out = out.reindex(sorted(out.index)).reset_index()
-
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir,
-                        f"compare_passk_by_family_{label_a}_vs_{label_b}{suffix}.csv")
-    out.to_csv(path, index=False)
-    print(f"Wrote aggregated pass@k values: {path}")
+    ps.write_table(out, output_dir,
+                   f"compare_passk_by_family_{label_a}_vs_{label_b}{suffix}.csv")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

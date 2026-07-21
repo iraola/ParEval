@@ -1,6 +1,5 @@
 """ Plot metrics from the analysis/outputs/<dir>/metrics_*.csv files. """
 import argparse
-import os
 import re
 
 import matplotlib.pyplot as plt
@@ -159,9 +158,7 @@ def plot_passk1_by_problem_type(df: pd.DataFrame, output_dir, suffix=""):
                  "bars sorted hardest → easiest)", fontsize=12 + FONT_BUMP)
     ax.legend(title="problem type", bbox_to_anchor=(1.01, 1), loc="upper left",
               frameon=False, fontsize=8 + FONT_BUMP, title_fontsize=8 + FONT_BUMP)
-    ps.style_axis(ax)
-    # style_axis resets both axes to labelsize 9; re-bump both (model names on x too).
-    ax.tick_params(labelsize=9 + FONT_BUMP)
+    ps.style_axis(ax, labelsize=9 + FONT_BUMP)
     fig.tight_layout()
     ps.save_both(fig, output_dir, f"pass1_by_problem_type{suffix}")
 
@@ -206,14 +203,9 @@ def dump_passk_csv(df: pd.DataFrame, k_values: list, output_dir, suffix=""):
     Each point in k_vs_passk / k_vs_passk_by_family is pass@k averaged over the
     problem types; this saves that table (one row per model) so it is inspectable.
     """
-    cols = [f"pass@{k}" for k in k_values if f"pass@{k}" in df.columns]
-    agg = df.groupby("model")[cols].mean().round(6)
-    agg = agg.reindex(_model_order(df)).reset_index()
-
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"k_vs_passk{suffix}.csv")
-    agg.to_csv(path, index=False)
-    print(f"Wrote aggregated pass@k values: {path}")
+    cols = ps.passk_columns(k_values, df)
+    agg = ps.mean_passk_by_model(df, cols).round(6).reindex(_model_order(df)).reset_index()
+    ps.write_table(agg, output_dir, f"k_vs_passk{suffix}.csv")
 
 # ── Plot 2b: pass@1 heatmap (model × problem type) ───────────────────────────
 
@@ -262,8 +254,7 @@ def _barh_metric(ax, agg: pd.DataFrame, col: str) -> None:
                alpha=0.6, zorder=4)
     # headroom so the value labels do not clip the right spine
     ax.set_xlim(0, ax.get_xlim()[1] * 1.08)
-    ps.style_axis(ax, xgrid=True, ygrid=False, pct_axis=None)
-    ax.tick_params(labelsize=9 + FONT_BUMP)   # override style_axis default (both axes)
+    ps.style_axis(ax, xgrid=True, ygrid=False, pct_axis=None, labelsize=9 + FONT_BUMP)
 
 
 def _speedup_efficiency_agg(df: pd.DataFrame) -> pd.DataFrame:

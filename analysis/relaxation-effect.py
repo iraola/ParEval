@@ -49,24 +49,10 @@ def _passk_by_type_and_overall(df: pd.DataFrame, k: int) -> tuple[pd.Series, flo
     return by_type, overall
 
 
-def _prepare(df: pd.DataFrame, count_relaxed: bool) -> pd.DataFrame:
-    """Fill missing run flags and, for the baseline, void relaxed passes.
-
-    Mirrors metrics.py: did_run/is_valid are NaN when a build failed, and without
-    --relaxations a relaxed pass is treated as a failure.
-    """
-    df = df.copy()
-    df["did_run"] = df["did_run"].fillna(False)
-    df["is_valid"] = df["is_valid"].fillna(False)
-    if not count_relaxed and "relaxation_used" in df.columns:
-        df.loc[df["relaxation_used"] == True, "is_valid"] = False  # noqa: E712
-    return df
-
-
 def effect_for_model(df: pd.DataFrame, model: str, ks: list[int]) -> list[dict]:
     """Rows of {model, problem_type, k, pass_no_relax, pass_relax, delta_pp, delta_rel_pct}."""
-    baseline = _prepare(df, count_relaxed=False)
-    relaxed = _prepare(df, count_relaxed=True)
+    baseline = metrics.prepare_run_flags(df, count_relaxed=False)
+    relaxed = metrics.prepare_run_flags(df, count_relaxed=True)
 
     rows = []
     for k in ks:

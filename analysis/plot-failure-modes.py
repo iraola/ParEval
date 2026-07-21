@@ -13,12 +13,15 @@ Usage:
     python plot-failure-modes.py outputs/kernel --fine --top 6
 """
 import argparse
+import importlib
 import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
 import plotstyle
+# classify-errors.py owns the category_group taxonomy and its share computation.
+classify = importlib.import_module("classify-errors")
 
 # Bump every text element on these plots this many points above the plotstyle default.
 FONT_BUMP = 2
@@ -52,14 +55,16 @@ def _errors_csv(metrics_dir: str) -> str:
 
 
 def _group_shares(df: pd.DataFrame) -> pd.DataFrame:
-    """model × category_group share matrix (rows sum to 1), fixed column order."""
-    counts = (df.groupby(["model", "category_group"]).size()
-                .unstack(fill_value=0))
+    """model × category_group share matrix (rows sum to 1), in fixed GROUP_ORDER.
+
+    Missing groups (absent from the run) become zero-share columns; any present
+    group outside GROUP_ORDER stays in the shared denominator but is not drawn.
+    """
+    shares = classify.group_share_matrix(df, "model")
     for g in GROUP_ORDER:
-        if g not in counts.columns:
-            counts[g] = 0
-    counts = counts[GROUP_ORDER]
-    return counts.div(counts.sum(axis=1), axis=0)
+        if g not in shares.columns:
+            shares[g] = 0.0
+    return shares[GROUP_ORDER]
 
 
 def _fine_shares(df: pd.DataFrame, top: int) -> tuple[pd.DataFrame, list[str]]:
@@ -128,8 +133,7 @@ def plot(metrics_dir: str, output_dir: str, fine: bool, top: int) -> None:
     ax.set_xlim(0, 1)
     ax.set_xlabel("share of run attempts", fontsize=10 + FONT_BUMP)
     ax.invert_yaxis()
-    plotstyle.style_axis(ax, xgrid=True, ygrid=False, pct_axis="x")
-    ax.tick_params(labelsize=9 + FONT_BUMP)   # override style_axis default
+    plotstyle.style_axis(ax, xgrid=True, ygrid=False, pct_axis="x", labelsize=9 + FONT_BUMP)
     # Wrap the legend to a few rows so the fine view (a dozen categories) stays readable.
     ax.legend(ncol=min(len(columns), 7), loc="lower center",
               bbox_to_anchor=(0.5, 1.01), frameon=False, fontsize=8 + FONT_BUMP)

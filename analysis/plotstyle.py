@@ -226,11 +226,12 @@ PANEL_LEGEND_KW = dict(fontsize=7, loc="best", frameon=True, framealpha=0.65,
                        facecolor="white", edgecolor="none")
 
 
-def style_axis(ax, *, xgrid=False, ygrid=True, pct_axis="y"):
+def style_axis(ax, *, xgrid=False, ygrid=True, pct_axis="y", labelsize=9):
     """Consistent spines, grid, and optional percentage-formatted axis.
 
     pct_axis: "y", "x", or None. On a percentage axis ticks snap to 20% steps
-    and get a % formatter.
+    and get a % formatter. labelsize sets both axes' tick labels; pass a larger
+    value instead of overriding with a follow-up tick_params call.
     """
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -247,7 +248,7 @@ def style_axis(ax, *, xgrid=False, ygrid=True, pct_axis="y"):
         ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
     elif pct_axis == "x":
         ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-    ax.tick_params(labelsize=9)
+    ax.tick_params(labelsize=labelsize)
 
 
 def family_grid(models, ncols=3, panel_w=3.4, panel_h=2.85):
@@ -372,6 +373,26 @@ def load_csvs(metrics_dir: str, prefix: str) -> pd.DataFrame:
     if not frames:
         raise FileNotFoundError(f"No {prefix}*.csv files found in {metrics_dir}")
     return pd.concat(frames, ignore_index=True)
+
+
+def passk_columns(k_values, *frames) -> list:
+    """pass@k column names present in every given frame, in k_values order."""
+    return [f"pass@{k}" for k in k_values
+            if all(f"pass@{k}" in f.columns for f in frames)]
+
+
+def mean_passk_by_model(df: pd.DataFrame, cols: list) -> pd.DataFrame:
+    """Per-model mean of the given pass@k columns (averaged across problem types)."""
+    return df.groupby("model")[cols].mean()
+
+
+def write_table(df: pd.DataFrame, output_dir: str, fname: str,
+                label: str = "aggregated pass@k values") -> None:
+    """makedirs + to_csv(index=False) + a one-line print. Shared CSV-dump tail."""
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, fname)
+    df.to_csv(path, index=False)
+    print(f"Wrote {label}: {path}")
 
 
 def fname_suffix(args) -> str:

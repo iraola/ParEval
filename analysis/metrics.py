@@ -3,12 +3,71 @@
 # std imports
 import argparse
 import json
+from dataclasses import dataclass
 from math import comb
 from typing import Union
 
 # tpl imports
 import numpy as np
 import pandas as pd
+
+
+@dataclass
+class ModelSpec:
+    """Per-parallelism-model facts the metrics derive from.
+
+    workers: columns whose product is the run's parallel worker count (the scaling
+             "n" / the efficiency divisor). Empty means serial, i.e. 1.
+    operating_point: the single config the headline speedup/efficiency metrics are
+                     reported at, as {column: value}. Empty means no constraint (gpu).
+    """
+    workers: list
+    operating_point: dict
+
+
+# Single source of truth for per-model resource semantics; add a backend = one entry.
+#                         workers                       operating point
+MODELS = {
+    "serial":   ModelSpec([],                           {}),
+    "omp":      ModelSpec(["num_threads"],              {"num_threads": 32}),
+    "mpi":      ModelSpec(["num_procs"],                {"num_procs": 512}),
+    "mpi+omp":  ModelSpec(["num_procs", "num_threads"], {"num_procs": 4, "num_threads": 64}),
+    "kokkos":   ModelSpec(["num_threads"],              {"num_threads": 32}),
+    "cuda":     ModelSpec(["problem_size"],             {}),
+    "hip":      ModelSpec(["problem_size"],             {}),
+    "pycompss": ModelSpec(["num_procs"],                {"num_procs": 64}),
+}
+
+
+def canonical_mask(df: pd.DataFrame) -> pd.Series:
+    """Mask selecting each model's operating point; an allowlist.
+
+    Rows whose parallelism_model is not in MODELS are excluded.
+    """
+    mask = pd.Series(False, index=df.index)
+    for model, spec in MODELS.items():
+        m = df["parallelism_model"] == model
+        for col, val in spec.operating_point.items():
+            m &= df[col] == val
+        mask |= m
+    return mask
+
+
+def resource_count(df: pd.DataFrame) -> pd.Series:
+    """Per-row worker count (the scaling 'n'): product of each model's worker columns.
+
+    Rows of models not in MODELS (and serial, whose worker list is empty) default to 1.
+    """
+    out = pd.Series(1.0, index=df.index)
+    for model, spec in MODELS.items():
+        m = df["parallelism_model"] == model
+        if not m.any():
+            continue
+        n = pd.Series(1.0, index=df.index[m])
+        for col in spec.workers:
+            n *= df.loc[m, col]
+        out.loc[m] = n
+    return out
 
 
 def get_args():
@@ -22,6 +81,9 @@ def get_args():
     parser.add_argument("--relaxations", action="store_true",
         help="Count outputs that passed only after a relaxation as correct. "
              "Default: treat relaxed passes as failures.")
+    parser.add_argument("--baseline", choices=["serial", "n1"], default="serial",
+        help="Speedup baseline: 'serial' (purely sequential) or 'n1' (the single-resource "
+             "run, factoring out fixed runtime overhead). Default: serial.")
     return parser.parse_args()
 
 def get_correctness_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -99,15 +161,8 @@ def speedupk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     # get all runs where is_valid is true
     df = df[df["is_valid"] == True]
 
-    # choose processor count; hardcoded right now
-    df = df[(df["parallelism_model"] == "serial") |
-            (df["parallelism_model"] == "cuda") |
-            (df["parallelism_model"] == "hip") |
-            ((df["parallelism_model"] == "kokkos") & (df["num_threads"] == 32)) |
-            ((df["parallelism_model"] == "omp") & (df["num_threads"] == 32)) |
-            ((df["parallelism_model"] == "mpi") & (df["num_procs"] == 512)) |
-            ((df["parallelism_model"] == "mpi+omp") & (df["num_procs"] == 4) & (df["num_threads"] == 64)) |
-            ((df["parallelism_model"] == "pycompss") & (df["num_procs"] == 64))]
+    # keep each model's canonical operating point (see MODELS)
+    df = df[canonical_mask(df)]
     df = df.copy()
 
     # use min best_sequential_runtime
@@ -200,26 +255,11 @@ def efficiencyk(df: pd.DataFrame, k: int, n: int) -> pd.DataFrame:
     # get all runs where is_valid is true
     df = df[df["is_valid"] == True]
 
-    # choose processor count; hardcoded right now
-    df = df[(df["parallelism_model"] == "serial") |
-           (df["parallelism_model"] == "cuda") |
-            (df["parallelism_model"] == "hip") |
-            ((df["parallelism_model"] == "kokkos") & (df["num_threads"] == 32)) |
-            ((df["parallelism_model"] == "omp") & (df["num_threads"] == 32)) |
-            ((df["parallelism_model"] == "mpi") & (df["num_procs"] == 512)) |
-            ((df["parallelism_model"] == "mpi+omp") & (df["num_procs"] == 4) & (df["num_threads"] == 64)) |
-            ((df["parallelism_model"] == "pycompss") & (df["num_procs"] == 64))]
+    # keep each model's canonical operating point (see MODELS)
+    df = df[canonical_mask(df)]
 
-    # set n_resources column to 1 for serial; 32 for kokkos; 32 for omp; 512 for mpi; 4*64 for mpi+omp;
-    # set it to problem_size for cuda and hip
-    df["n_resources"] = 1
-    df.loc[df["parallelism_model"] == "cuda", "n_resources"] = df["problem_size"]
-    df.loc[df["parallelism_model"] == "hip", "n_resources"] = df["problem_size"]
-    df.loc[df["parallelism_model"] == "kokkos", "n_resources"] = 32
-    df.loc[df["parallelism_model"] == "omp", "n_resources"] = 8
-    df.loc[df["parallelism_model"] == "mpi", "n_resources"] = 512
-    df.loc[df["parallelism_model"] == "mpi+omp", "n_resources"] = 4*64
-    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["num_procs"]
+    # resource count at that operating point (see MODELS)
+    df["n_resources"] = resource_count(df)
 
     df = df.copy()
 
@@ -248,15 +288,8 @@ def efficiencyk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
     # get all runs where is_valid is true
     df = df[df["is_valid"] == True]
 
-    # set n_resources column
-    df["n_resources"] = 1
-    df.loc[df["parallelism_model"] == "cuda", "n_resources"] = df["problem_size"]
-    df.loc[df["parallelism_model"] == "hip", "n_resources"] = df["problem_size"]
-    df.loc[df["parallelism_model"] == "kokkos", "n_resources"] = df["num_threads"]
-    df.loc[df["parallelism_model"] == "omp", "n_resources"] = df["num_threads"]
-    df.loc[df["parallelism_model"] == "mpi", "n_resources"] = df["num_procs"]
-    df.loc[df["parallelism_model"] == "mpi+omp", "n_resources"] = df["num_procs"] * df["num_threads"]
-    df.loc[df["parallelism_model"] == "pycompss", "n_resources"] = df["num_procs"]
+    # resource count per row (see MODELS)
+    df["n_resources"] = resource_count(df)
 
     # choose the row with min num_resources * runtime
     df = df.groupby(["name", "parallelism_model", "output_idx"]).apply(
@@ -280,19 +313,27 @@ def efficiencyk_max(df: pd.DataFrame, k: int) -> pd.DataFrame:
 
     return df
 
-def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
-    """For PyCOMPSs, replace best_sequential_runtime with the n=1 (single-worker) runtime.
+def apply_n1_baseline(df: pd.DataFrame, void_unmatched: bool = False) -> pd.DataFrame:
+    """Replace best_sequential_runtime with the n=1 (single-resource) runtime.
 
-    PyCOMPSs carries inherent scheduling overhead that makes comparison against a purely
-    sequential baseline reflect overhead rather than scaling. Using n=1 as the reference
-    isolates how well the code scales with additional resources.
+    For runtimes with fixed startup/scheduling overhead (e.g. PyCOMPSs), comparing
+    against a purely sequential baseline reflects overhead rather than scaling. Using
+    n=1 as the reference isolates how well the code scales with added resources.
 
-    Only applies to scaling runs, i.e. pycompss rows with a populated df["n"]
-    (num_procs). Correctness runs don't record num_procs, so those rows are
-    left untouched.
+    Operates on rows with a populated df["n"] (the resource count); callers set n for
+    the models they want rebaselined. Rows without n (e.g. correctness runs that don't
+    record it) are left untouched. Not tied to any one parallelism_model.
+
+    void_unmatched controls what happens to an output with no valid n=1 run:
+      * True  (correctness, metrics.py): its speedup@k is defined against n=1, so
+              with no baseline the number is meaningless. Void the output.
+      * False (scaling, metrics-scaling.py): each n is its own point on a curve, so
+              n>1 points stay valid on the sequential baseline even if n=1 failed.
     """
     df = df.copy()
-    mask = (df["parallelism_model"] == "pycompss") & df["n"].notna()
+    if "n" not in df.columns:
+        return df
+    mask = df["n"].notna()
     if not mask.any():
         return df
 
@@ -307,9 +348,9 @@ def apply_n1_baseline(df: pd.DataFrame) -> pd.DataFrame:
     df = df.merge(n1_baselines, on=["name", "output_idx"], how="left")
     updated = mask & df["n1_baseline"].notna()
     df.loc[updated, "best_sequential_runtime"] = df.loc[updated, "n1_baseline"]
-    # No valid n=1 run: exclude the output from metrics rather than
-    # silently falling back to the sequential baseline
-    df.loc[mask & df["n1_baseline"].isna(), "is_valid"] = False
+    if void_unmatched:
+        # no valid n=1 run: void rather than fall back to the sequential baseline
+        df.loc[mask & df["n1_baseline"].isna(), "is_valid"] = False
     return df.drop(columns=["n1_baseline"])
 
 
@@ -320,6 +361,23 @@ def parse_problem_size(problem_size: str) -> int:
         return 2 ** int(num)
     else:
         return int(problem_size)
+
+
+def prepare_run_flags(df: pd.DataFrame, count_relaxed: bool = False) -> pd.DataFrame:
+    """Fill missing run flags and, unless count_relaxed, void relaxed passes.
+
+    did_run/is_valid are NaN when a build failed; treat those as False. Without
+    count_relaxed, an output that only passed after a relaxation is counted as a
+    failure. Returns a copy; the input is not mutated. Shared by metrics.py,
+    metrics-scaling.py, and relaxation-effect.py so "what counts as a pass" lives
+    in one place.
+    """
+    df = df.copy()
+    df["did_run"] = df["did_run"].fillna(False)     # nan when it didn't build
+    df["is_valid"] = df["is_valid"].fillna(False)   # nan when it didn't build
+    if not count_relaxed and "relaxation_used" in df.columns:
+        df.loc[df["relaxation_used"] == True, "is_valid"] = False  # noqa: E712
+    return df
 
 
 def main():
@@ -338,18 +396,13 @@ def main():
     # remove rows where parallelism_model is kokkos and num_threads is 64
     df = df[~((df["parallelism_model"] == "kokkos") & (df["num_threads"] == 64))]
 
-    # filter/aggregate
-    df["did_run"] = df["did_run"].fillna(False)     # if it didn't build, then this will be nan; overwrite
-    df["is_valid"] = df["is_valid"].fillna(False)   # if it didn't build, then this will be nan; overwrite
+    # fill missing run flags; without --relaxations, void relaxed passes
+    df = prepare_run_flags(df, count_relaxed=args.relaxations)
 
-    # without --relaxations, relaxed passes are treated as failures
-    if not args.relaxations and "relaxation_used" in df.columns:
-        df.loc[df["relaxation_used"] == True, "is_valid"] = False
-
-    # For PyCOMPSs, scale relative to n=1 instead of the purely sequential baseline.
-    # Set n transiently so apply_n1_baseline can locate single-worker runs.
-    df.loc[df["parallelism_model"] == "pycompss", "n"] = df["num_procs"]
-    df = apply_n1_baseline(df)
+    if args.baseline == "n1":
+        # set n transiently (pycompss resource count = num_procs) for apply_n1_baseline
+        df.loc[df["parallelism_model"] == "pycompss", "n"] = df["num_procs"]
+        df = apply_n1_baseline(df, void_unmatched=True)
 
     # get only valid runs
     valid_runs = get_correctness_df(df)
