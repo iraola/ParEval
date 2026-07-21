@@ -9,3 +9,4 @@ torchaudio
 torchvision
 tqdm==4.66.1
 transformers
+matplotlib>=3.10.9
